@@ -65,7 +65,6 @@ export function resize() {
   sceneCtx.fillRect(0, 0, width, height);
   outputCtx.fillRect(0, 0, width, height);
   if (previous) sceneCtx.drawImage(previous, 0, 0, width, height);
-  $('qv').textContent = Math.round(view.quality * 100) + '%';
 }
 
 let averageFrameMs = 16;

@@ -1,52 +1,11 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="en" class="dark"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DJ Visualizer</title>
 </head>
 <body>
 <canvas id="cv"></canvas>
-<div id="msg">Pick an audio source below. Press ? for keys.</div>
-<div id="help"><h3>Keys</h3><table>
-<tr><td><kbd>1</kbd>–<kbd>0</kbd>, <kbd>←</kbd><kbd>→</kbd></td><td>Pick mode / previous / next (Bars, Radial, Tunnel, Scope, Galaxy, Retro Grid, Warp, Blob, Hex, Hypno)</td></tr>
-<tr><td><kbd>M</kbd>, <kbd>Space</kbd></td><td>Presets panel, next preset in the current folder</td></tr>
-<tr><td><kbd>Enter</kbd></td><td>Fire a drop by hand</td></tr>
-<tr><td><kbd>C</kbd> / <kbd>Shift+C</kbd></td><td>Next / previous palette (crossfades)</td></tr>
-<tr><td><kbd>P</kbd></td><td>Psychedelic: Off, Vortex, Liquid, Rainbow, Trip (all)</td></tr>
-<tr><td><kbd>K</kbd></td><td>Mirror: Off, Mirror, Quad, Kaleido</td></tr>
-<tr><td><kbd>L</kbd> <kbd>X</kbd> <kbd>S</kbd> <kbd>E</kbd></td><td>Lasers, Glitch, Strobe, Trails</td></tr>
-<tr><td><kbd>A</kbd></td><td>Auto: switches mode and palette on drops and every 32 beats (off while a folder plays)</td></tr>
-<tr><td><kbd>↑</kbd><kbd>↓</kbd>, <kbd>G</kbd></td><td>Gain up/down, automatic gain</td></tr>
-<tr><td><kbd>F</kbd> <kbd>H</kbd> <kbd>?</kbd></td><td>Fullscreen, hide controls, this help</td></tr>
-</table><p style="margin:10px 0 0;opacity:.7">Render quality adapts automatically to keep it smooth. Current: <span id="qv">100%</span></p></div>
-<div id="pp">
- <div class="row"><h3>Presets</h3><button id="ppX" title="Close (M)">✕</button></div>
- <div class="row"><select id="fSel" title="Folder"></select><button id="fNew" title="New folder">+ Folder</button><button id="fRen" title="Rename folder">✎</button><button id="fDel" title="Delete folder">🗑</button></div>
- <div class="row"><input type="text" id="pName" placeholder="Preset name (optional)" maxlength="40"><button id="pSave">💾 Save look</button></div>
- <ol id="pList"></ol>
- <div class="row">Change <select id="plBy"><option value="drop">on each drop</option><option value="b16">every 16 beats</option><option value="b32" selected>every 32 beats</option><option value="s15">every 15 s</option><option value="s30">every 30 s</option><option value="s60">every 60 s</option></select><label><input type="checkbox" id="plShuf"> Shuffle</label></div>
- <button id="plBtn" class="wide">▶ Play folder</button>
- <div class="row"><button id="pExp">⬇ Export all</button><label class="b">⬆ Import<input type="file" id="pImp" accept=".json,application/json" hidden></label></div>
- <p class="note">A preset saves mode, colour, psychedelic, mirror, trails, lasers, glitch, strobe, gain and react. Folders are kept in this browser; export to back them up or move them to another computer.</p>
-</div>
-<div id="ui">
-  <button id="bTab" title="Share a browser tab or entire screen and tick 'share audio'">🖥 Tab audio</button>
-  <button id="bMic">🎤 Mic</button>
-  <label class="b">🎵 File<input id="file" type="file" accept="audio/*" hidden></label>
-  <button id="bMode" title="Click: next, right-click: previous">Mode: Bars</button>
-  <button id="bCol">Color (C)</button>
-  <button id="bPsy">Psy: Off (P)</button>
-  <button id="bKal">Mirror: Off (K)</button>
-  <button id="bFb" class="on">Trails (E)</button>
-  <button id="bLas">Lasers (L)</button>
-  <button id="bGl">Glitch (X)</button>
-  <button id="bStb" title="Colour flashes on beats, invert on drops. Avoid if sensitive to flashing light.">Strobe (S)</button>
-  <button id="bAuto">Auto (A)</button>
-  <button id="bPre" class="hot">📁 Presets (M)</button>
-  <button id="bFs">Fullscreen (F)</button>
-  <button id="bHelp">?</button>
-  <span class="sl">Gain <input id="gain" type="range" min="0" max="100" step="1" value="55"><output id="gv">×1.7</output><button id="bAgc" style="padding:3px 8px">Auto (G)</button></span>
-  <span class="sl">React <input id="react" type="range" min="0.5" max="3" step="0.1" value="1.6"><output id="rv">1.6</output></span>
-</div>
-<script type="module" src="/src/main.js"></script>
+<div id="root"></div>
+<script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
