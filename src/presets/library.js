@@ -22,7 +22,7 @@ export const createPreset = (name, mode, palette, overrides) => ({
   gl: false,
   stb: false,
   gain: 27,
-  agc: false,
+  agc: true,
   react: 0.6,
   ...overrides,
 });

@@ -22,7 +22,7 @@ export const settings = {
   glitch: false,
   strobe: false,
   auto: false,
-  autoGain: false,
+  autoGain: true,
   gain: 55,
   reactivity: 1.6,
 };
