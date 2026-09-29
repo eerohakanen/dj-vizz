@@ -1,9 +1,10 @@
-import './styles.css';
+import './index.css';
+import { createRoot } from 'react-dom/client';
+import { App } from './app/App.jsx';
 import { analyse } from './audio/analysis.js';
 import { adaptQuality, resize } from './canvas.js';
-import { advancePaletteFade, buildLut, renderPaletteButton } from './color.js';
+import { advancePaletteFade, buildLut } from './color.js';
 import { bindControls } from './controls.js';
-import { bindPresetPanel } from './presets/panel.js';
 import { advanceTimedPlaylist } from './presets/playlist.js';
 import { presentFrame, renderScene } from './render.js';
 import { clock, fx, settings } from './state.js';
@@ -45,6 +46,5 @@ function frame(timestamp) {
 addEventListener('resize', resize);
 resize();
 bindControls();
-bindPresetPanel();
-renderPaletteButton();
+createRoot(document.getElementById('root')).render(<App />);
 requestAnimationFrame(frame);

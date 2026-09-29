@@ -1,7 +1,7 @@
-import { setButtonOn, showMessage } from '../dom.js';
+import { showMessage } from '../dom.js';
 import { clock, settings } from '../state.js';
-import { applyPreset, currentFolder, playlist } from './library.js';
-import { renderPresetList } from './listView.js';
+import { notify } from '../store.js';
+import { applyPreset, currentFolder, playlist, selectFolder } from './library.js';
 
 export function loadPreset(index) {
   const { presets } = currentFolder();
@@ -12,7 +12,7 @@ export function loadPreset(index) {
   playlist.startedAt = clock.time;
   applyPreset(preset);
   showMessage(`▶ ${preset.name}  (${index + 1}/${presets.length})`);
-  renderPresetList();
+  notify();
 }
 
 export function nextPreset() {
@@ -38,17 +38,32 @@ export function togglePlayback() {
       return;
     }
     playlist.playing = true;
-    if (settings.auto) {
-      settings.auto = false;
-      setButtonOn('bAuto', false);
-    }
+    settings.auto = false;
     playlist.index = -1;
     nextPreset();
   }
-  renderPresetList();
+  notify();
 }
 
 export function advanceTimedPlaylist() {
   if (!playlist.playing || playlist.changeOn[0] !== 's') return;
   if (clock.time - playlist.startedAt >= +playlist.changeOn.slice(1)) nextPreset();
+}
+
+export function setChangeOn(changeOn) {
+  playlist.changeOn = changeOn;
+  playlist.beats = 0;
+  playlist.startedAt = clock.time;
+  notify();
+}
+
+export function setShuffle(shuffle) {
+  playlist.shuffle = shuffle;
+  notify();
+}
+
+export function playFolder(index) {
+  selectFolder(index);
+  playlist.playing = false;
+  togglePlayback();
 }

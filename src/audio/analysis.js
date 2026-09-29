@@ -1,4 +1,3 @@
-import { $ } from '../dom.js';
 import { onBeat, triggerDrop } from '../events.js';
 import { clock, fx, settings, signal } from '../state.js';
 import { audio } from './input.js';
@@ -14,7 +13,6 @@ for (let i = 0; i < BAND_COUNT; i++) {
 let rawPeak = 0.1;
 let autoGainFactor = 1;
 let previousBass = 0;
-let frameCount = 0;
 
 function averageBins(frequencies, from, to) {
   let sum = 0;
@@ -109,5 +107,4 @@ export function analyse() {
   if (time - signal.lastDrop > 3 && signal.bass > 0.5 && (signal.breakdown > 0.7 || surge)) triggerDrop();
 
   fillSpectrum(frequencies, gain);
-  if (++frameCount % 10 === 0) $('gv').textContent = (settings.autoGain ? 'A ' : '') + '×' + gain.toFixed(gain < 1 ? 2 : 1);
 }

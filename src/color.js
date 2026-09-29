@@ -1,6 +1,7 @@
-import { $, showMessage } from './dom.js';
+import { showMessage } from './dom.js';
 import { PALETTES } from './palettes.js';
 import { fx, settings } from './state.js';
+import { notify } from './store.js';
 
 const LUT_SIZE = 64;
 const lut = new Float32Array(LUT_SIZE * 3);
@@ -62,14 +63,10 @@ export function color(position, alpha = 1, lightness) {
   return `hsla(${lut[k] | 0},${lut[k + 1] | 0}%,${light | 0}%,${clampedAlpha.toFixed(3)})`;
 }
 
-export function renderPaletteButton() {
-  $('bCol').textContent = `Color: ${PALETTES[settings.palette].name} (C)`;
-}
-
 export function setPalette(index, quiet) {
   previousPalette = settings.palette;
   fade = 0;
   settings.palette = (index + PALETTES.length) % PALETTES.length;
-  renderPaletteButton();
+  notify();
   if (!quiet) showMessage(`Palette: ${PALETTES[settings.palette].name}`);
 }
