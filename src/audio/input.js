@@ -38,6 +38,11 @@ function ensureContext() {
   if (context.state === 'suspended') context.resume();
 }
 
+export function disconnectAudio() {
+  stopInput();
+  notify();
+}
+
 function stopInput() {
   try {
     source?.disconnect();

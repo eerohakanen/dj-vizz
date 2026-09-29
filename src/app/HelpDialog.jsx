@@ -21,7 +21,8 @@ const SHORTCUTS = [
   [['↑', '↓'], 'Gain up / down'],
   [['G'], 'Automatic gain'],
   [['F'], 'Fullscreen'],
-  [['H'], 'Hide controls'],
+  [['H'], 'Hide / show controls'],
+  [['Q'], 'Back to main menu'],
   [['?'], 'This help'],
 ];
 

@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import {
   AudioLines,
   CircleHelp,
+  EyeOff,
   FolderOpen,
+  LogOut,
   Maximize,
   Pause,
   Play,
@@ -35,7 +37,7 @@ import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { openOverlay, setGain, setMirror, setPsy, setSetting, toggleFullscreen, togglePaused } from '@/actions.js';
+import { openOverlay, setGain, setMirror, setPsy, setHideLocked, setSetting, toggleFullscreen, togglePaused } from '@/actions.js';
 import { audio, captureMicrophone, captureWindow } from '@/audio/input.js';
 import { setPalette } from '@/color.js';
 import { showMessage } from '@/dom.js';
@@ -366,6 +368,17 @@ export function Toolbar() {
         <Hint label="Keyboard shortcuts" shortcut="?">
           <Button variant="ghost" size="icon-sm" onClick={() => openOverlay('help')} aria-label="Keyboard shortcuts">
             <CircleHelp />
+          </Button>
+        </Hint>
+        <Hint label="Hide controls" shortcut="H">
+          <Button variant="ghost" size="icon-sm" onClick={() => setHideLocked(true)} aria-label="Hide controls">
+            <EyeOff />
+          </Button>
+        </Hint>
+        <Separator orientation="vertical" className="h-6! max-sm:hidden" />
+        <Hint label="Back to main menu" shortcut="Q">
+          <Button variant="ghost" size="icon-sm" onClick={() => openOverlay('exit')} aria-label="Back to main menu">
+            <LogOut />
           </Button>
         </Hint>
       </div>

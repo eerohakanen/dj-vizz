@@ -5,6 +5,8 @@ let version = 0;
 
 export const ui = {
   controlsHidden: false,
+  hideLocked: false,
+  peek: false,
   overlay: null,
   paused: false,
   live: false,

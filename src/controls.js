@@ -1,4 +1,4 @@
-import { cycleMirror, cyclePsy, nudgeGain, openOverlay, setControlsHidden, toggleFullscreen, toggleSetting } from './actions.js';
+import { cycleMirror, cyclePsy, nudgeGain, openOverlay, setControlsHidden, setHideLocked, setPeek, toggleFullscreen, toggleSetting } from './actions.js';
 import { audio } from './audio/input.js';
 import { setPalette } from './color.js';
 import { triggerDrop } from './events.js';
@@ -32,12 +32,13 @@ const KEY_ACTIONS = {
   a: () => toggleSetting('auto'),
   c: (event) => setPalette(settings.palette + (event.shiftKey ? -1 : 1)),
   f: toggleFullscreen,
-  h: () => setControlsHidden(!ui.controlsHidden),
+  h: () => setHideLocked(!ui.hideLocked),
   l: () => toggleSetting('lasers'),
   x: () => toggleSetting('glitch'),
   s: () => toggleSetting('strobe'),
   g: () => toggleSetting('autoGain'),
   p: cyclePsy,
+  q: () => openOverlay('exit'),
   m: () => openOverlay('presets'),
   '?': () => openOverlay('help'),
   '/': () => openOverlay('help'),
@@ -63,10 +64,22 @@ function handleKey(event) {
 let idleTimer;
 
 const hasOpenPopup = () => !!document.querySelector('[data-radix-popper-content-wrapper]');
+const isHoveringReveal = () => !!document.querySelector('[data-reveal]:hover');
+
+function peekReveal() {
+  setPeek(true);
+  idleTimer = setTimeout(() => {
+    if (!isHoveringReveal()) setPeek(false);
+  }, IDLE_HIDE_MS);
+}
 
 function wake() {
-  setControlsHidden(false);
   clearTimeout(idleTimer);
+  if (ui.hideLocked) {
+    peekReveal();
+    return;
+  }
+  setControlsHidden(false);
   idleTimer = setTimeout(() => {
     if (audio.live && !ui.overlay && !hasOpenPopup()) setControlsHidden(true);
   }, IDLE_HIDE_MS);
