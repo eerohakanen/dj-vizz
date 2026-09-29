@@ -5,6 +5,7 @@ import { drawGalaxy } from './galaxy.js';
 import { drawGrid } from './grid.js';
 import { drawHex } from './hex.js';
 import { drawHypno } from './hypno.js';
+import { drawModel, pulseModel } from './model.js';
 import { drawRadial } from './radial.js';
 import { drawScope } from './scope.js';
 import { drawTunnel, spawnRing } from './tunnel.js';
@@ -32,4 +33,5 @@ export const MODES = [
   defineMode('Hex', drawHex),
   defineMode('Hypno', drawHypno),
   defineMode('Deep Space', drawDeepSpace, { trails: false, opaque: true, onBeat: pulseDeepSpace }),
+  defineMode('Model', drawModel, { trails: false, opaque: true, onBeat: pulseModel }),
 ];

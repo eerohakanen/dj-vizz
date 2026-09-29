@@ -1,7 +1,6 @@
-import { BACKGROUND, createCanvas, sceneCtx as ctx } from '../canvas.js';
-import { color } from '../color.js';
 import { TAU } from '../math.js';
-import { clock, fx, signal, view } from '../state.js';
+import { clock, fx, signal } from '../state.js';
+import { createRenderer, fitStage, GLOW_POINT_FRAGMENT, paint, pointScale, presentStage } from './three-stage.js';
 
 const CUBE = 240;
 const FIELD_RADIUS = CUBE / 2;
@@ -38,21 +37,6 @@ const STAR_VERTEX = `
     vFade = (1.0 - smoothstep(uFieldRadius * 0.55, uFieldRadius, distance)) * smoothstep(0.5, 4.0, distance) * min(1.0, size / 1.5);
     vSeed = aSeed;
     gl_PointSize = clamp(size, 1.5, 48.0);
-  }
-`;
-
-const STAR_FRAGMENT = `
-  uniform vec3 uColorA;
-  uniform vec3 uColorB;
-  uniform float uGlow;
-  varying float vSeed;
-  varying float vFade;
-  void main() {
-    float d = length(gl_PointCoord - 0.5) * 2.0;
-    if (d > 1.0) discard;
-    float light = exp(-d * d * 10.0) + exp(-d * 4.0) * 0.3 * uGlow;
-    vec3 tint = mix(vec3(1.0), mix(uColorA, uColorB, fract(vSeed * 7.31)), 0.6);
-    gl_FragColor = vec4(tint * light * vFade, 1.0);
   }
 `;
 
@@ -262,9 +246,7 @@ function spawnBillboard(body, near, far, minOffset, maxOffset) {
 }
 
 function createStage(THREE) {
-  const renderer = new THREE.WebGLRenderer({ canvas: createCanvas(), antialias: false, alpha: false, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(1);
-  renderer.setClearColor(new THREE.Color().setStyle(BACKGROUND, THREE.LinearSRGBColorSpace));
+  const renderer = createRenderer(THREE);
 
   const shared = {
     uTime: { value: 0 },
@@ -290,7 +272,7 @@ function createStage(THREE) {
 
   const scene = new THREE.Scene();
   const { stars, streaks } = createStarGeometry(THREE);
-  const starMaterial = additive(STAR_VERTEX, STAR_FRAGMENT, { uSize: { value: 0.5 } });
+  const starMaterial = additive(STAR_VERTEX, GLOW_POINT_FRAGMENT, { uSize: { value: 0.5 } });
   const streakMaterial = additive(STREAK_VERTEX, STREAK_FRAGMENT, {
     uStreak: { value: 0 },
     uStreakAlpha: { value: 0 },
@@ -360,19 +342,6 @@ function loadStage() {
   import('three').then(createStage).catch(() => {});
 }
 
-function fitRenderer() {
-  const { width, height } = view;
-  if (stage.width === width && stage.height === height) return;
-  stage.width = width;
-  stage.height = height;
-  stage.renderer.setSize(width, height, false);
-  stage.camera.aspect = width / height;
-}
-
-function paint(target, position, lightness) {
-  target.setStyle(color(position, 1, lightness), stage.THREE.LinearSRGBColorSpace);
-}
-
 const approach = (value, target, rate) => value + (target - value) * Math.min(1, clock.delta * rate);
 
 const wrapAngle = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
@@ -420,10 +389,10 @@ function updateUniforms() {
   const { shared, starMaterial, streakMaterial, camera } = stage;
   shared.uTime.value = clock.time;
   shared.uKick.value = kick;
-  shared.uScale.value = view.height / (2 * Math.tan((camera.fov * Math.PI) / 360));
+  shared.uScale.value = pointScale(camera);
   shared.uGlow.value = 0.7 + signal.mid * 0.8 + kick * 0.8 + fx.drop;
-  paint(shared.uColorA.value, 0);
-  paint(shared.uColorB.value, 1);
+  paint(stage, shared.uColorA.value, 0);
+  paint(stage, shared.uColorB.value, 1);
   starMaterial.uniforms.uSize.value = 0.45 + kick * 0.35 + signal.punchHigh * 0.3;
   streakMaterial.uniforms.uStreak.value = speed * 0.12;
   streakMaterial.uniforms.uHeading.value.copy(stage.heading);
@@ -442,7 +411,7 @@ function advanceBodies() {
   for (const sun of stage.suns) {
     const { ahead, distance } = drift(sun, 2, 10, 32);
     const { uniforms } = sun.material;
-    paint(uniforms.uColor.value, sun.hue);
+    paint(stage, uniforms.uColor.value, sun.hue);
     uniforms.uIntensity.value = (0.9 + signal.punchBass * 0.8 + kick * 0.5) * Math.min(1, (FAR - distance) / 80) * Math.min(1, Math.max(0, ahead / 6));
   }
   for (const nebula of stage.nebulae) {
@@ -450,7 +419,7 @@ function advanceBodies() {
     nebula.material.uniforms.uIntensity.value = (0.18 + signal.mid * 0.25 + fx.drop * 0.3) * Math.min(1, (FAR - distance) / 120) * Math.min(1, Math.max(0, ahead / 40));
   }
   const { core, galaxy } = stage;
-  paint(core.material.uniforms.uColor.value, 0.5, 70);
+  paint(stage, core.material.uniforms.uColor.value, 0.5, 70);
   core.material.uniforms.uIntensity.value = 0.55 + signal.mid * 0.5 + kick * 0.4 + fx.drop * 1.5;
   galaxy.rotation.y = -fx.spin * 0.25 - clock.time * 0.02;
 }
@@ -480,12 +449,11 @@ export function drawDeepSpace() {
     return;
   }
   kick *= Math.pow(0.03, clock.delta);
-  fitRenderer();
+  fitStage(stage);
   steer();
   fly();
   moveCamera();
   updateUniforms();
   advanceBodies();
-  stage.renderer.render(stage.scene, stage.camera);
-  ctx.drawImage(stage.renderer.domElement, 0, 0, view.width, view.height);
+  presentStage(stage);
 }
