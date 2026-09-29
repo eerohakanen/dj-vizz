@@ -8,6 +8,7 @@ import { bindControls } from './controls.js';
 import { advanceTimedPlaylist } from './presets/playlist.js';
 import { presentFrame, renderScene } from './render.js';
 import { clock, fx, settings } from './state.js';
+import { ui } from './store.js';
 import { PSY_NAMES } from './ui.js';
 
 let lastTimestamp = 0;
@@ -30,6 +31,10 @@ function updateEffectMixes() {
 function frame(timestamp) {
   const elapsed = timestamp - lastTimestamp;
   lastTimestamp = timestamp;
+  if (ui.paused) {
+    requestAnimationFrame(frame);
+    return;
+  }
   clock.time = timestamp / 1000;
   clock.delta = Math.min(0.05, Math.max(0.001, elapsed / 1000));
   if (elapsed > 0 && elapsed < 100 && !document.hidden) adaptQuality(elapsed);
@@ -43,7 +48,10 @@ function frame(timestamp) {
   requestAnimationFrame(frame);
 }
 
-addEventListener('resize', resize);
+addEventListener('resize', () => {
+  resize();
+  if (ui.paused) presentFrame();
+});
 resize();
 bindControls();
 createRoot(document.getElementById('root')).render(<App />);

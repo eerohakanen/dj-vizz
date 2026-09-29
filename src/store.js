@@ -6,6 +6,7 @@ let version = 0;
 export const ui = {
   controlsHidden: false,
   overlay: null,
+  paused: false,
   live: false,
 };
 

@@ -30,6 +30,11 @@ export const toggleFullscreen = () =>
     ? document.exitFullscreen()
     : document.documentElement.requestFullscreen().catch(() => {});
 
+export function togglePaused() {
+  ui.paused = !ui.paused;
+  notify();
+}
+
 export function setControlsHidden(hidden) {
   if (ui.controlsHidden === hidden) return;
   ui.controlsHidden = hidden;

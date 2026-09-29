@@ -4,6 +4,8 @@ import {
   CircleHelp,
   FolderOpen,
   Maximize,
+  Pause,
+  Play,
   MicIcon,
   MonitorSpeaker,
   Sparkles,
@@ -33,7 +35,7 @@ import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { openOverlay, setGain, setMirror, setPsy, setSetting, toggleFullscreen } from '@/actions.js';
+import { openOverlay, setGain, setMirror, setPsy, setSetting, toggleFullscreen, togglePaused } from '@/actions.js';
 import { audio, captureMicrophone, captureWindow } from '@/audio/input.js';
 import { setPalette } from '@/color.js';
 import { showMessage } from '@/dom.js';
@@ -329,6 +331,17 @@ export function Toolbar() {
           <Button variant="outline" size="sm" onClick={triggerDrop}>
             <Zap />
             Drop
+          </Button>
+        </Hint>
+        <Hint label={ui.paused ? 'Resume visuals' : 'Pause visuals'}>
+          <Button
+            variant={ui.paused ? 'default' : 'outline'}
+            size="sm"
+            onClick={togglePaused}
+            aria-pressed={ui.paused}
+          >
+            {ui.paused ? <Play /> : <Pause />}
+            {ui.paused ? 'Resume' : 'Pause'}
           </Button>
         </Hint>
         <Separator orientation="vertical" className="h-6! max-sm:hidden" />
