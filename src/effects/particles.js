@@ -7,7 +7,7 @@ const MAX_PARTICLES = 1500;
 const COLOR_GROUPS = 4;
 
 const particles = [];
-let shockwaves = [];
+const shockwaves = [];
 
 export function burst(count, minSpeed, speedRange, life) {
   const { width, height, pixelRatio } = view;
@@ -33,8 +33,10 @@ export function addShockwave(radius = 0) {
 
 export function drawShockwaves() {
   const { width, height, diagonal, pixelRatio } = view;
-  shockwaves = shockwaves.filter((wave) => wave.radius < diagonal);
+  let alive = 0;
   for (const wave of shockwaves) {
+    if (wave.radius >= diagonal) continue;
+    shockwaves[alive++] = wave;
     wave.radius += (26 + wave.radius * 0.05) * pixelRatio;
     const alpha = Math.max(0, 1 - wave.radius / diagonal);
     ctx.strokeStyle = color(wave.radius / 300, alpha, 65);
@@ -43,6 +45,7 @@ export function drawShockwaves() {
     ctx.arc(width / 2, height / 2, wave.radius, 0, TAU);
     ctx.stroke();
   }
+  shockwaves.length = alive;
 }
 
 export function drawParticles() {

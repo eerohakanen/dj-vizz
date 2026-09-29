@@ -1,5 +1,18 @@
-import { bloomContexts, bloomLevels, output } from '../canvas.js';
+import { bloomContexts, bloomLevels, bloomMix, bloomMixCtx, output } from '../canvas.js';
 import { fx, signal, view } from '../state.js';
+
+const WIDE_WEIGHT = 0.6;
+const NEAR_WEIGHT = 0.3;
+
+function mixLevels() {
+  const { width, height } = bloomMix;
+  bloomMixCtx.globalCompositeOperation = 'copy';
+  bloomMixCtx.globalAlpha = NEAR_WEIGHT;
+  bloomMixCtx.drawImage(bloomLevels[1], 0, 0);
+  bloomMixCtx.globalCompositeOperation = 'lighter';
+  bloomMixCtx.globalAlpha = WIDE_WEIGHT;
+  bloomMixCtx.drawImage(bloomLevels[3], 0, 0, width, height);
+}
 
 export function applyBloom(o) {
   const { width, height } = view;
@@ -7,11 +20,10 @@ export function applyBloom(o) {
   for (let i = 1; i < bloomLevels.length; i++) {
     bloomContexts[i].drawImage(bloomLevels[i - 1], 0, 0, bloomLevels[i].width, bloomLevels[i].height);
   }
+  mixLevels();
   const alpha = Math.min(0.6, (0.14 + fx.beat * 0.25 + fx.drop * 0.35) * Math.max(signal.gate, 0.15));
   o.globalCompositeOperation = 'lighter';
-  o.globalAlpha = alpha;
-  o.drawImage(bloomLevels[3], 0, 0, width, height);
-  o.globalAlpha = alpha * 0.5;
-  o.drawImage(bloomLevels[1], 0, 0, width, height);
+  o.globalAlpha = alpha / WIDE_WEIGHT;
+  o.drawImage(bloomMix, 0, 0, width, height);
   o.globalAlpha = 1;
 }

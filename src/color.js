@@ -5,6 +5,7 @@ import { notify } from './store.js';
 
 const LUT_SIZE = 64;
 const lut = new Float32Array(LUT_SIZE * 3);
+const styleCache = new Map();
 const currentHsl = new Float32Array(3);
 const previousHsl = new Float32Array(3);
 let previousPalette = 1;
@@ -32,6 +33,7 @@ function samplePalette(index, position, out) {
 }
 
 export function buildLut() {
+  styleCache.clear();
   for (let i = 0; i < LUT_SIZE; i++) {
     const position = i / LUT_SIZE;
     samplePalette(settings.palette, position, currentHsl);
@@ -59,8 +61,14 @@ export function color(position, alpha = 1, lightness) {
   const k = ((x * LUT_SIZE) | 0) * 3;
   let light = lut[k + 2] + (lightness == null ? 0 : lightness - 58) + fx.beat * 8;
   light = light < 5 ? 5 : light > 95 ? 95 : light;
-  const clampedAlpha = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
-  return `hsla(${lut[k] | 0},${lut[k + 1] | 0}%,${light | 0}%,${clampedAlpha.toFixed(3)})`;
+  const alphaSteps = alpha < 0 ? 0 : alpha > 1 ? 1000 : Math.round(alpha * 1000);
+  const key = (k * 96 + (light | 0)) * 1001 + alphaSteps;
+  let style = styleCache.get(key);
+  if (style === undefined) {
+    style = `hsla(${lut[k] | 0},${lut[k + 1] | 0}%,${light | 0}%,${(alphaSteps / 1000).toFixed(3)})`;
+    styleCache.set(key, style);
+  }
+  return style;
 }
 
 export function setPalette(index, quiet) {

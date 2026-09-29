@@ -5,10 +5,10 @@ import { fx, signal, view } from '../state.js';
 
 const SIDE_COUNTS = [4, 5, 6, 8];
 
-let rings = [];
+const rings = [];
 
 export function resetRings() {
-  rings = [];
+  rings.length = 0;
 }
 
 export function spawnRing() {
@@ -23,9 +23,10 @@ export function drawTunnel() {
   const sides = SIDE_COUNTS[Math.floor(fx.scroll / 8) % SIDE_COUNTS.length];
   if (signal.gate < 0.02) resetRings();
   else if (Math.random() < signal.gate * (0.04 + signal.punchMid * 0.3)) spawnRing();
-  rings = rings.filter((ring) => ring.alpha > 0.02);
-
+  let alive = 0;
   for (const ring of rings) {
+    if (ring.alpha <= 0.02) continue;
+    rings[alive++] = ring;
     ring.radius += (1 + signal.punchBass * 20 + fx.drop * 30) * pixelRatio * (1 + (ring.radius / maxRadius) * 2);
     const depth = ring.radius / maxRadius;
     ring.alpha = 1 - depth;
@@ -41,6 +42,7 @@ export function drawTunnel() {
     }
     ctx.stroke();
   }
+  rings.length = alive;
   ctx.fillStyle = color(1, 0.35 + 0.5 * fx.beat);
   ctx.beginPath();
   ctx.arc(cx, cy, (12 + signal.punchBass * 80) * pixelRatio, 0, TAU);
