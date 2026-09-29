@@ -50,6 +50,10 @@ import { ui, useEngine } from '@/store.js';
 import { MIRROR_NAMES, PSY_NAMES } from '@/ui.js';
 import { cn } from '@/lib/utils';
 import { SOURCE_LABELS } from './labels.js';
+import { StableLabel } from './StableLabel.jsx';
+
+const NO_INPUT_LABEL = 'No input';
+const AUDIO_LABELS = [...Object.values(SOURCE_LABELS), NO_INPUT_LABEL];
 
 const TOGGLES = [
   { key: 'trails', label: 'Trails', shortcut: 'E' },
@@ -129,11 +133,13 @@ function EffectsMenu() {
           <Button variant="outline" size="sm">
             <Sparkles />
             Effects
-            {count > 0 && (
-              <Badge variant="secondary" className="h-5 min-w-5 rounded-full px-1.5 tabular-nums">
-                {count}
-              </Badge>
-            )}
+            <Badge
+              variant="secondary"
+              className={cn('h-5 min-w-5 rounded-full px-1.5 tabular-nums', count === 0 && 'invisible')}
+              aria-hidden={count === 0}
+            >
+              {count}
+            </Badge>
           </Button>
         </DropdownMenuTrigger>
       </Hint>
@@ -237,7 +243,7 @@ function AudioPopover() {
           <Button variant="outline" size="sm">
             <span className={cn('size-2 rounded-full', audio.live ? 'bg-emerald-400' : 'bg-destructive')} />
             <AudioLines />
-            {SOURCE_LABELS[audio.source] ?? 'No input'}
+            <StableLabel value={SOURCE_LABELS[audio.source] ?? NO_INPUT_LABEL} options={AUDIO_LABELS} />
           </Button>
         </PopoverTrigger>
       </Hint>
@@ -341,7 +347,7 @@ export function Toolbar() {
             aria-pressed={ui.paused}
           >
             {ui.paused ? <Play /> : <Pause />}
-            {ui.paused ? 'Resume' : 'Pause'}
+            <StableLabel value={ui.paused ? 'Resume' : 'Pause'} options={['Pause', 'Resume']} />
           </Button>
         </Hint>
         <Separator orientation="vertical" className="h-6! max-sm:hidden" />
