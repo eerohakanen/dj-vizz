@@ -1,5 +1,6 @@
 import { drawBars } from './bars.js';
 import { drawBlob } from './blob.js';
+import { drawDeepSpace, pulseDeepSpace } from './deepspace.js';
 import { drawGalaxy } from './galaxy.js';
 import { drawGrid } from './grid.js';
 import { drawHex } from './hex.js';
@@ -30,4 +31,5 @@ export const MODES = [
   defineMode('Blob', drawBlob),
   defineMode('Hex', drawHex),
   defineMode('Hypno', drawHypno),
+  defineMode('Deep Space', drawDeepSpace, { trails: false, opaque: true, onBeat: pulseDeepSpace }),
 ];
