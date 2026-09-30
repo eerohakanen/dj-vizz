@@ -1,6 +1,6 @@
 import { releaseTension } from './audio/musical';
 import { anchorPhrase } from './audio/tempo';
-import { setPalette } from './color';
+import { KEY_CONFIDENCE_FLOOR, keyHue, keyPalette, setPalette } from './color';
 import { addShockwave, burst, sparkle } from './effects/particles';
 import { currentMode, setMode } from './mode';
 import { MODES } from './modes/index';
@@ -17,6 +17,11 @@ function randomOtherMode() {
   do next = (Math.random() * MODES.length) | 0;
   while (next === settings.mode);
   return next;
+}
+
+function dropPalette() {
+  if (signal.key >= 0 && signal.keyConfidence >= KEY_CONFIDENCE_FLOOR) return keyPalette(keyHue(signal.key), settings.palette);
+  return 1 + Math.floor(Math.random() * (PALETTES.length - 1));
 }
 
 export function triggerDrop() {
@@ -39,7 +44,7 @@ export function triggerDrop() {
   if (playlist.playing && playlist.changeOn === 'drop') nextPreset();
   else if (settings.auto) {
     setMode(randomOtherMode());
-    setPalette(1 + Math.floor(Math.random() * (PALETTES.length - 1)), true);
+    setPalette(dropPalette(), true);
   }
 }
 

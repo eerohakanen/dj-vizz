@@ -1,17 +1,64 @@
 import { showMessage } from './dom';
-import { hueDelta, lerp, smoothstep, wrap } from './math';
-import { PALETTES } from './palettes';
+import { clamp, clamp01, hueDelta, lerp, smoothstep, wrap } from './math';
+import { PALETTES, type Palette } from './palettes';
 import { fx, settings, signal } from './state';
 import { notify } from './store';
 
+export const KEY_CONFIDENCE_FLOOR = 0.5;
+const KEY_CONFIDENCE_FULL = 0.8;
+const KEY_TINT_RANGE = 40;
+const KEY_PALETTE_CHOICES = 3;
+const MODE_HUE_SHIFT = 8;
+const MODE_LIGHTNESS_SHIFT = 3;
+const WARM_HUE = 30;
+const COOL_HUE = 220;
 const LUT_SIZE = 64;
-const MINOR_DIMMING = 4;
 const lut = new Float32Array(LUT_SIZE * 3);
 const styleCache = new Map<number, string>();
 const currentHsl = new Float32Array(3);
 const previousHsl = new Float32Array(3);
 let previousPalette = 1;
 let fade = 1;
+
+const radians = (degrees: number) => (degrees * Math.PI) / 180;
+
+export function keyHue(key: number) {
+  const majorTonic = key >= 12 ? (key - 12 + 3) % 12 : key;
+  return ((majorTonic * 7) % 12) * 30;
+}
+
+export const keyTintStrength = (confidence: number) =>
+  smoothstep(clamp01((confidence - KEY_CONFIDENCE_FLOOR) / (KEY_CONFIDENCE_FULL - KEY_CONFIDENCE_FLOOR)));
+
+export const keyTintOffset = (baseHue: number | null, hue: number) =>
+  baseHue === null ? 0 : KEY_TINT_RANGE * Math.sin(radians(hueDelta(baseHue, hue)));
+
+export function paletteHue(palette: Palette) {
+  if (palette.rainbow) return null;
+  let x = 0;
+  let y = 0;
+  for (const [hue, saturation] of palette.stops) {
+    x += saturation * Math.cos(radians(hue));
+    y += saturation * Math.sin(radians(hue));
+  }
+  if (Math.hypot(x, y) < 1e-6) return null;
+  return wrap((Math.atan2(y, x) * 180) / Math.PI, 360);
+}
+
+const PALETTE_HUES = PALETTES.map(paletteHue);
+
+export function rankPalettesByHue(hue: number, exclude: number) {
+  return PALETTE_HUES.flatMap((candidate, index) =>
+    candidate === null || index === exclude ? [] : [{ index, distance: Math.abs(hueDelta(candidate, hue)) }],
+  )
+    .sort((a, b) => a.distance - b.distance)
+    .map(({ index }) => index);
+}
+
+export function keyPalette(hue: number, current: number, random = Math.random) {
+  const nearest = rankPalettesByHue(hue, current).slice(0, KEY_PALETTE_CHOICES);
+  return nearest[Math.floor(random() * nearest.length)];
+}
 
 function samplePalette(index: number, position: number, out: Float32Array) {
   const palette = PALETTES[index];
@@ -34,23 +81,36 @@ function samplePalette(index: number, position: number, out: Float32Array) {
   out[2] = from[2] + (to[2] - from[2]) * blend;
 }
 
-export function buildLut() {
+function fillLut(hue: number, keyStrength: number, minor: boolean) {
   styleCache.clear();
+  const currentOffset = keyTintOffset(PALETTE_HUES[settings.palette], hue) * keyStrength;
+  const previousOffset = keyTintOffset(PALETTE_HUES[previousPalette], hue) * keyStrength;
+  const modeHue = minor ? COOL_HUE : WARM_HUE;
+  const modeHueShift = MODE_HUE_SHIFT * keyStrength;
+  const modeLightness = (minor ? -MODE_LIGHTNESS_SHIFT : MODE_LIGHTNESS_SHIFT) * keyStrength;
   for (let i = 0; i < LUT_SIZE; i++) {
     const position = i / LUT_SIZE;
     samplePalette(settings.palette, position, currentHsl);
+    currentHsl[0] += currentOffset;
     if (fade < 1) {
       samplePalette(previousPalette, position, previousHsl);
+      previousHsl[0] += previousOffset;
       const eased = smoothstep(fade);
       const hueStep = hueDelta(previousHsl[0], currentHsl[0]);
       currentHsl[0] = previousHsl[0] + hueStep * eased;
       currentHsl[1] = lerp(previousHsl[1], currentHsl[1], eased);
       currentHsl[2] = lerp(previousHsl[2], currentHsl[2], eased);
     }
-    lut[i * 3] = wrap(currentHsl[0], 360);
+    const modeStep = modeHueShift * Math.sin(radians(hueDelta(currentHsl[0], modeHue)));
+    lut[i * 3] = wrap(currentHsl[0] + modeStep, 360);
     lut[i * 3 + 1] = currentHsl[1];
-    lut[i * 3 + 2] = currentHsl[2];
+    lut[i * 3 + 2] = clamp(currentHsl[2] + modeLightness, 0, 100);
   }
+}
+
+export function buildLut() {
+  const keyStrength = signal.key < 0 ? 0 : keyTintStrength(signal.keyConfidence);
+  fillLut(fx.keyHue, keyStrength, signal.key >= 12);
 }
 
 export function advancePaletteFade(delta: number) {
@@ -58,10 +118,10 @@ export function advancePaletteFade(delta: number) {
 }
 
 export function color(position: number, alpha = 1, lightness?: number) {
-  let x = (position * 0.5 + (fx.hue + fx.keyHue) / 360) % 1;
+  let x = (position * 0.5 + fx.hue / 360) % 1;
   if (x < 0) x += 1;
   const k = ((x * LUT_SIZE) | 0) * 3;
-  const mood = (signal.brightness - 0.5) * 14 - (signal.key >= 12 ? MINOR_DIMMING : 0);
+  const mood = (signal.brightness - 0.5) * 14;
   let light = lut[k + 2] + (lightness == null ? 0 : lightness - 58) + fx.beat * 8 + mood;
   light = light < 5 ? 5 : light > 95 ? 95 : light;
   const alphaSteps = alpha < 0 ? 0 : alpha > 1 ? 1000 : Math.round(alpha * 1000);

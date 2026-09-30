@@ -1,5 +1,6 @@
 import Meyda from 'meyda';
-import { approach, clamp01, hueDelta } from '../math';
+import { KEY_CONFIDENCE_FLOOR, keyHue } from '../color';
+import { approach, clamp01, hueDelta, wrap } from '../math';
 import { fx, signal } from '../state';
 import { audio } from './input';
 
@@ -47,11 +48,6 @@ function estimateKey() {
   return { key: best, score: bestScore };
 }
 
-function keyHue(key: number) {
-  const majorTonic = key >= 12 ? (key - 12 + 3) % 12 : key;
-  return ((majorTonic * 7) % 12) * 30;
-}
-
 function followKey(time: number, delta: number) {
   const { key, score } = estimateKey();
   signal.keyConfidence = approach(signal.keyConfidence, score, 1, delta);
@@ -59,10 +55,10 @@ function followKey(time: number, delta: number) {
     candidateKey = key;
     candidateSince = time;
   }
-  if (score > 0.5 && time - candidateSince > KEY_HOLD) signal.key = candidateKey;
-  if (signal.key < 0) return;
+  if (score > KEY_CONFIDENCE_FLOOR && time - candidateSince > KEY_HOLD) signal.key = candidateKey;
+  if (signal.key < 0 || signal.keyConfidence < KEY_CONFIDENCE_FLOOR) return;
   const step = hueDelta(fx.keyHue, keyHue(signal.key));
-  fx.keyHue = (fx.keyHue + step * Math.min(1, delta * KEY_HUE_SPEED) + 360) % 360;
+  fx.keyHue = wrap(fx.keyHue + step * Math.min(1, delta * KEY_HUE_SPEED), 360);
 }
 
 function bandShare(spectrum: Float32Array, lowHz: number, highHz: number) {
