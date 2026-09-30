@@ -5,6 +5,7 @@ import { applyGlitch } from './effects/glitch';
 import { drawLasers } from './effects/lasers';
 import { applyMirror } from './effects/mirror';
 import { drawParticles, drawShockwaves } from './effects/particles';
+import { applyPixelate } from './effects/pixelate';
 import { drawTransition } from './effects/transition';
 import { clamp01, frameAlpha, frameScale, signedRandom } from './math';
 import { currentMode } from './mode';
@@ -172,6 +173,7 @@ export function presentFrame() {
   applyBloom(o);
   if (fx.rainbowMix > 0.02) drawRainbowWash(o);
   o.globalCompositeOperation = 'source-over';
+  applyPixelate(o);
   drawTransition(o);
   applyGlitch(o);
   drawFlashes(o);

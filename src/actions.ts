@@ -1,6 +1,7 @@
 import { showMessage } from './dom';
 import { startTransition } from './effects/transition';
 import { clamp, wrap } from './math';
+import { PIXELATE_UNAVAILABLE, pixelateAvailable } from './mode';
 import { allowStrobe, revokeStrobe, strobeActive } from './motion';
 import { audio, disconnectAudio } from './audio/input';
 import { flushAutosave } from './presets/autosave';
@@ -8,7 +9,7 @@ import { addScene, createFolder, currentFolder, duplicateScene, playlist, select
 import { loadPreset, nextPreset, previousPreset, startPlaybackAt } from './presets/playlist';
 import { settings, TUNING_DEFAULTS } from './state';
 import { notify, ui, type LiveMode, type Overlay, type Screen } from './store';
-import { MIRROR_NAMES, PSY_NAMES } from './effects/options';
+import { MIRROR_NAMES, PIXEL_NAMES, PSY_NAMES } from './effects/options';
 
 type Settings = typeof settings;
 
@@ -32,6 +33,16 @@ export const cycleMirror = () => setMirror(settings.mirror + 1);
 export const setPsy = (index: number) => setSetting('psy', wrap(index, PSY_NAMES.length));
 
 export const cyclePsy = () => setPsy(settings.psy + 1);
+
+export const setPixelate = (index: number) => setSetting('pixelate', wrap(index, PIXEL_NAMES.length));
+
+export function cyclePixelate() {
+  if (!pixelateAvailable()) {
+    showMessage(PIXELATE_UNAVAILABLE);
+    return;
+  }
+  setPixelate(settings.pixelate + 1);
+}
 
 export const setGain = (value: number) => setSetting('gain', clamp(value, 0, 100));
 

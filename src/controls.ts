@@ -1,5 +1,6 @@
 import {
   cycleMirror,
+  cyclePixelate,
   cyclePsy,
   nextScene,
   nudgeGain,
@@ -143,6 +144,15 @@ export const KEYMAP: KeyEntry[] = [
     modes: LOOK_EDITING,
     matches: keyIn('k'),
     run: cycleMirror,
+  },
+  {
+    id: 'pixelate',
+    group: 'Style',
+    help: 'Cycle pixelate',
+    display: ['I'],
+    modes: LOOK_EDITING,
+    matches: keyIn('i'),
+    run: cyclePixelate,
   },
   {
     id: 'lasers',

@@ -25,6 +25,8 @@ export const TUNING_DEFAULTS = {
   particles: 1,
   colorSpeed: 1,
   trailLength: 0.86,
+  pixelSize: 12,
+  pixelGap: 0.15,
 };
 
 export const settings = {
@@ -32,6 +34,7 @@ export const settings = {
   palette: 1,
   psy: 0,
   mirror: 0,
+  pixelate: 0,
   trails: true,
   lasers: false,
   glitch: false,

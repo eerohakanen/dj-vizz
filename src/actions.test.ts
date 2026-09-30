@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   captureScene,
+  cyclePixelate,
   duplicateAndEditScene,
   editScene,
   enterEdit,
@@ -20,6 +21,7 @@ import {
 } from './actions';
 import { audio, disconnectAudio } from './audio/input';
 import { showMessage } from './dom';
+import { pixelateAvailable } from './mode';
 import { createPreset, library, playlist } from './presets/library';
 import { settings } from './state';
 import { ui } from './store';
@@ -28,7 +30,11 @@ vi.mock('./canvas', () => ({ output: {}, transitionCtx: {}, transitionFrame: {} 
 vi.mock('./modes/index', () => ({ MODES: Array.from({ length: 12 }, (_, index) => ({ name: `Mode ${index}` })) }));
 vi.mock('./mode', async () => {
   const { settings } = await import('./state');
-  return { setMode: vi.fn((index: number) => (settings.mode = index)) };
+  return {
+    setMode: vi.fn((index: number) => (settings.mode = index)),
+    pixelateAvailable: vi.fn(() => true),
+    PIXELATE_UNAVAILABLE: 'unavailable',
+  };
 });
 vi.mock('./color', () => ({ setPalette: vi.fn() }));
 vi.mock('./dom', () => ({ showMessage: vi.fn() }));
@@ -244,5 +250,21 @@ describe('scene guards', () => {
     nextScene();
     previousScene();
     expect(playlist.beats).toBe(5);
+  });
+});
+
+describe('cyclePixelate', () => {
+  it('steps through the pixel shapes in 2D modes', () => {
+    settings.pixelate = 3;
+    cyclePixelate();
+    expect(settings.pixelate).toBe(0);
+  });
+
+  it('leaves the shape alone and explains why in 3D modes', () => {
+    vi.mocked(pixelateAvailable).mockReturnValueOnce(false);
+    settings.pixelate = 1;
+    cyclePixelate();
+    expect(settings.pixelate).toBe(1);
+    expect(showMessage).toHaveBeenCalledWith('unavailable');
   });
 });

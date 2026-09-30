@@ -152,6 +152,31 @@ export const TUNING_SECTIONS = [
       },
     ],
   },
+  {
+    title: 'Pixelate',
+    group: 'look',
+    description: 'How the picture breaks into pixels while Pixelate is on.',
+    controls: [
+      {
+        key: 'pixelSize',
+        label: 'Pixel size',
+        min: 4,
+        max: 48,
+        step: 1,
+        format: (value) => `${value}px`,
+        description: 'Width of each pixel on screen. Bigger pixels make a chunkier, more abstract picture.',
+      },
+      {
+        key: 'pixelGap',
+        label: 'Pixel spacing',
+        min: 0,
+        max: 0.6,
+        step: 0.01,
+        format: percentOf(0, 1),
+        description: 'Dark gap between neighbouring pixels, as a share of the pixel size. Wide gaps give an LED-wall look.',
+      },
+    ],
+  },
 ] satisfies TuningSection[];
 
 type SectionIn<G extends TuningGroup> = Extract<(typeof TUNING_SECTIONS)[number], { group: G }>;

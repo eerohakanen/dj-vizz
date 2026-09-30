@@ -4,6 +4,7 @@ import type { LiveMode } from './store';
 
 vi.mock('./actions', () => ({
   cycleMirror: vi.fn(),
+  cyclePixelate: vi.fn(),
   cyclePsy: vi.fn(),
   nextScene: vi.fn(),
   nudgeGain: vi.fn(),
@@ -59,6 +60,7 @@ describe('modeIndexFor', () => {
 describe('resolveKey', () => {
   it('resolves letters case-insensitively', () => {
     expect(idFor('k')).toBe('mirror');
+    expect(idFor('i')).toBe('pixelate');
     expect(idFor('C', 'KeyC', true)).toBe('palette');
   });
 
@@ -79,7 +81,7 @@ describe('resolveKey', () => {
   });
 
   it('ignores look editing keys in play mode', () => {
-    for (const key of ['1', 'c', 'p', 'k', 'l', 'x', 's', 'a', 'Enter', 't']) {
+    for (const key of ['1', 'c', 'p', 'k', 'i', 'l', 'x', 's', 'a', 'Enter', 't']) {
       expect(idIn('play', key)).toBeUndefined();
     }
   });

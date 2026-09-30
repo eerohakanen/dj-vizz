@@ -8,6 +8,7 @@ import {
   currentFolder,
   deleteFolder,
   deletePreset,
+  describePreset,
   duplicateScene,
   importFolders,
   movePreset,
@@ -53,7 +54,7 @@ const legacyLibrary = (version: number) => ({ version, cur: 0, folders: [{ name:
 
 const calibration = { gain: 12, autoGain: false, noiseGate: 0.1, beatSensitivity: 1.7, dropSensitivity: 0.3 };
 
-const defaultLook = { mode: 0, palette: 1, psy: 0, mirror: 0, trails: true, lasers: false, glitch: false, strobe: false };
+const defaultLook = { mode: 0, palette: 1, psy: 0, mirror: 0, pixelate: 0, trails: true, lasers: false, glitch: false, strobe: false };
 
 beforeEach(() => {
   Object.assign(settings, TUNING_DEFAULTS, defaultLook);
@@ -69,6 +70,7 @@ describe('migrateLibrary', () => {
       palette: 4,
       mirror: 2,
       psy: 1,
+      pixelate: 0,
       effects: { trails: false, lasers: true, glitch: false, strobe: true },
       tuning: { reactivity: 2.2, motion: 1.5 },
     });
@@ -149,6 +151,19 @@ describe('applyPreset', () => {
     expect(settings.flashes).toBe(0);
   });
 
+  it('clamps pixel size and spacing and wraps the pixel shape', () => {
+    applyPreset(createPreset('Blocky', 0, 0, { pixelate: 5, tuning: { pixelSize: 200, pixelGap: -1 } }));
+    expect(settings.pixelate).toBe(1);
+    expect(settings.pixelSize).toBe(48);
+    expect(settings.pixelGap).toBe(0);
+  });
+
+  it('turns pixelate off for presets saved before it existed', () => {
+    settings.pixelate = 2;
+    applyPreset(migrateLibrary(legacyLibrary(2))!.folders[0].presets[0]);
+    expect(settings.pixelate).toBe(0);
+  });
+
   it('resets look tuning the preset does not mention to defaults', () => {
     settings.punch = 1.9;
     applyPreset(createPreset('Sparse', 0, 0, { tuning: {} }));
@@ -161,6 +176,7 @@ describe('applyPreset', () => {
       palette: 9,
       mirror: 3,
       psy: 4,
+      pixelate: 2,
       trails: false,
       lasers: true,
       glitch: true,
@@ -172,6 +188,8 @@ describe('applyPreset', () => {
       particles: 1.8,
       colorSpeed: 0.2,
       trailLength: 0.9,
+      pixelSize: 30,
+      pixelGap: 0.4,
     };
     Object.assign(settings, look);
     const preset = snapshot('Round trip');
@@ -369,5 +387,12 @@ describe('scene selection', () => {
     playlist.selected = playlist.index = 2;
     movePreset(1, 1);
     expect([playlist.selected, playlist.index]).toEqual([1, 1]);
+  });
+});
+
+describe('describePreset', () => {
+  it('names the pixel shape when pixelate is on', () => {
+    expect(describePreset(createPreset('Dots', 2, 3, { pixelate: 2 }))).toBe('Mode 2 · Ocean · Round pixels');
+    expect(describePreset(createPreset('Plain', 2, 3))).not.toContain('pixels');
   });
 });

@@ -9,7 +9,7 @@ import { PALETTES } from '../palettes';
 import { settings, TUNING_DEFAULTS } from '../state';
 import { notify } from '../store';
 import { LOOK_CONTROLS, type LookTuningKey } from '../tuning';
-import { MIRROR_NAMES, PSY_NAMES } from '../effects/options';
+import { MIRROR_NAMES, PIXEL_NAMES, PSY_NAMES } from '../effects/options';
 
 const STORAGE_KEY = 'djviz.presets.v4';
 const LEGACY_STORAGE_KEYS = ['djviz.presets.v3', 'djviz.presets.v2', 'djviz.presets.v1'];
@@ -33,6 +33,7 @@ export interface Preset {
   palette: number;
   mirror: number;
   psy: number;
+  pixelate: number;
   effects: PresetEffects;
   tuning: LookTuning;
 }
@@ -76,6 +77,7 @@ export const createPreset = (
   palette,
   mirror: 0,
   psy: 0,
+  pixelate: 0,
   tuning: lookTuning(TUNING_DEFAULTS),
   ...overrides,
   effects: { ...DEFAULT_EFFECTS, ...overrides?.effects },
@@ -123,6 +125,7 @@ function migratePreset(raw: Record<string, unknown>, version: number): Preset {
     palette,
     mirror: numberOr(legacy ? raw.kal : raw.mirror, 0),
     psy: numberOr(raw.psy, 0),
+    pixelate: numberOr(raw.pixelate, 0),
     effects: effectFlags(effect),
     tuning: Object.fromEntries(
       LOOK_CONTROLS.flatMap(({ key }) => (isNumber(tuningSource[key]) ? [[key, tuningSource[key]]] : [])),
@@ -192,7 +195,7 @@ export function saveLibrary() {
 
 export const currentFolder = (): Folder | undefined => library.folders[library.cur];
 
-type Look = Pick<typeof settings, 'mode' | 'palette' | 'psy' | 'mirror' | keyof PresetEffects | LookTuningKey>;
+type Look = Pick<typeof settings, 'mode' | 'palette' | 'psy' | 'mirror' | 'pixelate' | keyof PresetEffects | LookTuningKey>;
 
 const presetFromLook = (name: string, look: Look): Preset => ({
   name,
@@ -200,6 +203,7 @@ const presetFromLook = (name: string, look: Look): Preset => ({
   palette: look.palette,
   mirror: look.mirror,
   psy: look.psy,
+  pixelate: look.pixelate,
   effects: effectFlags((key) => look[key]),
   tuning: lookTuning(look),
 });
@@ -212,6 +216,7 @@ export function resolveLook(preset: Preset): Look {
     palette: wrap(numberOr(preset.palette, settings.palette), PALETTES.length),
     psy: wrap(numberOr(preset.psy, 0), PSY_NAMES.length),
     mirror: wrap(numberOr(preset.mirror, 0), MIRROR_NAMES.length),
+    pixelate: wrap(numberOr(preset.pixelate, 0), PIXEL_NAMES.length),
     ...Object.fromEntries(EFFECT_KEYS.map((key) => [key, !!preset.effects?.[key]])),
     ...Object.fromEntries(
       LOOK_CONTROLS.map(({ key, min, max }) => {
@@ -372,5 +377,6 @@ export function describePreset(preset: Preset) {
   const parts = [MODES[preset.mode]?.name || '?', PALETTES[preset.palette]?.name || '?'];
   if (preset.psy) parts.push(PSY_NAMES[preset.psy]);
   if (preset.mirror) parts.push(MIRROR_NAMES[preset.mirror]);
+  if (preset.pixelate) parts.push(`${PIXEL_NAMES[preset.pixelate]} pixels`);
   return parts.join(' · ');
 }

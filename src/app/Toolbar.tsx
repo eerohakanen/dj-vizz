@@ -50,6 +50,7 @@ import {
   previousScene,
   setHideLocked,
   setMirror,
+  setPixelate,
   setPsy,
   setSetting,
   switchToEdit,
@@ -61,14 +62,14 @@ import { audio } from '@/audio/input';
 import { setPalette } from '@/color';
 import { shortcutFor, shortcutKeys } from '@/controls';
 import { triggerDrop } from '@/events';
-import { setMode } from '@/mode';
+import { pixelateAvailable, setMode } from '@/mode';
 import { MODES } from '@/modes/index';
 import { PALETTES } from '@/palettes';
 import { currentFolder, playlist } from '@/presets/library';
 import { showMessage } from '@/dom';
 import { settings } from '@/state';
 import { ui, useEngine } from '@/store';
-import { MIRROR_NAMES, PSY_NAMES } from '@/effects/options';
+import { MIRROR_NAMES, PIXEL_NAMES, PSY_NAMES } from '@/effects/options';
 import { cn } from '@/lib/utils';
 import { SOURCES, sourceLabel } from './labels';
 import { FLOATING_PANEL, SourcePicker, swatchStyle } from './shared';
@@ -142,14 +143,15 @@ interface OptionSubmenuProps {
   names: readonly string[];
   value: number;
   onChange: (index: number) => void;
+  unavailable?: string;
 }
 
-function OptionSubmenu({ label, shortcut, names, value, onChange }: OptionSubmenuProps) {
+function OptionSubmenu({ label, shortcut, names, value, onChange, unavailable }: OptionSubmenuProps) {
   return (
     <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
+      <DropdownMenuSubTrigger disabled={!!unavailable} className="data-disabled:opacity-50">
         {label}
-        <span className="ml-auto text-xs text-muted-foreground">{names[value]}</span>
+        <span className="ml-auto text-xs text-muted-foreground">{unavailable ?? names[value]}</span>
         <DropdownMenuShortcut className="ml-2">{shortcut}</DropdownMenuShortcut>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
@@ -166,7 +168,7 @@ function OptionSubmenu({ label, shortcut, names, value, onChange }: OptionSubmen
 }
 
 function activeEffectCount() {
-  return TOGGLES.filter(({ key }) => effectEnabled(key)).length + Number(settings.psy > 0) + Number(settings.mirror > 0);
+  return TOGGLES.filter(({ key }) => effectEnabled(key)).length + Number(settings.psy > 0) + Number(settings.mirror > 0) + Number(settings.pixelate > 0 && pixelateAvailable());
 }
 
 function EffectsMenu() {
@@ -191,6 +193,14 @@ function EffectsMenu() {
       <DropdownMenuContent side="top" align="start" className="w-56">
         <OptionSubmenu label="Psychedelic" shortcut={shortcutFor('psy')} names={PSY_NAMES} value={settings.psy} onChange={setPsy} />
         <OptionSubmenu label="Mirror" shortcut={shortcutFor('mirror')} names={MIRROR_NAMES} value={settings.mirror} onChange={setMirror} />
+        <OptionSubmenu
+          label="Pixelate"
+          shortcut={shortcutFor('pixelate')}
+          names={PIXEL_NAMES}
+          value={settings.pixelate}
+          onChange={setPixelate}
+          unavailable={pixelateAvailable() ? undefined : 'Not in 3D'}
+        />
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-xs text-muted-foreground">Layers</DropdownMenuLabel>
         {TOGGLES.map(({ key, label }) => (

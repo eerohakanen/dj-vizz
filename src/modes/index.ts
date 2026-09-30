@@ -17,6 +17,7 @@ export interface Mode {
   trails: boolean;
   fade: number;
   opaque: boolean;
+  threeD: boolean;
   onBeat: () => void;
 }
 
@@ -26,6 +27,7 @@ const defineMode = (name: string, draw: () => void, options?: Partial<Mode>): Mo
   trails: true,
   fade: 0.22,
   opaque: false,
+  threeD: false,
   onBeat: () => {},
   ...options,
 });
@@ -41,6 +43,6 @@ export const MODES = [
   defineMode('Blob', drawBlob),
   defineMode('Hex', drawHex),
   defineMode('Hypno', drawHypno),
-  defineMode('Deep Space', drawDeepSpace, { trails: false, opaque: true, onBeat: pulseDeepSpace }),
-  defineMode('Model', drawModel, { trails: false, opaque: true, onBeat: pulseModel }),
+  defineMode('Deep Space', drawDeepSpace, { trails: false, opaque: true, threeD: true, onBeat: pulseDeepSpace }),
+  defineMode('Model', drawModel, { trails: false, opaque: true, threeD: true, onBeat: pulseModel }),
 ];
