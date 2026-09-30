@@ -2,39 +2,42 @@
 @import "tw-animate-css";
 
 :root {
-  --radius: 0.5rem;
-  --background: #efeae0;
-  --foreground: #1f2a2e;
-  --card: #f7f3eb;
-  --card-foreground: #1f2a2e;
-  --popover: #f7f3eb;
-  --popover-foreground: #1f2a2e;
-  --primary: #ff7a3d;
-  --primary-foreground: #1f2a2e;
-  --secondary: #e7e0d3;
-  --secondary-foreground: #1f2a2e;
-  --muted: #e7e0d3;
-  --muted-foreground: #58615f;
-  --accent: #e3dbcc;
-  --accent-foreground: #1f2a2e;
+  --radius: 0rem;
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --secondary: #efefef;
+  --secondary-foreground: #000000;
+  --muted: #efefef;
+  --muted-foreground: #4a4a4a;
+  --accent: #efefef;
+  --accent-foreground: #000000;
   --destructive: #b3261e;
-  --border: #c4bdb0;
-  --input: #7d7668;
-  --ring: #d4561c;
-  --brand: #1c8c86;
-  --brand-ink: #126a65;
+  --border: #000000;
+  --input: #000000;
+  --ring: #000000;
+  --live: #ff3b30;
+  --live-foreground: #000000;
+  --brand: var(--live);
+  --brand-ink: #000000;
   --side-panel-width: 28rem;
 }
 
 @theme inline {
-  --font-sans: "Rubik", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "Courier Prime", "Courier New", Courier, ui-monospace, monospace;
-  --font-display: "Bowlby One", Impact, "Arial Black", ui-sans-serif, sans-serif;
-  --shadow-hard: 3px 3px 0 var(--foreground);
-  --radius-sm: calc(var(--radius) - 3px);
-  --radius-md: calc(var(--radius) - 2px);
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: "Space Grotesk", "Arial Black", ui-sans-serif, sans-serif;
+  --shadow-hard: 4px 4px 0 var(--foreground);
+  --shadow-live: 3px 3px 0 var(--live);
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: var(--radius);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -55,6 +58,8 @@
   --color-ring: var(--ring);
   --color-brand: var(--brand);
   --color-brand-ink: var(--brand-ink);
+  --color-live: var(--live);
+  --color-live-foreground: var(--live-foreground);
 }
 
 @layer base {

@@ -17,7 +17,7 @@ function SourceStep({ onConnected }: { onConnected: () => void }) {
   return (
     <>
       <div className="space-y-2 text-center">
-        <h2 className="font-display text-2xl tracking-[-0.01em] text-balance sm:text-3xl">{setupHeading()}</h2>
+        <h2 className="font-display text-2xl font-bold tracking-[-0.04em] uppercase text-balance sm:text-3xl">{setupHeading()}</h2>
         <p className="text-muted-foreground">Pick an audio source. Your browser will ask for permission next.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

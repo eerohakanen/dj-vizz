@@ -18,10 +18,9 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import type { Palette } from '@/palettes';
-import grainUrl from '@/assets/grain.png';
 import { MENU_SCREEN_LABELS, SOURCES, type SourceOption } from './labels';
 
-export const FLOATING_PANEL = 'bg-card shadow-hard';
+export const FLOATING_PANEL = 'border-2 border-foreground bg-card shadow-hard';
 
 export const SIDE_PANEL_WIDTH = 'sm:max-w-(--side-panel-width)';
 
@@ -49,14 +48,10 @@ export function MenuBackdrop() {
       <svg
         viewBox={`0 0 ${WAVE_WIDTH} ${WAVE_HEIGHT}`}
         preserveAspectRatio="none"
-        className="absolute inset-x-0 bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] h-16 w-full text-brand opacity-70 sm:h-24"
+        className="absolute inset-x-0 bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] h-16 w-full text-foreground sm:h-24"
       >
         <path d={WAVEFORM} fill="none" stroke="currentColor" strokeWidth={1.25} vectorEffect="non-scaling-stroke" />
       </svg>
-      <div
-        className="absolute inset-0 opacity-[0.07] mix-blend-multiply [image-rendering:pixelated]"
-        style={{ backgroundImage: `url(${grainUrl})`, backgroundSize: '144px 144px' }}
-      />
     </div>
   );
 }
@@ -137,7 +132,7 @@ export function swatchStyle(palette: Palette) {
 
 export function IconTile({ children }: { children: ReactNode }) {
   return (
-    <div className="mb-2 flex size-11 items-center justify-center rounded-md border border-primary/50 bg-primary/15 text-foreground">{children}</div>
+    <div className="mb-2 flex size-11 items-center justify-center rounded-md border border-foreground bg-live text-live-foreground">{children}</div>
   );
 }
 

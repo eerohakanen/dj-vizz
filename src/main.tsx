@@ -1,6 +1,7 @@
 import './index.css';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
+import { syncAccent } from './accent';
 import { analyse } from './audio/analysis';
 import { adaptQuality, output, resize } from './canvas';
 import { advancePaletteFade, buildLut } from './color';
@@ -42,6 +43,8 @@ function frame(timestamp: number) {
   lastTimestamp = timestamp;
   if (ui.paused || !visualsShown()) {
     wasPaused = true;
+    buildLut();
+    syncAccent();
     requestAnimationFrame(frame);
     return;
   }
@@ -56,6 +59,7 @@ function frame(timestamp: number) {
   advanceTimedPlaylist();
   analyse();
   buildLut();
+  syncAccent();
   renderScene();
   presentFrame();
   requestAnimationFrame(frame);
