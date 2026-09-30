@@ -6,7 +6,7 @@ import { drawLasers } from './effects/lasers';
 import { applyMirror } from './effects/mirror';
 import { drawParticles, drawShockwaves } from './effects/particles';
 import { drawTransition } from './effects/transition';
-import { frameAlpha, signedRandom } from './math';
+import { frameAlpha, frameScale, signedRandom } from './math';
 import { currentMode } from './mode';
 import { clock, fx, settings, signal, view } from './state';
 
@@ -19,6 +19,7 @@ const calmScale = () => 1 - CALM_DAMPING * fx.calm;
 function feedPreviousFrame(ctx: CanvasRenderingContext2D) {
   const { width, height } = view;
   const { gate, punchBass, punchMid } = signal;
+  const step = frameScale(clock.delta);
   const cx = width / 2 + Math.sin(clock.time * 0.7) * width * 0.07 * fx.vortexMix;
   const cy = height / 2 + Math.cos(clock.time * 0.53) * height * 0.07 * fx.vortexMix;
   const rotation =
@@ -32,8 +33,8 @@ function feedPreviousFrame(ctx: CanvasRenderingContext2D) {
   ctx.save();
   ctx.globalAlpha = Math.min(0.95, frameAlpha(settings.trailLength * (1 - TRAIL_CALM_SHORTENING * fx.calm) + fx.vortexMix * 0.07, clock.delta));
   ctx.translate(cx, cy);
-  ctx.rotate(rotation);
-  ctx.scale(zoom, zoom);
+  ctx.rotate(rotation * step);
+  ctx.scale(Math.pow(zoom, step), Math.pow(zoom, step));
   ctx.translate(-cx, -cy);
   ctx.drawImage(scene, 0, 0);
   ctx.restore();

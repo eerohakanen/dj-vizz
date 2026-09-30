@@ -1,6 +1,6 @@
 import { onBeat, onHat, onKick, onSnare, triggerDrop } from '../events';
-import { approach, clamp01, decay, follow, frameScale, lerp } from '../math';
-import { clock, fx, settings, signal } from '../state';
+import { approach, decay, follow, frameScale, lerp } from '../math';
+import { clock, fx, settings, signal, TUNING_DEFAULTS } from '../state';
 import { detectDrums } from './drums';
 import { audio } from './input';
 import { analyseMusic, tensionPeak } from './musical';
@@ -64,7 +64,7 @@ function decayEffects(delta: number) {
 }
 
 function fillSpectrum(frequencies: Uint8Array, gain: number, delta: number) {
-  const boost = 1 + (fx.beat * BEAT_BOOST + fx.drop * DROP_BOOST) * clamp01(settings.reactivity);
+  const boost = 1 + (fx.beat * BEAT_BOOST + fx.drop * DROP_BOOST) * (settings.reactivity / TUNING_DEFAULTS.reactivity);
   for (let i = 0; i < BAND_COUNT; i++) {
     let max = 0;
     for (let j = bandStart[i]; j < bandEnd[i]; j++) if (frequencies[j] > max) max = frequencies[j];

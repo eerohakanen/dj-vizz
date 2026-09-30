@@ -23,7 +23,7 @@ export function drawTunnel() {
   const sides = SIDE_COUNTS[Math.floor(fx.scroll / 8) % SIDE_COUNTS.length];
   const step = frameScale(clock.delta);
   if (signal.gate < 0.02) resetRings();
-  else if (Math.random() < signal.gate * (0.04 + signal.punchMid * 0.3) * step) spawnRing();
+  else if (Math.random() < 1 - Math.pow(1 - signal.gate * (0.04 + signal.punchMid * 0.3), step)) spawnRing();
   let alive = 0;
   for (const ring of rings) {
     if (ring.alpha <= 0.02) continue;
