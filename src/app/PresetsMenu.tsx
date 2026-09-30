@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { enterEdit, enterPlay, explore, leaveVisualizer, newPreset } from '@/actions';
 import { showMessage, showWarning } from '@/dom';
-import { findTransition } from '@/effects/transition';
+import { DEFAULT_TRANSITION, findTransition } from '@/effects/transition';
 import { PALETTES } from '@/palettes';
 import { changeOption } from '@/presets/change';
 import { deleteFolder, exportLibrary, importLibraryFile, library, renameFolder, type Folder } from '@/presets/library';
@@ -105,7 +105,7 @@ function PresetCard({ folder, index, onRename, onDelete }: PresetCardProps) {
         <SceneSwatches folder={folder} />
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge variant="secondary">{changeOption(folder.changeOn).label}</Badge>
-          <Badge variant="outline">{findTransition(folder.transition)?.label} transition</Badge>
+          <Badge variant="outline">{(findTransition(folder.transition) ?? findTransition(DEFAULT_TRANSITION))?.label} transition</Badge>
           {folder.shuffle && (
             <Badge variant="outline">
               <Shuffle />
@@ -115,11 +115,11 @@ function PresetCard({ folder, index, onRename, onDelete }: PresetCardProps) {
         </div>
       </CardContent>
       <CardFooter className="mt-auto gap-2">
-        <Button className="flex-1" disabled={empty} onClick={() => enterPlay(index)}>
+        <Button className="flex-1" disabled={empty} onClick={() => enterPlay(index)} aria-label={empty ? undefined : `Play ${folder.name}`}>
           <Play />
           {empty ? 'Add scenes to play' : 'Play'}
         </Button>
-        <Button variant="outline" className="flex-1" onClick={() => enterEdit(index)}>
+        <Button variant="outline" className="flex-1" onClick={() => enterEdit(index)} aria-label={`Edit ${folder.name}`}>
           <Pencil />
           Edit
         </Button>

@@ -1,8 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../canvas', () => ({ output: {}, transitionCtx: {}, transitionFrame: {} }));
+vi.mock('../canvas', () => ({ output: {}, transitionCtx: { drawImage: vi.fn() }, transitionFrame: {} }));
 
-import { DEFAULT_TRANSITION, findTransition, TRANSITIONS, transitionDuration, transitionStyle } from './transition';
+import { clock } from '../state';
+import {
+  DEFAULT_TRANSITION,
+  drawTransition,
+  findTransition,
+  startTransition,
+  TRANSITIONS,
+  transitionDuration,
+  transitionStyle,
+} from './transition';
 
 describe('transitionDuration', () => {
   it('keeps the default when tempo is not locked', () => {
@@ -62,5 +71,22 @@ describe('findTransition', () => {
 
   it('defaults to a listed kind', () => {
     expect(TRANSITIONS.map(({ value }) => value)).toContain(DEFAULT_TRANSITION);
+  });
+});
+
+describe('startTransition', () => {
+  const drawsOverlay = () => {
+    const context = { save: vi.fn(), restore: vi.fn(), drawImage: vi.fn(), globalAlpha: 1 };
+    drawTransition(context as unknown as CanvasRenderingContext2D);
+    return context.save.mock.calls.length > 0;
+  };
+
+  it('clears a running transition on a hard cut', () => {
+    clock.time = 10;
+    startTransition('fade');
+    clock.time = 10.2;
+    expect(drawsOverlay()).toBe(true);
+    startTransition('cut');
+    expect(drawsOverlay()).toBe(false);
   });
 });

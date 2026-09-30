@@ -12,6 +12,7 @@ const STYLE_COUNT = 4;
 const CROSSFADE = STYLE_COUNT;
 const STRIPS = 24;
 const CUT = -1;
+const IDLE_START = -9;
 
 export const TRANSITIONS = [
   { value: 'random', label: 'Random' },
@@ -31,7 +32,7 @@ export const findTransition = (value: unknown) => TRANSITIONS.find((option) => o
 
 const STYLE_INDEX: Record<Exclude<TransitionKind, 'random' | 'cut'>, number> = { zoom: 0, spin: 1, iris: 2, strips: 3, fade: CROSSFADE };
 
-let startedAt = -9;
+let startedAt = IDLE_START;
 let duration = DEFAULT_DURATION;
 let style = 0;
 
@@ -48,7 +49,10 @@ export function transitionStyle(reducedMotion: boolean, random: number, kind: Tr
 export function startTransition(kind: TransitionKind = DEFAULT_TRANSITION) {
   if (clock.time < 0.5) return;
   const next = transitionStyle(comfort.reduced, Math.random(), kind);
-  if (next === CUT) return;
+  if (next === CUT) {
+    startedAt = IDLE_START;
+    return;
+  }
   transitionCtx.drawImage(output, 0, 0);
   startedAt = clock.time;
   duration = transitionDuration(signal.bpm);
