@@ -31,6 +31,10 @@ declare global {
   interface Window {
     webkitAudioContext?: typeof AudioContext;
   }
+
+  class CaptureController {
+    setFocusBehavior(behavior: 'focus-captured-surface' | 'no-focus-change'): void;
+  }
 }
 
 let context: AudioContext | null = null;
@@ -97,22 +101,44 @@ function useStream(mediaStream: MediaStream, kind: AudioSourceKind) {
   notify();
 }
 
-export async function captureWindow() {
-  try {
-    const captured = await navigator.mediaDevices.getDisplayMedia(DISPLAY_CAPTURE);
-    if (!captured.getAudioTracks().length) {
-      captured.getTracks().forEach((track) => track.stop());
-      return { error: 'No audio was shared. Pick a tab, window or entire screen and turn on "Share audio" in the picker.' };
-    }
-    captured.getVideoTracks().forEach((track) => track.stop());
-    useStream(new MediaStream(captured.getAudioTracks()), 'window');
-    return { ok: true };
-  } catch (error) {
-    return { error: `Could not capture audio (${(error as Error).name}). If embedded, open this page in its own browser tab.` };
-  }
+type CaptureResult = { ok: true; error?: undefined } | { ok?: false; error: string };
+
+export const canCaptureWindow = !!navigator.mediaDevices?.getDisplayMedia;
+
+function createCaptureController() {
+  return 'CaptureController' in window ? new CaptureController() : undefined;
 }
 
-export async function captureMicrophone() {
+function keepFocusHere(controller: CaptureController | undefined) {
+  try {
+    controller?.setFocusBehavior('no-focus-change');
+  } catch {}
+}
+
+export async function captureWindow(): Promise<CaptureResult> {
+  if (!canCaptureWindow) {
+    return { error: 'Window audio is not supported on mobile browsers. Use Microphone instead.' };
+  }
+  const controller = createCaptureController();
+  let captured: MediaStream;
+  try {
+    captured = await navigator.mediaDevices.getDisplayMedia({ ...DISPLAY_CAPTURE, controller } as DisplayMediaStreamOptions);
+  } catch (error) {
+    const name = (error as Error).name;
+    if (name === 'NotAllowedError') return { error: 'Sharing cancelled.' };
+    return { error: `Could not capture audio (${name}). If embedded, open this page in its own browser tab.` };
+  }
+  keepFocusHere(controller);
+  if (!captured.getAudioTracks().length) {
+    captured.getTracks().forEach((track) => track.stop());
+    return { error: 'No audio was shared. Pick a tab, window or entire screen and turn on "Share audio" in the picker.' };
+  }
+  captured.getVideoTracks().forEach((track) => track.stop());
+  useStream(new MediaStream(captured.getAudioTracks()), 'window');
+  return { ok: true };
+}
+
+export async function captureMicrophone(): Promise<CaptureResult> {
   try {
     useStream(await navigator.mediaDevices.getUserMedia({ audio: UNPROCESSED }), 'mic');
     return { ok: true };

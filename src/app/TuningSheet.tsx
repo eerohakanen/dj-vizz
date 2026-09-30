@@ -7,8 +7,8 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { closeOverlay, resetTuning, setGain, setSetting } from '@/actions';
-import { audio, captureMicrophone, captureWindow } from '@/audio/input';
-import { showMessage } from '@/dom';
+import { audio, canCaptureWindow, captureMicrophone, captureWindow } from '@/audio/input';
+import { showWarning } from '@/dom';
 import { settings, signal } from '@/state';
 import { ui, useEngine } from '@/store';
 import { GAIN_CONTROL, TUNING_SECTIONS, type TuningControl } from '@/tuning';
@@ -28,7 +28,7 @@ const readEnergy = () => signal.energy;
 
 async function switchSource(capture: typeof captureWindow) {
   const result = await capture();
-  if (result.error) showMessage(result.error);
+  if (result.error) showWarning(result.error);
 }
 
 export function SourcePicker() {
@@ -36,7 +36,13 @@ export function SourcePicker() {
     <div className="space-y-2">
       <Label>Source</Label>
       <div className="grid grid-cols-2 gap-2">
-        <Button variant={audio.source === 'window' ? 'default' : 'outline'} size="sm" onClick={() => switchSource(captureWindow)}>
+        <Button
+          variant={audio.source === 'window' ? 'default' : 'outline'}
+          size="sm"
+          disabled={!canCaptureWindow}
+          title={canCaptureWindow ? undefined : 'Not supported on mobile browsers'}
+          onClick={() => switchSource(captureWindow)}
+        >
           <MonitorSpeaker />
           Window
         </Button>

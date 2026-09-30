@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { audio, captureMicrophone, captureWindow } from '@/audio/input';
+import { audio, canCaptureWindow, captureMicrophone, captureWindow } from '@/audio/input';
+import { showWarning } from '@/dom';
 import { library, playlist } from '@/presets/library';
 import { playFolder, setChangeOn, setShuffle } from '@/presets/playlist';
 import { cn } from '@/lib/utils';
@@ -16,7 +17,10 @@ const SOURCES = [
     kind: 'window',
     icon: MonitorSpeaker,
     title: 'Window audio',
-    description: 'Share a tab, window or your entire screen. Turn on "Share audio" in the picker.',
+    description: canCaptureWindow
+      ? 'Share a tab, window or your entire screen. Turn on "Share audio" in the picker.'
+      : 'Not supported on mobile browsers. Use Microphone instead.',
+    available: canCaptureWindow,
     capture: captureWindow,
   },
   {
@@ -24,6 +28,7 @@ const SOURCES = [
     icon: MicIcon,
     title: 'Microphone',
     description: 'Listen to the room through your mic or an audio interface.',
+    available: true,
     capture: captureMicrophone,
   },
 ];
@@ -54,15 +59,13 @@ type Source = (typeof SOURCES)[number];
 
 function SourceStep({ onConnected }: { onConnected: () => void }) {
   const [pending, setPending] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const connect = async (source: Source) => {
     setPending(source.kind);
-    setError(null);
     const result = await source.capture();
     setPending(null);
     if (result.ok) onConnected();
-    else setError(result.error ?? null);
+    else showWarning(result.error);
   };
 
   return (
@@ -76,7 +79,7 @@ function SourceStep({ onConnected }: { onConnected: () => void }) {
           <button
             key={source.kind}
             type="button"
-            disabled={!!pending}
+            disabled={!!pending || !source.available}
             onClick={() => connect(source)}
             className="group rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
           >
@@ -92,11 +95,6 @@ function SourceStep({ onConnected }: { onConnected: () => void }) {
           </button>
         ))}
       </div>
-      {error && (
-        <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </p>
-      )}
     </>
   );
 }
