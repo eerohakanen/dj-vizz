@@ -37,6 +37,7 @@ declare global {
 let context: AudioContext | null = null;
 let source: MediaStreamAudioSourceNode | null = null;
 let stream: MediaStream | null = null;
+let captureTicket = 0;
 
 function ensureContext() {
   if (!context) {
@@ -59,7 +60,17 @@ function ensureContext() {
   return context;
 }
 
+function startCapture() {
+  const ticket = ++captureTicket;
+  return () => ticket === captureTicket;
+}
+
+function stopTracks(mediaStream: MediaStream) {
+  mediaStream.getTracks().forEach((track) => track.stop());
+}
+
 export function disconnectAudio() {
+  captureTicket++;
   stopInput();
   notify();
 }
@@ -99,7 +110,12 @@ function useStream(mediaStream: MediaStream, kind: AudioSourceKind) {
   notify();
 }
 
-type CaptureResult = { ok: true; error?: undefined } | { ok?: false; error: string };
+type CaptureResult =
+  | { ok: true; error?: undefined; superseded?: undefined }
+  | { ok?: false; error: string; superseded?: undefined }
+  | { ok?: false; error?: undefined; superseded: true };
+
+const SUPERSEDED = { superseded: true } as const;
 
 export const canCaptureWindow = !!navigator.mediaDevices?.getDisplayMedia;
 
@@ -117,18 +133,24 @@ export async function captureWindow(): Promise<CaptureResult> {
   if (!canCaptureWindow) {
     return { error: WINDOW_UNSUPPORTED };
   }
+  const isCurrent = startCapture();
   const controller = createCaptureController();
   let captured: MediaStream;
   try {
     captured = await navigator.mediaDevices.getDisplayMedia({ ...DISPLAY_CAPTURE, controller } as DisplayMediaStreamOptions);
   } catch (error) {
+    if (!isCurrent()) return SUPERSEDED;
     const name = (error as Error).name;
     if (name === 'NotAllowedError') return { error: 'Sharing cancelled.' };
     return { error: `Could not capture audio (${name}). If embedded, open this page in its own browser tab.` };
   }
+  if (!isCurrent()) {
+    stopTracks(captured);
+    return SUPERSEDED;
+  }
   keepFocusHere(controller);
   if (!captured.getAudioTracks().length) {
-    captured.getTracks().forEach((track) => track.stop());
+    stopTracks(captured);
     return { error: 'No audio was shared. Pick a tab, window or entire screen and turn on "Share audio" in the picker.' };
   }
   captured.getVideoTracks().forEach((track) => track.stop());
@@ -137,10 +159,17 @@ export async function captureWindow(): Promise<CaptureResult> {
 }
 
 export async function captureMicrophone(): Promise<CaptureResult> {
+  const isCurrent = startCapture();
   try {
-    useStream(await navigator.mediaDevices.getUserMedia({ audio: UNPROCESSED }), 'mic');
+    const captured = await navigator.mediaDevices.getUserMedia({ audio: UNPROCESSED });
+    if (!isCurrent()) {
+      stopTracks(captured);
+      return SUPERSEDED;
+    }
+    useStream(captured, 'mic');
     return { ok: true };
   } catch (error) {
+    if (!isCurrent()) return SUPERSEDED;
     return { error: `Microphone blocked (${(error as Error).name}). Allow microphone access for this page and try again.` };
   }
 }

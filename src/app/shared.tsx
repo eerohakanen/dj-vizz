@@ -100,7 +100,7 @@ export function useSourceCapture(onConnected?: () => void) {
     const result = await source.capture();
     setPending(null);
     if (result.ok) onConnected?.();
-    else showWarning(result.error);
+    else if (result.error) showWarning(result.error);
   };
   return { pending, connect };
 }

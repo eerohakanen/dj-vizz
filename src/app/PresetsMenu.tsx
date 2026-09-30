@@ -259,7 +259,7 @@ export function PresetsMenu() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={confirmDelete}>
+            <AlertDialogAction variant="destructive" onClick={confirmDelete}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
