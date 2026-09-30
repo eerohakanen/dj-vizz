@@ -400,7 +400,7 @@ function steer(stage: DeepSpaceStage) {
 function fly(stage: DeepSpaceStage) {
   const { gate, energy, punchBass } = signal;
   const target = (8 + gate * (energy * 40 + punchBass * 90 + kick.value * 40) + fx.drop * 650) * settings.motion;
-  speed += (target - speed) * Math.min(1, clock.delta * (target > speed ? 8 : 2.5));
+  speed = approach(speed, target, target > speed ? 8 : 2.5, clock.delta);
   const offset = stage.shared.uOffset.value.addScaledVector(stage.heading, speed * clock.delta);
   offset.set(offset.x % CUBE, offset.y % CUBE, offset.z % CUBE);
 }

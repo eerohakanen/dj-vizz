@@ -32,8 +32,6 @@ function Steps({ step }: { step: number }) {
   );
 }
 
-type Source = (typeof SOURCES)[number];
-
 function SourceStep({ onConnected }: { onConnected: () => void }) {
   const { pending, connect } = useSourceCapture(onConnected);
 

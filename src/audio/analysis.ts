@@ -94,8 +94,8 @@ export function analyse() {
   const mid = removeNoiseFloor(rawMid) * gain;
   const high = removeNoiseFloor(rawHigh) * gain * 1.6;
   const energy = Math.min(1, bass * 0.5 + mid * 0.35 + high * 0.15);
-  signal.energy += (energy - signal.energy) * Math.min(1, delta * 8);
-  signal.energySlow += (energy - signal.energySlow) * Math.min(1, delta * 0.5);
+  signal.energy = approach(signal.energy, energy, 8, delta);
+  signal.energySlow = approach(signal.energySlow, energy, 0.5, delta);
   signal.energyPeak = Math.max(signal.energy, signal.energyPeak - delta * 0.05);
   signal.gate = Math.min(1, Math.max(0, (signal.energy - settings.noiseGate) / 0.07));
 

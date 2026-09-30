@@ -1,7 +1,7 @@
 import { disconnectAudio } from './audio/input';
 import { showMessage } from './dom';
 import { startTransition } from './effects/transition';
-import { wrap } from './math';
+import { clamp, wrap } from './math';
 import { allowStrobe, revokeStrobe, strobeActive } from './motion';
 import { playlist } from './presets/library';
 import { settings, TUNING_DEFAULTS } from './state';
@@ -31,7 +31,7 @@ export const setPsy = (index: number) => setSetting('psy', wrap(index, PSY_NAMES
 
 export const cyclePsy = () => setPsy(settings.psy + 1);
 
-export const setGain = (value: number) => setSetting('gain', Math.max(0, Math.min(100, value)));
+export const setGain = (value: number) => setSetting('gain', clamp(value, 0, 100));
 
 export const nudgeGain = (step: number) => setGain(settings.gain + step);
 

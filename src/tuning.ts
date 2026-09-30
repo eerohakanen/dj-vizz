@@ -165,6 +165,5 @@ interface GroupControl<K extends TuningKey> extends TuningControl {
 const controlsIn = <K extends TuningKey>(group: TuningGroup) =>
   TUNING_SECTIONS.filter((section) => section.group === group).flatMap((section) => section.controls) as GroupControl<K>[];
 
-export const TUNING_CONTROLS: TuningControl[] = TUNING_SECTIONS.flatMap((section) => section.controls);
 export const LOOK_CONTROLS = controlsIn<LookTuningKey>('look');
 export const CALIBRATION_CONTROLS = controlsIn<CalibrationTuningKey>('calibration');
