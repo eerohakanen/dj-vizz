@@ -1,24 +1,26 @@
 import { bandAt } from '../audio/spectrum';
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
-import { frameScale, lerp, TAU } from '../math';
+import { frameScale, keepNewest, lerp, TAU } from '../math';
 import { clock, fx, settings, signal, view } from '../state';
 
 const SIDE_COUNTS = [4, 5, 6, 8];
 const SEGMENTS_PER_SIDE = 6;
 const BAND_BULGE = 0.22;
+const MAX_RINGS = 40;
+const MIN_MOTION = 0.02;
+
+const point = { x: 0, y: 0 };
 
 const rings: { radius: number; alpha: number }[] = [];
 
-function polygonPoint(sides: number, turn: number, spin: number) {
+function setPolygonPoint(sides: number, turn: number, spin: number) {
   const corner = Math.floor(turn * sides);
   const fraction = turn * sides - corner;
   const from = (corner / sides) * TAU + spin;
   const to = ((corner + 1) / sides) * TAU + spin;
-  return {
-    x: lerp(Math.cos(from), Math.cos(to), fraction),
-    y: lerp(Math.sin(from), Math.sin(to), fraction),
-  };
+  point.x = lerp(Math.cos(from), Math.cos(to), fraction);
+  point.y = lerp(Math.sin(from), Math.sin(to), fraction);
 }
 
 const mirroredBand = (turn: number) => bandAt(Math.abs(turn * 2 - 1), 1);
@@ -39,7 +41,7 @@ export function drawTunnel() {
   const sides = SIDE_COUNTS[Math.floor(fx.scroll / 8) % SIDE_COUNTS.length];
   const step = frameScale(clock.delta);
   if (signal.gate < 0.02) resetRings();
-  else if (Math.random() < 1 - Math.pow(1 - signal.gate * (0.04 + signal.punchMid * 0.3), step)) spawnRing();
+  else if (settings.motion > MIN_MOTION && Math.random() < 1 - Math.pow(1 - signal.gate * (0.04 + signal.punchMid * 0.3), step)) spawnRing();
   let alive = 0;
   for (const ring of rings) {
     if (ring.alpha <= 0.02) continue;
@@ -54,7 +56,7 @@ export function drawTunnel() {
     const spin = fx.spin * 2 + depth;
     for (let i = 0; i <= vertices; i++) {
       const turn = i / vertices;
-      const point = polygonPoint(sides, turn, spin);
+      setPolygonPoint(sides, turn, spin);
       const reach = ring.radius * (1 + mirroredBand(turn) * BAND_BULGE);
       const x = cx + point.x * reach;
       const y = cy + point.y * reach;
@@ -64,6 +66,7 @@ export function drawTunnel() {
     ctx.stroke();
   }
   rings.length = alive;
+  keepNewest(rings, MAX_RINGS);
   ctx.fillStyle = color(1, 0.35 + 0.5 * fx.beat);
   ctx.beginPath();
   ctx.arc(cx, cy, (12 + signal.punchBass * 80) * pixelRatio, 0, TAU);

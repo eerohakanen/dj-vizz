@@ -21,6 +21,10 @@ export const follow = (value: number, target: number, attack: number, release: n
 
 export const updatePeak = (peak: number, level: number, fall: number, delta: number) => Math.max(level, peak - fall * delta);
 
+export function keepNewest<T>(items: T[], max: number) {
+  if (items.length > max) items.splice(0, items.length - max);
+}
+
 export const smoothstep = (t: number) => t * t * (3 - 2 * t);
 
 export const wrap = (value: number, length: number) => ((value % length) + length) % length;

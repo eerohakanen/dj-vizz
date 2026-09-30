@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { approach, clamp, clamp01, decay, follow, frameAlpha, hueDelta, lerp, randomRange, signedRandom, smoothstep, updatePeak, wrap } from './math';
+import { approach, clamp, clamp01, decay, follow, frameAlpha, hueDelta, keepNewest, lerp, randomRange, signedRandom, smoothstep, updatePeak, wrap } from './math';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -207,5 +207,19 @@ describe('updatePeak', () => {
     for (let i = 0; i < 30; i++) at60 = updatePeak(at60, 0, 0.6, 1 / 60);
     for (let i = 0; i < 60; i++) at120 = updatePeak(at120, 0, 0.6, 1 / 120);
     expect(at120).toBeCloseTo(at60, 10);
+  });
+});
+
+describe('keepNewest', () => {
+  it('drops the oldest items above the max', () => {
+    const items = [1, 2, 3, 4, 5];
+    keepNewest(items, 3);
+    expect(items).toEqual([3, 4, 5]);
+  });
+
+  it('leaves shorter lists untouched', () => {
+    const items = [1, 2];
+    keepNewest(items, 3);
+    expect(items).toEqual([1, 2]);
   });
 });

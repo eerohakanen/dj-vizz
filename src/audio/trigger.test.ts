@@ -21,8 +21,13 @@ describe('findTrigger', () => {
     expect(findTrigger(new Uint8Array(16).fill(100))).toBe(0);
   });
 
-  it('keeps a full half buffer available after the trigger', () => {
-    const wave = Uint8Array.from({ length: 32 }, (_, i) => (i % 8 < 4 ? 100 : 160));
-    expect(findTrigger(wave) + 16).toBeLessThanOrEqual(wave.length);
+  it('aligns phase-shifted sine waves on the same waveform point', () => {
+    const sine = (shift: number) => Uint8Array.from({ length: 256 }, (_, i) => Math.round(128 + 100 * Math.sin(((i + shift) / 64) * Math.PI * 2)));
+    const first = sine(3);
+    const second = sine(20);
+    const a = findTrigger(first);
+    const b = findTrigger(second);
+    expect(a).not.toBe(b);
+    expect(Array.from(first.subarray(a, a + 32))).toEqual(Array.from(second.subarray(b, b + 32)));
   });
 });
