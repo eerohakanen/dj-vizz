@@ -38,6 +38,11 @@ describe('modeIndexFor', () => {
     expect(modeIndexFor(press('&', 'Digit1', true))).toBe(10);
   });
 
+  it('treats a shifted digit that types itself as a plain digit', () => {
+    expect(modeIndexFor(press('1', 'Digit1', true))).toBe(0);
+    expect(modeIndexFor(press('2', 'Digit2', true))).toBe(1);
+  });
+
   it('ignores other shifted digits and non-digits', () => {
     expect(modeIndexFor(press('#', 'Digit3', true))).toBeUndefined();
     expect(modeIndexFor(press('a', 'KeyA'))).toBeUndefined();
@@ -79,9 +84,9 @@ describe('KEYMAP', () => {
   });
 
   it('gives each printable key to one entry', () => {
-    const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
-    for (const letter of letters) {
-      expect(KEYMAP.filter((entry) => entry.matches(press(letter))).length).toBeLessThanOrEqual(1);
+    const keys = [...'abcdefghijklmnopqrstuvwxyz0123456789+-?/ ', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+    for (const key of keys) {
+      expect(KEYMAP.filter((entry) => entry.matches(press(key))).length).toBeLessThanOrEqual(1);
     }
   });
 

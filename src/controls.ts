@@ -20,18 +20,18 @@ export interface KeyEntry {
   display: string[];
   matches: (event: KeyLike) => boolean;
   run: (event: KeyboardEvent) => void;
-  overlay?: boolean;
 }
 
 const SHIFT_MODE_CODES = ['Digit1', 'Digit2'];
 const FIRST_SHIFT_MODE = 10;
 
 export function modeIndexFor({ key, code, shiftKey }: KeyLike) {
-  if (shiftKey) {
+  const digitTyped = /^[0-9]$/.test(key);
+  if (shiftKey && !digitTyped) {
     const index = SHIFT_MODE_CODES.indexOf(code);
     return index < 0 ? undefined : FIRST_SHIFT_MODE + index;
   }
-  return /^[0-9]$/.test(key) ? (+key + 9) % 10 : undefined;
+  return digitTyped ? (+key + 9) % 10 : undefined;
 }
 
 const keyIn =
@@ -66,7 +66,6 @@ export const KEYMAP: KeyEntry[] = [
     display: ['M'],
     matches: keyIn('m'),
     run: () => openOverlay('presets'),
-    overlay: true,
   },
   {
     id: 'presetNext',
@@ -155,7 +154,6 @@ export const KEYMAP: KeyEntry[] = [
     display: ['T'],
     matches: keyIn('t'),
     run: () => openOverlay('tuning'),
-    overlay: true,
   },
   {
     id: 'gain',
@@ -212,7 +210,6 @@ export const KEYMAP: KeyEntry[] = [
     display: ['Q'],
     matches: keyIn('q'),
     run: () => openOverlay('exit'),
-    overlay: true,
   },
   {
     id: 'help',
@@ -221,7 +218,6 @@ export const KEYMAP: KeyEntry[] = [
     display: ['?'],
     matches: keyIn('?', '/'),
     run: () => openOverlay('help'),
-    overlay: true,
   },
 ];
 
@@ -246,7 +242,7 @@ function handleKey(event: KeyboardEvent) {
   const entry = resolveKey(event);
   if (!entry) return;
   event.preventDefault();
-  if (entry.overlay) blurToolbarFocus();
+  blurToolbarFocus();
   entry.run(event);
 }
 
