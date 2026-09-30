@@ -1,6 +1,6 @@
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
-import { TAU } from '../math';
+import { signedRandom, TAU } from '../math';
 import { clock, fx, signal, view } from '../state';
 
 const HUES = 6;
@@ -16,8 +16,8 @@ interface Star {
 }
 
 function respawn(star: Star) {
-  star.x = (Math.random() - 0.5) * 2;
-  star.y = (Math.random() - 0.5) * 2;
+  star.x = signedRandom(2);
+  star.y = signedRandom(2);
   star.z = Math.random() * 0.9 + 0.1;
   star.previousZ = star.z;
   star.hue = (Math.random() * HUES) | 0;

@@ -6,6 +6,7 @@ import { drawLasers } from './effects/lasers';
 import { applyMirror } from './effects/mirror';
 import { drawParticles, drawShockwaves } from './effects/particles';
 import { drawTransition } from './effects/transition';
+import { signedRandom } from './math';
 import { currentMode } from './mode';
 import { clock, fx, settings, signal, view } from './state';
 
@@ -50,7 +51,7 @@ function applyBeatShake(ctx: CanvasRenderingContext2D) {
   const { width, height, pixelRatio } = view;
   const punch = 1 + (fx.kick * 0.04 + fx.beat * 0.015 + fx.drop * 0.1) * settings.reactivity * settings.punch * signal.gate;
   const shake = fx.shake + signal.tension * signal.tension * 0.12;
-  const jitter = () => (Math.random() - 0.5) * shake * 60 * pixelRatio;
+  const jitter = () => signedRandom(shake * 60 * pixelRatio);
   ctx.translate(width / 2 + jitter(), height / 2 + jitter());
   ctx.scale(punch, punch);
   ctx.translate(-width / 2, -height / 2);

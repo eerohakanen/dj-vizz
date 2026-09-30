@@ -1,4 +1,5 @@
 import { bloomLevels, glitchCyan, glitchCyanCtx, glitchRed, glitchRedCtx, output } from '../canvas';
+import { signedRandom } from '../math';
 import { fx, settings, view } from '../state';
 
 const CHANNELS: [CanvasRenderingContext2D, string][] = [
@@ -31,7 +32,7 @@ function tearSlices(o: CanvasRenderingContext2D, amount: number) {
     const y = (Math.random() * height) | 0;
     const sliceHeight = Math.min(height - y, ((Math.random() * 0.06 + 0.01) * height) | 0);
     if (sliceHeight < 1) continue;
-    const shift = (Math.random() - 0.5) * width * 0.15 * amount;
+    const shift = signedRandom(width * 0.15 * amount);
     o.drawImage(output, 0, y, width, sliceHeight, shift, y, width, sliceHeight);
   }
 }

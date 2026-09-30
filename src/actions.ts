@@ -1,6 +1,7 @@
 import { disconnectAudio } from './audio/input';
 import { showMessage } from './dom';
 import { startTransition } from './effects/transition';
+import { wrap } from './math';
 import { playlist } from './presets/library';
 import { settings, TUNING_DEFAULTS } from './state';
 import { notify, ui, type Overlay } from './store';
@@ -19,12 +20,12 @@ export const toggleSetting = (key: BooleanSetting) => setSetting(key, !settings[
 
 export function setMirror(index: number) {
   startTransition();
-  setSetting('mirror', (index + MIRROR_NAMES.length) % MIRROR_NAMES.length);
+  setSetting('mirror', wrap(index, MIRROR_NAMES.length));
 }
 
 export const cycleMirror = () => setMirror(settings.mirror + 1);
 
-export const setPsy = (index: number) => setSetting('psy', (index + PSY_NAMES.length) % PSY_NAMES.length);
+export const setPsy = (index: number) => setSetting('psy', wrap(index, PSY_NAMES.length));
 
 export const cyclePsy = () => setPsy(settings.psy + 1);
 

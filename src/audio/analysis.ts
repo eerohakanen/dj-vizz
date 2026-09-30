@@ -1,9 +1,10 @@
 import { onBeat, onHat, onKick, onSnare, triggerDrop } from '../events';
+import { approach, decay } from '../math';
 import { clock, fx, settings, signal } from '../state';
 import { detectDrums } from './drums';
 import { audio } from './input';
 import { analyseMusic, tensionPeak } from './musical';
-import { BAND_COUNT, spectrum } from './spectrum';
+import { averageBins, BAND_COUNT, spectrum } from './spectrum';
 import { advanceTempo, beatStrength } from './tempo';
 
 const DROP_COOLDOWN = 8;
@@ -17,12 +18,6 @@ for (let i = 0; i < BAND_COUNT; i++) {
 
 let rawPeak = 0.1;
 let autoGainFactor = 1;
-
-function averageBins(frequencies: Uint8Array, from: number, to: number) {
-  let sum = 0;
-  for (let i = from; i < to; i++) sum += frequencies[i];
-  return sum / (to - from) / 255;
-}
 
 const removeNoiseFloor = (level: number) => Math.max(0, (level - 0.06) * 1.15);
 
@@ -45,21 +40,21 @@ function readInput() {
 function computeGain(raw: number, delta: number) {
   rawPeak = Math.max(raw, rawPeak - delta * 0.02, 0.04);
   const target = Math.min(12, Math.max(0.3, 0.42 / rawPeak));
-  autoGainFactor += (target - autoGainFactor) * Math.min(1, delta * (target < autoGainFactor ? 6 : 0.8));
+  autoGainFactor = approach(autoGainFactor, target, target < autoGainFactor ? 6 : 0.8, delta);
   return 0.2 * Math.pow(50, settings.gain / 100) * (settings.autoGain ? autoGainFactor : 1);
 }
 
 function decayEffects(delta: number) {
-  fx.beat *= Math.pow(0.002, delta);
-  fx.drop *= Math.pow(0.4, delta);
-  fx.flash *= Math.pow(0.02, delta);
-  fx.shake *= Math.pow(0.02, delta);
-  fx.strobeFlash *= Math.pow(0.00005, delta);
-  fx.invert *= Math.pow(0.0001, delta);
-  fx.glitchAmount *= Math.pow(0.01, delta);
-  fx.kick *= Math.pow(0.004, delta);
-  fx.snare *= Math.pow(0.002, delta);
-  fx.hat *= Math.pow(0.0005, delta);
+  fx.beat *= decay(0.002, delta);
+  fx.drop *= decay(0.4, delta);
+  fx.flash *= decay(0.02, delta);
+  fx.shake *= decay(0.02, delta);
+  fx.strobeFlash *= decay(0.00005, delta);
+  fx.invert *= decay(0.0001, delta);
+  fx.glitchAmount *= decay(0.01, delta);
+  fx.kick *= decay(0.004, delta);
+  fx.snare *= decay(0.002, delta);
+  fx.hat *= decay(0.0005, delta);
 }
 
 function fillSpectrum(frequencies: Uint8Array, gain: number) {

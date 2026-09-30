@@ -1,5 +1,5 @@
 import type * as Three from 'three';
-import { TAU } from '../math';
+import { approach, decay, randomRange, signedRandom, TAU } from '../math';
 import { clock, fx, signal } from '../state';
 import { createRenderer, fitStage, GLOW_POINT_FRAGMENT, paint, pointScale, presentStage, type ThreeModule } from './three-stage';
 
@@ -184,13 +184,12 @@ let roll = 0;
 let rollVelocity = 0;
 let dropping = false;
 
-const random = (min: number, max: number) => min + Math.random() * (max - min);
 
 function createStarGeometry(THREE: ThreeModule) {
   const positions = new Float32Array(STAR_COUNT * 3);
   const seeds = new Float32Array(STAR_COUNT);
   for (let i = 0; i < STAR_COUNT; i++) {
-    positions.set([random(0, CUBE), random(0, CUBE), random(0, CUBE)], i * 3);
+    positions.set([randomRange(0, CUBE), randomRange(0, CUBE), randomRange(0, CUBE)], i * 3);
     seeds[i] = Math.random();
   }
   const stars = new THREE.BufferGeometry();
@@ -221,13 +220,13 @@ function createGalaxyGeometry(THREE: ThreeModule) {
   for (let i = 0; i < GALAXY_COUNT; i++) {
     const radius = Math.pow(Math.random(), 1.6);
     const scatter = (1 - radius * 0.7) * 0.35;
-    const angle = ((i % GALAXY_ARMS) / GALAXY_ARMS) * TAU + radius * 5.5 + random(-scatter, scatter);
+    const angle = ((i % GALAXY_ARMS) / GALAXY_ARMS) * TAU + radius * 5.5 + randomRange(-scatter, scatter);
     const distance = radius * GALAXY_RADIUS;
     positions.set(
       [
-        Math.cos(angle) * distance + random(-6, 6),
-        random(-1, 1) * (1 - radius) * 14,
-        Math.sin(angle) * distance + random(-6, 6),
+        Math.cos(angle) * distance + randomRange(-6, 6),
+        randomRange(-1, 1) * (1 - radius) * 14,
+        Math.sin(angle) * distance + randomRange(-6, 6),
       ],
       i * 3,
     );
@@ -244,10 +243,10 @@ function createGalaxyGeometry(THREE: ThreeModule) {
 function spawnBillboard(stage: DeepSpaceStage, body: Billboard, near: number, far: number, minOffset: number, maxOffset: number) {
   const { heading, right, up } = stage;
   const angle = Math.random() * TAU;
-  const offset = random(minOffset, maxOffset);
+  const offset = randomRange(minOffset, maxOffset);
   body.mesh.position
     .copy(heading)
-    .multiplyScalar(random(near, far))
+    .multiplyScalar(randomRange(near, far))
     .addScaledVector(right, Math.cos(angle) * offset)
     .addScaledVector(up, Math.sin(angle) * offset);
   body.hue = Math.random() * 2;
@@ -306,10 +305,10 @@ function buildStage(THREE: ThreeModule) {
   };
   const core = createSun(70);
   galaxyTilt.add(core.mesh);
-  const suns = Array.from({ length: SUN_COUNT }, () => createSun(random(5, 10)));
+  const suns = Array.from({ length: SUN_COUNT }, () => createSun(randomRange(5, 10)));
   const nebulae = Array.from({ length: NEBULA_COUNT }, () => {
     const material = additive(BILLBOARD_VERTEX, NEBULA_FRAGMENT, {
-      uRadius: { value: random(35, 80) },
+      uRadius: { value: randomRange(35, 80) },
       uSeed: { value: Math.random() * 100 },
       uIntensity: { value: 0 },
     });
@@ -357,14 +356,12 @@ function loadStage() {
   import('three').then(createStage).catch(() => {});
 }
 
-const approach = (value: number, target: number, rate: number) => value + (target - value) * Math.min(1, clock.delta * rate);
-
 const wrapAngle = (angle: number) => Math.atan2(Math.sin(angle), Math.cos(angle));
 
 function throwTurn(strength: number) {
   const reach = strength * (0.4 + signal.energy * 1.2);
-  turnYaw = random(-1, 1) * reach;
-  turnPitch = random(-1, 1) * reach * 0.5;
+  turnYaw = randomRange(-1, 1) * reach;
+  turnPitch = randomRange(-1, 1) * reach * 0.5;
 }
 
 function steer(stage: DeepSpaceStage) {
@@ -377,14 +374,14 @@ function steer(stage: DeepSpaceStage) {
   } else if (fx.drop < 0.5) dropping = false;
   const wander = (Math.sin(time * 0.21) * 0.25 + Math.sin(time * 0.07 + 1) * 0.35) * (0.3 + energy);
   const push = 1 + punchBass * gate * 0.8;
-  yawRate = approach(yawRate, (turnYaw + wander * gate) * push - wrapAngle(yaw) * 0.12, 2.5);
-  pitchRate = approach(pitchRate, (turnPitch + Math.sin(time * 0.17) * 0.12 * gate) * push - pitch * 0.6, 2.5);
-  turnYaw *= Math.pow(0.25, delta);
-  turnPitch *= Math.pow(0.25, delta);
+  yawRate = approach(yawRate, (turnYaw + wander * gate) * push - wrapAngle(yaw) * 0.12, 2.5, delta);
+  pitchRate = approach(pitchRate, (turnPitch + Math.sin(time * 0.17) * 0.12 * gate) * push - pitch * 0.6, 2.5, delta);
+  turnYaw *= decay(0.25, delta);
+  turnPitch *= decay(0.25, delta);
   yaw += yawRate * delta;
   pitch = Math.max(-1.1, Math.min(1.1, pitch + pitchRate * delta));
-  bank = approach(bank, yawRate * 0.7, 3);
-  rollVelocity *= Math.pow(0.25, delta);
+  bank = approach(bank, yawRate * 0.7, 3, delta);
+  rollVelocity *= decay(0.25, delta);
   roll += rollVelocity * delta;
   const { heading, right, up } = stage;
   heading.set(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
@@ -442,7 +439,7 @@ function advanceBodies(stage: DeepSpaceStage) {
 function moveCamera(stage: DeepSpaceStage) {
   const { camera } = stage;
   const { time } = clock;
-  const jitter = () => (Math.random() - 0.5) * fx.shake * 0.6;
+  const jitter = () => signedRandom(fx.shake * 0.6);
   camera.position.set(Math.sin(time * 0.31) * 4 + jitter(), Math.cos(time * 0.23) * 3 + jitter(), 0);
   camera.rotation.set(
     pitch + Math.sin(time * 0.17) * 0.05,
@@ -463,7 +460,7 @@ export function drawDeepSpace() {
     if (!loading) loadStage();
     return;
   }
-  kick *= Math.pow(0.03, clock.delta);
+  kick *= decay(0.03, clock.delta);
   fitStage(stage);
   steer(stage);
   fly(stage);

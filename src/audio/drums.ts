@@ -1,5 +1,6 @@
 import { settings } from '../state';
 import { audio } from './input';
+import { averageBins } from './spectrum';
 
 const HISTORY = 32;
 
@@ -38,9 +39,7 @@ function toBin(hz: number, binCount: number) {
 function rangeLevel(frequencies: Uint8Array, [lowHz, highHz, weight]: Range) {
   const from = toBin(lowHz, frequencies.length);
   const to = Math.max(from + 1, toBin(highHz, frequencies.length));
-  let sum = 0;
-  for (let i = from; i < to; i++) sum += frequencies[i];
-  return (sum / (to - from) / 255) * weight;
+  return averageBins(frequencies, from, to) * weight;
 }
 
 function detectOnset(detector: OnsetDetector, frequencies: Uint8Array, time: number) {

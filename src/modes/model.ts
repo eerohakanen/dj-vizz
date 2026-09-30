@@ -1,6 +1,7 @@
 import type * as Three from 'three';
 import type { mergeGeometries as MergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MeshSurfaceSampler as Sampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js';
+import { decay, signedRandom } from '../math';
 import { clock, fx, signal } from '../state';
 import { createRenderer, fitStage, GLOW_POINT_FRAGMENT, paint, pointScale, presentStage, type ThreeModule } from './three-stage';
 
@@ -269,7 +270,7 @@ function animate(stage: ModelStage) {
 function moveCamera(stage: ModelStage) {
   const { camera } = stage;
   const { time } = clock;
-  const jitter = () => (Math.random() - 0.5) * fx.shake * 0.12;
+  const jitter = () => signedRandom(fx.shake * 0.12);
   const radius = ORBIT_RADIUS - kick * 0.25 + fx.drop * 0.8;
   camera.position.set(Math.sin(time * 0.13) * radius + jitter(), Math.sin(time * 0.09) * 0.9 + jitter(), Math.cos(time * 0.13) * radius);
   camera.lookAt(0, 0, 0);
@@ -287,7 +288,7 @@ export function drawModel() {
     if (!loading) loadStage();
     return;
   }
-  kick *= Math.pow(0.03, clock.delta);
+  kick *= decay(0.03, clock.delta);
   fitStage(stage);
   moveCamera(stage);
   animate(stage);

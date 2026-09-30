@@ -1,6 +1,6 @@
 import { output, transitionCtx, transitionFrame as frame } from '../canvas';
 import { color } from '../color';
-import { TAU } from '../math';
+import { smoothstep, TAU } from '../math';
 import { clock, view } from '../state';
 
 const DURATION = 1.1;
@@ -9,8 +9,6 @@ const STRIPS = 24;
 
 let startedAt = -9;
 let style = 0;
-
-const ease = (progress: number) => progress * progress * (3 - 2 * progress);
 
 export function startTransition() {
   if (clock.time < 0.5) return;
@@ -76,6 +74,6 @@ export function drawTransition(o: CanvasRenderingContext2D) {
   const progress = (clock.time - startedAt) / DURATION;
   if (progress >= 1 || progress < 0) return;
   o.save();
-  STYLES[style](o, ease(progress), progress);
+  STYLES[style](o, smoothstep(progress), progress);
   o.restore();
 }

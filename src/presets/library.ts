@@ -1,5 +1,6 @@
 import { setPalette } from '../color';
 import { setMode } from '../mode';
+import { clamp, wrap } from '../math';
 import { MODES } from '../modes/index';
 import { PALETTES } from '../palettes';
 import { settings, TUNING_DEFAULTS } from '../state';
@@ -144,8 +145,6 @@ export function snapshot(name: string): Preset {
 }
 
 const isNumber = (value: unknown): value is number => typeof value === 'number' && isFinite(value);
-const wrap = (value: number, count: number) => ((value % count) + count) % count;
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 export function applyPreset(preset: Partial<Preset> | undefined) {
   if (!preset) return;

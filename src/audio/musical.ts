@@ -1,4 +1,5 @@
 import Meyda from 'meyda';
+import { approach, clamp01, hueDelta } from '../math';
 import { fx, signal } from '../state';
 import { audio } from './input';
 
@@ -13,9 +14,6 @@ const chroma = new Float32Array(12);
 const smoothed = { highFast: 0, highSlow: 0, brightFast: 0.5, brightSlow: 0.5, tensionPeak: 0 };
 let candidateKey = -1;
 let candidateSince = 0;
-
-const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
-const ease = (value: number, target: number, rate: number) => value + (target - value) * Math.min(1, rate);
 
 function correlate(profile: number[], tonic: number) {
   let meanChroma = 0;
@@ -56,14 +54,14 @@ function keyHue(key: number) {
 
 function followKey(time: number, delta: number) {
   const { key, score } = estimateKey();
-  signal.keyConfidence = ease(signal.keyConfidence, score, delta);
+  signal.keyConfidence = approach(signal.keyConfidence, score, 1, delta);
   if (key !== candidateKey) {
     candidateKey = key;
     candidateSince = time;
   }
   if (score > 0.5 && time - candidateSince > KEY_HOLD) signal.key = candidateKey;
   if (signal.key < 0) return;
-  const step = ((((keyHue(signal.key) - fx.keyHue) % 360) + 540) % 360) - 180;
+  const step = hueDelta(fx.keyHue, keyHue(signal.key));
   fx.keyHue = (fx.keyHue + step * Math.min(1, delta * KEY_HUE_SPEED) + 360) % 360;
 }
 
@@ -81,15 +79,15 @@ function bandShare(spectrum: Float32Array, lowHz: number, highHz: number) {
 }
 
 function followTension(delta: number, snareRate: number) {
-  smoothed.highFast = ease(smoothed.highFast, signal.high, delta * 1.5);
-  smoothed.highSlow = ease(smoothed.highSlow, signal.high, delta * 0.15);
-  smoothed.brightFast = ease(smoothed.brightFast, signal.brightness, delta * 1.5);
-  smoothed.brightSlow = ease(smoothed.brightSlow, signal.brightness, delta * 0.15);
+  smoothed.highFast = approach(smoothed.highFast, signal.high, 1.5, delta);
+  smoothed.highSlow = approach(smoothed.highSlow, signal.high, 0.15, delta);
+  smoothed.brightFast = approach(smoothed.brightFast, signal.brightness, 1.5, delta);
+  smoothed.brightSlow = approach(smoothed.brightSlow, signal.brightness, 0.15, delta);
   const highRise = Math.max(0, smoothed.highFast - smoothed.highSlow * 1.05);
   const brightRise = Math.max(0, smoothed.brightFast - smoothed.brightSlow - 0.02);
   const roll = clamp01((snareRate - 2.5) / 4);
   const target = clamp01(highRise * 3 + brightRise * 4 + roll * 0.6 + (signal.breakdown > 1 ? 0.2 : 0));
-  signal.tension = ease(signal.tension, target, delta * (target > signal.tension ? 0.6 : 1.5));
+  signal.tension = approach(signal.tension, target, target > signal.tension ? 0.6 : 1.5, delta);
   smoothed.tensionPeak = Math.max(signal.tension, smoothed.tensionPeak - delta * 0.15);
 }
 
@@ -102,7 +100,7 @@ export function releaseTension() {
 
 export function analyseMusic(time: number, delta: number, snareRate: number) {
   if (!audio.live) {
-    signal.vocal = ease(signal.vocal, 0, delta * 2);
+    signal.vocal = approach(signal.vocal, 0, 2, delta);
     followTension(delta, 0);
     return;
   }
@@ -115,16 +113,16 @@ export function analyseMusic(time: number, delta: number, snareRate: number) {
   }
 
   const centroidHz = ((features.spectralCentroid ?? 0) * audio.sampleRate) / Meyda.bufferSize;
-  signal.brightness = ease(signal.brightness, clamp01(Math.log2(Math.max(1, centroidHz) / 400) / 4), delta * 2);
+  signal.brightness = approach(signal.brightness, clamp01(Math.log2(Math.max(1, centroidHz) / 400) / 4), 2, delta);
 
   const frame = features.chroma ?? [];
-  for (let i = 0; i < 12; i++) chroma[i] = ease(chroma[i], frame[i] ?? 0, delta / KEY_WINDOW);
+  for (let i = 0; i < 12; i++) chroma[i] = approach(chroma[i], frame[i] ?? 0, 1 / KEY_WINDOW, delta);
   followKey(time, delta);
 
   const midShare = bandShare(features.amplitudeSpectrum!, 300, 3000);
   const tonal = clamp01((0.3 - (features.spectralFlatness ?? 1)) / 0.25);
   const vocal = clamp01((midShare - 0.3) / 0.3) * tonal * signal.gate;
-  signal.vocal = ease(signal.vocal, vocal, delta * (vocal > signal.vocal ? 1.5 : 0.7));
+  signal.vocal = approach(signal.vocal, vocal, vocal > signal.vocal ? 1.5 : 0.7, delta);
 
   followTension(delta, snareRate);
 }

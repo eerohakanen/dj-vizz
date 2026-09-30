@@ -6,6 +6,7 @@ import { adaptQuality, resize } from './canvas';
 import { advancePaletteFade, buildLut } from './color';
 import { bindControls } from './controls';
 import { advanceTimedPlaylist } from './presets/playlist';
+import { approach } from './math';
 import { presentFrame, renderScene } from './render';
 import { clock, fx, settings } from './state';
 import { ui } from './store';
@@ -13,19 +14,17 @@ import { PSY_NAMES } from './ui';
 
 let lastTimestamp = 0;
 
-const approach = (value: number, target: number, speed: number) => value + (target - value) * Math.min(1, clock.delta * speed);
-
 function psyTarget(name: string) {
   const active = PSY_NAMES[settings.psy];
   return active === name || active === 'Trip' ? 1 : 0;
 }
 
 function updateEffectMixes() {
-  fx.laserMix = approach(fx.laserMix, settings.lasers ? 1 : 0, 4);
-  fx.vortexMix = approach(fx.vortexMix, psyTarget('Vortex'), 1.5);
-  fx.liquidMix = approach(fx.liquidMix, psyTarget('Liquid'), 2.5);
-  fx.rainbowMix = approach(fx.rainbowMix, psyTarget('Rainbow'), 1.5);
-  fx.tripMix = approach(fx.tripMix, psyTarget('Trip'), 2.5);
+  fx.laserMix = approach(fx.laserMix, settings.lasers ? 1 : 0, 4, clock.delta);
+  fx.vortexMix = approach(fx.vortexMix, psyTarget('Vortex'), 1.5, clock.delta);
+  fx.liquidMix = approach(fx.liquidMix, psyTarget('Liquid'), 2.5, clock.delta);
+  fx.rainbowMix = approach(fx.rainbowMix, psyTarget('Rainbow'), 1.5, clock.delta);
+  fx.tripMix = approach(fx.tripMix, psyTarget('Trip'), 2.5, clock.delta);
 }
 
 function frame(timestamp: number) {

@@ -1,3 +1,4 @@
+import { wrap } from '../math';
 import { signal } from '../state';
 
 const MIN_BPM = 88;
@@ -25,7 +26,7 @@ let locked = false;
 let candidateShift = 0;
 let candidateBars = 0;
 
-const wrapBin = (bin: number) => ((bin % HISTOGRAM_SIZE) + HISTOGRAM_SIZE) % HISTOGRAM_SIZE;
+const wrapBin = (bin: number) => wrap(bin, HISTOGRAM_SIZE);
 
 const binOf = (bpm: number) => wrapBin(Math.log2(bpm / MIN_BPM) * HISTOGRAM_SIZE);
 

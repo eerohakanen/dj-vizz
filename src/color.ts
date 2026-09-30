@@ -1,4 +1,5 @@
 import { showMessage } from './dom';
+import { hueDelta, lerp, smoothstep, wrap } from './math';
 import { PALETTES } from './palettes';
 import { fx, settings, signal } from './state';
 import { notify } from './store';
@@ -40,13 +41,13 @@ export function buildLut() {
     samplePalette(settings.palette, position, currentHsl);
     if (fade < 1) {
       samplePalette(previousPalette, position, previousHsl);
-      const eased = fade * fade * (3 - 2 * fade);
-      const hueStep = (((currentHsl[0] - previousHsl[0]) % 360) + 540) % 360 - 180;
+      const eased = smoothstep(fade);
+      const hueStep = hueDelta(previousHsl[0], currentHsl[0]);
       currentHsl[0] = previousHsl[0] + hueStep * eased;
-      currentHsl[1] = previousHsl[1] + (currentHsl[1] - previousHsl[1]) * eased;
-      currentHsl[2] = previousHsl[2] + (currentHsl[2] - previousHsl[2]) * eased;
+      currentHsl[1] = lerp(previousHsl[1], currentHsl[1], eased);
+      currentHsl[2] = lerp(previousHsl[2], currentHsl[2], eased);
     }
-    lut[i * 3] = ((currentHsl[0] % 360) + 360) % 360;
+    lut[i * 3] = wrap(currentHsl[0], 360);
     lut[i * 3 + 1] = currentHsl[1];
     lut[i * 3 + 2] = currentHsl[2];
   }
@@ -76,7 +77,7 @@ export function color(position: number, alpha = 1, lightness?: number) {
 export function setPalette(index: number, quiet?: boolean) {
   previousPalette = settings.palette;
   fade = 0;
-  settings.palette = (index + PALETTES.length) % PALETTES.length;
+  settings.palette = wrap(index, PALETTES.length);
   notify();
   if (!quiet) showMessage(`Palette: ${PALETTES[settings.palette].name}`);
 }

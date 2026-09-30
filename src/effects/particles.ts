@@ -1,6 +1,6 @@
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
-import { TAU } from '../math';
+import { signedRandom, TAU } from '../math';
 import { settings, view } from '../state';
 
 const MAX_PARTICLES = 1500;
@@ -26,8 +26,8 @@ export function burst(count: number, minSpeed: number, speedRange: number, life:
     const angle = Math.random() * TAU;
     const speed = (minSpeed + Math.random() * speedRange) * pixelRatio;
     particles.push({
-      x: width / 2 + (Math.random() - 0.5) * width * scatter,
-      y: height / 2 + (Math.random() - 0.5) * height * scatter,
+      x: width / 2 + signedRandom(width * scatter),
+      y: height / 2 + signedRandom(height * scatter),
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       life,

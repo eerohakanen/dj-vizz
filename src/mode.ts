@@ -1,4 +1,5 @@
 import { startTransition } from './effects/transition';
+import { wrap } from './math';
 import { MODES } from './modes/index';
 import { resetRings } from './modes/tunnel';
 import { settings } from './state';
@@ -8,7 +9,7 @@ export const currentMode = () => MODES[settings.mode];
 
 export function setMode(index: number) {
   startTransition();
-  settings.mode = (index + MODES.length) % MODES.length;
+  settings.mode = wrap(index, MODES.length);
   resetRings();
   notify();
 }

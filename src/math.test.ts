@@ -1,0 +1,152 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { approach, clamp, clamp01, decay, hueDelta, lerp, randomRange, signedRandom, smoothstep, wrap } from './math';
+
+afterEach(() => vi.restoreAllMocks());
+
+describe('clamp', () => {
+  it('keeps values inside the range', () => {
+    expect(clamp(5, 0, 10)).toBe(5);
+  });
+
+  it('limits values at both bounds', () => {
+    expect(clamp(-3, 0, 10)).toBe(0);
+    expect(clamp(42, 0, 10)).toBe(10);
+  });
+
+  it('clamp01 limits to the unit interval', () => {
+    expect(clamp01(-0.5)).toBe(0);
+    expect(clamp01(0.25)).toBe(0.25);
+    expect(clamp01(1.5)).toBe(1);
+  });
+});
+
+describe('lerp', () => {
+  it('interpolates between the endpoints', () => {
+    expect(lerp(10, 20, 0)).toBe(10);
+    expect(lerp(10, 20, 1)).toBe(20);
+    expect(lerp(10, 20, 0.25)).toBe(12.5);
+  });
+
+  it('extrapolates outside the unit interval', () => {
+    expect(lerp(0, 10, 2)).toBe(20);
+  });
+});
+
+describe('approach', () => {
+  it('moves a fraction of the way toward the target', () => {
+    expect(approach(0, 10, 2, 0.25)).toBe(5);
+  });
+
+  it('stays put when delta is zero', () => {
+    expect(approach(3, 10, 4, 0)).toBe(3);
+  });
+
+  it('clamps at the target when delta times rate exceeds one', () => {
+    expect(approach(0, 10, 5, 10)).toBe(10);
+  });
+
+  it('approaches downward as well', () => {
+    expect(approach(10, 0, 1, 0.5)).toBe(5);
+  });
+});
+
+describe('decay', () => {
+  it('is the identity for zero delta', () => {
+    expect(decay(0.25, 0)).toBe(1);
+  });
+
+  it('applies the factor once per unit of time', () => {
+    expect(decay(0.25, 1)).toBe(0.25);
+    expect(decay(0.25, 2)).toBe(0.0625);
+  });
+
+  it('composes across split frames', () => {
+    expect(decay(0.02, 0.1) * decay(0.02, 0.1)).toBeCloseTo(decay(0.02, 0.2));
+  });
+});
+
+describe('smoothstep', () => {
+  it('fixes the endpoints and midpoint', () => {
+    expect(smoothstep(0)).toBe(0);
+    expect(smoothstep(1)).toBe(1);
+    expect(smoothstep(0.5)).toBe(0.5);
+  });
+
+  it('eases in slower than linear near the start', () => {
+    expect(smoothstep(0.25)).toBeCloseTo(0.15625);
+  });
+});
+
+describe('wrap', () => {
+  it('leaves in-range values unchanged', () => {
+    expect(wrap(3, 5)).toBe(3);
+  });
+
+  it('wraps values past the end', () => {
+    expect(wrap(5, 5)).toBe(0);
+    expect(wrap(12, 5)).toBe(2);
+  });
+
+  it('wraps negatives into the positive range', () => {
+    expect(wrap(-1, 5)).toBe(4);
+    expect(wrap(-11, 5)).toBe(4);
+  });
+
+  it('wraps fractional values', () => {
+    expect(wrap(-30, 360)).toBe(330);
+    expect(wrap(725.5, 360)).toBeCloseTo(5.5);
+  });
+});
+
+describe('hueDelta', () => {
+  it('is zero for equal hues', () => {
+    expect(hueDelta(120, 120)).toBe(0);
+  });
+
+  it('takes the short way across the 0/360 seam', () => {
+    expect(hueDelta(350, 10)).toBe(20);
+    expect(hueDelta(10, 350)).toBe(-20);
+  });
+
+  it('is signed within the same turn', () => {
+    expect(hueDelta(100, 160)).toBe(60);
+    expect(hueDelta(160, 100)).toBe(-60);
+  });
+
+  it('stays within [-180, 180)', () => {
+    expect(hueDelta(0, 180)).toBe(-180);
+    expect(hueDelta(0, 181)).toBe(-179);
+  });
+
+  it('handles hues outside one turn', () => {
+    expect(hueDelta(0, 730)).toBe(10);
+    expect(hueDelta(720, -10)).toBe(-10);
+  });
+});
+
+describe('random helpers', () => {
+  it('randomRange maps the unit random into the range', () => {
+    vi.spyOn(Math, 'random').mockReturnValueOnce(0).mockReturnValueOnce(0.5).mockReturnValueOnce(0.999);
+    expect(randomRange(-2, 6)).toBe(-2);
+    expect(randomRange(-2, 6)).toBe(2);
+    expect(randomRange(-2, 6)).toBeCloseTo(5.992);
+  });
+
+  it('signedRandom is centered on zero and scaled', () => {
+    vi.spyOn(Math, 'random').mockReturnValueOnce(0).mockReturnValueOnce(0.5).mockReturnValueOnce(1);
+    expect(signedRandom(10)).toBe(-5);
+    expect(signedRandom(10)).toBe(0);
+    expect(signedRandom(10)).toBe(5);
+  });
+
+  it('stays within bounds for real random values', () => {
+    for (let i = 0; i < 200; i++) {
+      const range = randomRange(3, 4);
+      const signed = signedRandom(2);
+      expect(range).toBeGreaterThanOrEqual(3);
+      expect(range).toBeLessThan(4);
+      expect(signed).toBeGreaterThanOrEqual(-1);
+      expect(signed).toBeLessThan(1);
+    }
+  });
+});
