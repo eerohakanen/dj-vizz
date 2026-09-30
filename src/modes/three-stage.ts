@@ -2,7 +2,7 @@ import type * as Three from 'three';
 import { BACKGROUND, createCanvas, sceneCtx } from '../canvas';
 import { color } from '../color';
 import { showWarning } from '../dom';
-import { decay, signedRandom } from '../math';
+import { approach, decay, lerp, signedRandom, TAU } from '../math';
 import { clock, fx, signal, view } from '../state';
 
 export type ThreeModule = typeof Three;
@@ -71,6 +71,24 @@ export function createKick() {
       this.value *= decay(0.03, clock.delta);
     },
   };
+}
+
+const SWAY_BEATS = 16;
+const SWAY_LOCK_RATE = 1.5;
+
+let swayLock = 0;
+
+export const swayAngle = (phraseBeat: number, beatPhase: number) => (TAU * ((phraseBeat % SWAY_BEATS) + beatPhase)) / SWAY_BEATS;
+
+export function advanceSway() {
+  swayLock = approach(swayLock, signal.bpm > 0 ? 1 : 0, SWAY_LOCK_RATE, clock.delta);
+}
+
+export function sway(frequency: number, harmonic: number, offset = 0) {
+  const free = Math.sin(clock.time * frequency);
+  if (swayLock < 0.001) return free;
+  const locked = Math.sin(swayAngle(signal.phraseBeat, signal.beatPhase) * harmonic + offset);
+  return lerp(free, locked, swayLock);
 }
 
 export const glowLevel = (kick: number) => 0.7 + signal.mid * 0.8 + kick * 0.8 + fx.drop;

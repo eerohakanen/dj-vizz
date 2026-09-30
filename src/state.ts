@@ -59,6 +59,9 @@ export const signal = {
   bpm: 0,
   tempoConfidence: 0,
   beatInBar: 0,
+  beatPhase: 0,
+  barPhase: 0,
+  downbeat: false,
   phraseBeat: 0,
   tension: 0,
   brightness: 0.5,
@@ -70,7 +73,6 @@ export const signal = {
 export const fx = {
   hue: 0,
   beat: 0,
-  beatCount: 0,
   kick: 0,
   snare: 0,
   hat: 0,

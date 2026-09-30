@@ -3,6 +3,7 @@ import { approach, clamp, clamp01, decay, randomRange, TAU } from '../math';
 import { clock, fx, signal } from '../state';
 import {
   additiveOptions,
+  advanceSway,
   cameraJitter,
   createKick,
   createRenderer,
@@ -14,6 +15,7 @@ import {
   paintPalette,
   pointScale,
   presentStage,
+  sway,
   type ThreeModule,
 } from './three-stage';
 
@@ -443,13 +445,13 @@ function advanceBodies(stage: DeepSpaceStage) {
 
 function moveCamera(stage: DeepSpaceStage) {
   const { camera } = stage;
-  const { time } = clock;
   const jitter = cameraJitter(0.6);
-  camera.position.set(Math.sin(time * 0.31) * 4 + jitter(), Math.cos(time * 0.23) * 3 + jitter(), 0);
+  advanceSway();
+  camera.position.set(sway(0.31, 2) * 4 + jitter(), sway(0.23, 1, Math.PI / 2) * 3 + jitter(), 0);
   camera.rotation.set(
-    pitch + Math.sin(time * 0.17) * 0.05,
-    yaw + Math.sin(time * 0.13) * 0.06,
-    bank + roll + fx.spin * 0.15 + Math.sin(time * 0.09) * 0.2,
+    pitch + sway(0.17, 3) * 0.05,
+    yaw + sway(0.13, 2, 1) * 0.06,
+    bank + roll + fx.spin * 0.15 + sway(0.09, 1) * 0.2,
   );
   camera.fov = BASE_FOV + kick.value * 6 + Math.min(40, fx.drop * 35 + Math.max(0, speed - 60) * 0.04);
   camera.updateProjectionMatrix();

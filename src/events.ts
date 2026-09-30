@@ -10,6 +10,8 @@ import { playlist } from './presets/library';
 import { nextPreset } from './presets/playlist';
 import { clock, fx, settings, signal, view } from './state';
 
+const DOWNBEAT_HUE_BOOST = 1.6;
+
 function randomOtherMode() {
   let next;
   do next = (Math.random() * MODES.length) | 0;
@@ -42,8 +44,7 @@ export function triggerDrop() {
 }
 
 export function onBeat() {
-  fx.hue += (12 + fx.beat * 20) * settings.colorSpeed;
-  fx.beatCount++;
+  fx.hue += (12 + fx.beat * 20) * settings.colorSpeed * (signal.downbeat ? DOWNBEAT_HUE_BOOST : 1);
   const every = changeOption(playlist.changeOn).beats;
   if (playlist.playing) {
     playlist.beats++;
@@ -55,7 +56,10 @@ export function onBeat() {
   fx.shake = Math.max(fx.shake, 0.22 * fx.beat * settings.reactivity * settings.punch);
   if (settings.strobe) fx.strobeFlash = settings.flashes;
   if (settings.glitch && fx.beat > 0.6) fx.glitchAmount = Math.max(fx.glitchAmount, fx.beat);
-  if (fx.beat > 0.8) addShockwave();
+  if (signal.downbeat) {
+    addShockwave(0);
+    addShockwave(50 * view.pixelRatio);
+  } else if (fx.beat > 0.8) addShockwave();
   burst((10 + fx.beat * 25 * settings.reactivity) | 0, 2, 9, 1);
 }
 

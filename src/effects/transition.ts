@@ -1,19 +1,27 @@
 import { output, transitionCtx, transitionFrame as frame } from '../canvas';
 import { color } from '../color';
-import { smoothstep, TAU } from '../math';
-import { clock, view } from '../state';
+import { clamp, smoothstep, TAU } from '../math';
+import { clock, signal, view } from '../state';
 
-const DURATION = 1.1;
+const DEFAULT_DURATION = 1.1;
+const MIN_DURATION = 0.6;
+const MAX_DURATION = 2.4;
+const BEATS_PER_BAR = 4;
 const STYLE_COUNT = 4;
 const STRIPS = 24;
 
 let startedAt = -9;
+let duration = DEFAULT_DURATION;
 let style = 0;
+
+export const transitionDuration = (bpm: number) =>
+  bpm > 0 ? clamp((BEATS_PER_BAR * 60) / bpm, MIN_DURATION, MAX_DURATION) : DEFAULT_DURATION;
 
 export function startTransition() {
   if (clock.time < 0.5) return;
   transitionCtx.drawImage(output, 0, 0);
   startedAt = clock.time;
+  duration = transitionDuration(signal.bpm);
   style = (Math.random() * STYLE_COUNT) | 0;
 }
 
@@ -71,7 +79,7 @@ function dropStrips(o: CanvasRenderingContext2D, eased: number, progress: number
 const STYLES = [zoomOut, spinAway, irisOpen, dropStrips];
 
 export function drawTransition(o: CanvasRenderingContext2D) {
-  const progress = (clock.time - startedAt) / DURATION;
+  const progress = (clock.time - startedAt) / duration;
   if (progress >= 1 || progress < 0) return;
   o.save();
   STYLES[style](o, smoothstep(progress), progress);

@@ -3,6 +3,7 @@ import type { MeshSurfaceSampler as Sampler } from 'three/examples/jsm/math/Mesh
 import { clock, fx, signal } from '../state';
 import {
   additiveOptions,
+  advanceSway,
   cameraJitter,
   createKick,
   createRenderer,
@@ -14,6 +15,7 @@ import {
   paintPalette,
   pointScale,
   presentStage,
+  sway,
   type ThreeModule,
 } from './three-stage';
 
@@ -226,7 +228,7 @@ function updateUniforms(stage: ModelStage) {
 function animate(stage: ModelStage) {
   const { pivot, lights } = stage;
   const { time } = clock;
-  pivot.rotation.set(Math.sin(time * 0.21) * 0.35 + kick.value * 0.08, time * 0.35 + fx.spin * 0.6, Math.sin(time * 0.17) * 0.15);
+  pivot.rotation.set(sway(0.21, 2) * 0.35 + kick.value * 0.08, time * 0.35 + fx.spin * 0.6, sway(0.17, 1, 1) * 0.15);
   pivot.scale.setScalar(1 + kick.value * 0.14 + signal.gate * signal.punchBass * 0.08);
   lights.forEach((light, i) => {
     const angle = time * (0.6 + i * 0.25) + i * Math.PI;
@@ -239,9 +241,10 @@ function animate(stage: ModelStage) {
 function moveCamera(stage: ModelStage) {
   const { camera } = stage;
   const { time } = clock;
+  advanceSway();
   const jitter = cameraJitter(0.12);
   const radius = ORBIT_RADIUS - kick.value * 0.25 + fx.drop * 0.8;
-  camera.position.set(Math.sin(time * 0.13) * radius + jitter(), Math.sin(time * 0.09) * 0.9 + jitter(), Math.cos(time * 0.13) * radius);
+  camera.position.set(Math.sin(time * 0.13) * radius + jitter(), sway(0.09, 1) * 0.9 + jitter(), Math.cos(time * 0.13) * radius);
   camera.lookAt(0, 0, 0);
   camera.rotation.z += fx.spin * 0.2;
   camera.fov = BASE_FOV + kick.value * 4 + fx.drop * 18;

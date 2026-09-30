@@ -1,4 +1,4 @@
-import { wrap } from '../math';
+import { clamp01, wrap } from '../math';
 import { signal } from '../state';
 
 const MIN_BPM = 88;
@@ -25,6 +25,10 @@ let kickStrength = 0;
 let locked = false;
 let candidateShift = 0;
 let candidateBars = 0;
+
+export const beatPhaseAt = (now: number, upcomingBeat: number, beatPeriod: number) => clamp01(1 - (upcomingBeat - now) / beatPeriod);
+
+export const barPhaseAt = (beatInBar: number, beatPhase: number) => (beatInBar + beatPhase) / BEATS_PER_BAR;
 
 const wrapBin = (bin: number) => wrap(bin, HISTOGRAM_SIZE);
 
@@ -155,6 +159,14 @@ export function beatStrength(time: number) {
 }
 
 export function advanceTempo(time: number, delta: number, kick: number, snare: number) {
+  const fired = stepTempo(time, delta, kick, snare);
+  signal.downbeat = fired && locked && signal.beatInBar === 0;
+  signal.beatPhase = locked ? beatPhaseAt(time, nextBeat, period) : 0;
+  signal.barPhase = locked ? barPhaseAt(signal.beatInBar, signal.beatPhase) : 0;
+  return fired;
+}
+
+function stepTempo(time: number, delta: number, kick: number, snare: number) {
   const decay = Math.pow(0.5, delta / HISTOGRAM_HALF_LIFE);
   for (let i = 0; i < HISTOGRAM_SIZE; i++) histogram[i] *= decay;
   if (kick) registerKick(time, kick);
