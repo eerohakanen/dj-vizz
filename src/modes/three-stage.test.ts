@@ -1,13 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { showWarning } from '../dom';
 import { lazyStage } from './three-stage';
 
 vi.mock('../dom', () => ({ showWarning: vi.fn() }));
 vi.mock('../canvas', () => ({ BACKGROUND: '#000', createCanvas: vi.fn(), sceneCtx: {} }));
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+const settle = () => vi.advanceTimersByTimeAsync(0);
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.useFakeTimers();
+});
+
+afterEach(() => vi.useRealTimers());
 
 describe('lazyStage', () => {
   it('starts loading on first get and caches the result', async () => {
@@ -29,7 +34,12 @@ describe('lazyStage', () => {
     await settle();
     expect(lazy.get()).toBeUndefined();
     await settle();
+    expect(load).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(5000);
+    lazy.get();
+    await settle();
     expect(load).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(5000);
     lazy.get();
     await settle();
     expect(lazy.get()).toBe('stage');

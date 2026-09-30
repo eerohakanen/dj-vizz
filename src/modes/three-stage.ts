@@ -31,21 +31,26 @@ export const GLOW_POINT_FRAGMENT = `
   }
 `;
 
+const RETRY_DELAY_MS = 5000;
+
 export function lazyStage<T>(load: () => Promise<T>) {
   let stage: T | undefined;
   let loading = false;
   let warned = false;
+  let retryAt = 0;
   return {
     get() {
-      if (stage === undefined && !loading) {
+      if (stage === undefined && !loading && Date.now() >= retryAt) {
         loading = true;
         load()
           .then((loaded) => {
             stage = loaded;
           })
           .catch(() => {
-            if (!warned) showWarning('3D mode failed to load');
+            retryAt = Date.now() + RETRY_DELAY_MS;
+            if (warned) return;
             warned = true;
+            showWarning('3D mode failed to load');
           })
           .finally(() => {
             loading = false;
