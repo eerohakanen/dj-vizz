@@ -214,7 +214,7 @@ export function PresetsMenu() {
       <div className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">My presets</h1>
+            <h1 className="font-display text-3xl tracking-[-0.01em] sm:text-4xl">My presets</h1>
             <p className="text-muted-foreground">Sequences of scenes that play through your set.</p>
           </div>
           {!!library.folders.length && (

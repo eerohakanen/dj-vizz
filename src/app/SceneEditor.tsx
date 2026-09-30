@@ -95,14 +95,14 @@ function SceneRow({ scene, index, count, onRename }: SceneRowProps) {
       ref={row}
       className={cn(
         'group flex items-center gap-1 rounded-lg pr-1 transition-colors hover:bg-accent/60',
-        current && 'bg-primary/10 hover:bg-primary/15',
+        current && 'bg-primary/15 hover:bg-primary/20',
       )}
     >
       <button
         type="button"
         aria-current={current || undefined}
         onClick={() => editScene(index)}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
       >
         <span className="w-4 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground">{index + 1}</span>
         <span
@@ -111,7 +111,7 @@ function SceneRow({ scene, index, count, onRename }: SceneRowProps) {
           aria-hidden
         />
         <span className="min-w-0 flex-1">
-          <span className={cn('block truncate text-sm font-medium', current && 'text-primary')}>{scene.name}</span>
+          <span className="block truncate text-sm font-medium">{scene.name}</span>
           <span className="block truncate text-xs text-muted-foreground">{describePreset(scene)}</span>
         </span>
         {current && <Badge className="shrink-0">Editing</Badge>}
@@ -180,7 +180,7 @@ export function SceneEditor() {
           <SheetHeader className="gap-3">
             <SheetTitle className={SECTION_HEADING}>Edit preset</SheetTitle>
             {folder && <PresetNameField key={library.cur} folder={folder} />}
-            <SheetDescription className="flex items-center gap-1.5 text-xs">
+            <SheetDescription className="flex items-center gap-1.5 text-xs text-brand-ink">
               <CloudCheck className="size-3.5" />
               Changes save automatically
             </SheetDescription>

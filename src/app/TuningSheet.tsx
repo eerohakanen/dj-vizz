@@ -52,7 +52,7 @@ function LevelMeter() {
     <MeterBar
       value={signal.energy}
       hot={signal.energy > 0.85}
-      fillClassName="rounded-xs bg-emerald-400 transition-[width] duration-150 data-[hot=true]:bg-amber-400"
+      fillClassName="rounded-xs bg-brand transition-[width] duration-150 data-[hot=true]:bg-destructive"
     />
   );
 }

@@ -9,7 +9,7 @@ export function Landing() {
       <MenuBackdrop />
       <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center gap-8 px-6 py-12 text-center">
         <div className="space-y-4">
-          <h1 className="text-4xl font-extrabold tracking-tight font-stretch-expanded text-balance sm:text-6xl">DJ Visualizer</h1>
+          <h1 className="font-display text-[2.5rem] leading-none tracking-[-0.01em] text-balance text-brand sm:text-6xl">DJ Visualizer</h1>
           <p className="text-lg text-muted-foreground">
             Live, beat-reactive visuals for your mix. Point it at a microphone or a window and let the music drive the
             show.

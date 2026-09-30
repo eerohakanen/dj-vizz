@@ -10,7 +10,10 @@ function Hit({ label, level }: { label: string; level: number }) {
   return (
     <span
       className="inline-flex size-7 items-center justify-center rounded-full border border-border font-semibold"
-      style={{ backgroundColor: `rgba(255,255,255,${Math.min(1, level) * 0.85})`, color: level > 0.5 ? '#000' : undefined }}
+      style={{
+        backgroundColor: `color-mix(in srgb, var(--foreground) ${Math.round(Math.min(1, level) * 85)}%, transparent)`,
+        color: level > 0.65 ? 'var(--card)' : undefined,
+      }}
     >
       {label}
     </span>

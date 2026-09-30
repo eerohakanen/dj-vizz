@@ -1,35 +1,37 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 :root {
-  --radius: 0.375rem;
-  --background: oklch(0.19 0.008 70);
-  --foreground: oklch(0.93 0.018 85);
-  --card: oklch(0.225 0.01 70);
-  --card-foreground: oklch(0.93 0.018 85);
-  --popover: oklch(0.245 0.01 70);
-  --popover-foreground: oklch(0.93 0.018 85);
-  --primary: oklch(0.76 0.12 65);
-  --primary-foreground: oklch(0.2 0.03 55);
-  --secondary: oklch(0.28 0.01 70);
-  --secondary-foreground: oklch(0.93 0.018 85);
-  --muted: oklch(0.28 0.01 70);
-  --muted-foreground: oklch(0.72 0.02 80);
-  --accent: oklch(0.31 0.012 70);
-  --accent-foreground: oklch(0.93 0.018 85);
-  --destructive: oklch(0.64 0.18 28);
-  --border: oklch(0.34 0.012 70);
-  --input: oklch(0.38 0.012 70);
-  --ring: oklch(0.76 0.12 65 / 60%);
+  --radius: 0.5rem;
+  --background: #efeae0;
+  --foreground: #1f2a2e;
+  --card: #f7f3eb;
+  --card-foreground: #1f2a2e;
+  --popover: #f7f3eb;
+  --popover-foreground: #1f2a2e;
+  --primary: #ff7a3d;
+  --primary-foreground: #1f2a2e;
+  --secondary: #e7e0d3;
+  --secondary-foreground: #1f2a2e;
+  --muted: #e7e0d3;
+  --muted-foreground: #58615f;
+  --accent: #e3dbcc;
+  --accent-foreground: #1f2a2e;
+  --destructive: #b3261e;
+  --border: #c4bdb0;
+  --input: #aca496;
+  --ring: #d4561c;
+  --brand: #1c8c86;
+  --brand-ink: #126a65;
   --side-panel-width: 28rem;
 }
 
 @theme inline {
-  --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --radius-sm: calc(var(--radius) - 4px);
+  --font-sans: "Rubik", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Courier Prime", "Courier New", Courier, ui-monospace, monospace;
+  --font-display: "Bowlby One", Impact, "Arial Black", ui-sans-serif, sans-serif;
+  --shadow-hard: 3px 3px 0 var(--foreground);
+  --radius-sm: calc(var(--radius) - 3px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
@@ -51,11 +53,13 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
 
   html,

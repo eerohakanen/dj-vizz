@@ -238,7 +238,7 @@ function AudioPopover() {
       <Hint label="Audio input">
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm">
-            <span className={cn('size-2 rounded-full', audio.live ? 'bg-emerald-400' : 'bg-destructive')} />
+            <span className={cn('size-2 rounded-full', audio.live ? 'bg-brand' : 'bg-destructive')} />
             <AudioLines />
             <StableLabel value={sourceLabel(audio.source) ?? NO_INPUT_LABEL} options={AUDIO_LABELS} />
           </Button>
