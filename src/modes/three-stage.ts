@@ -1,7 +1,9 @@
 import type * as Three from 'three';
 import { BACKGROUND, createCanvas, sceneCtx } from '../canvas';
 import { color } from '../color';
-import { view } from '../state';
+import { showWarning } from '../dom';
+import { decay, signedRandom } from '../math';
+import { clock, fx, signal, view } from '../state';
 
 export type ThreeModule = typeof Three;
 
@@ -29,6 +31,53 @@ export const GLOW_POINT_FRAGMENT = `
   }
 `;
 
+export function lazyStage<T>(load: () => Promise<T>) {
+  let stage: T | undefined;
+  let loading = false;
+  let warned = false;
+  return {
+    get() {
+      if (stage === undefined && !loading) {
+        loading = true;
+        load()
+          .then((loaded) => {
+            stage = loaded;
+          })
+          .catch(() => {
+            if (!warned) showWarning('3D mode failed to load');
+            warned = true;
+          })
+          .finally(() => {
+            loading = false;
+          });
+      }
+      return stage;
+    },
+  };
+}
+
+export function createKick() {
+  return {
+    value: 0,
+    pulse() {
+      this.value = Math.max(this.value, fx.beat);
+    },
+    decay() {
+      this.value *= decay(0.03, clock.delta);
+    },
+  };
+}
+
+export const glowLevel = (kick: number) => 0.7 + signal.mid * 0.8 + kick * 0.8 + fx.drop;
+
+export const cameraJitter = (scale: number) => () => signedRandom(fx.shake * scale);
+
+export const additiveOptions = (THREE: ThreeModule) => ({
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+  transparent: true,
+});
+
 export function createRenderer(THREE: ThreeModule) {
   const renderer = new THREE.WebGLRenderer({ canvas: createCanvas(), antialias: false, alpha: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(1);
@@ -47,6 +96,11 @@ export function fitStage(stage: Stage) {
 
 export function paint(stage: Stage, target: Three.Color, position: number, lightness?: number) {
   target.setStyle(color(position, 1, lightness), stage.THREE.LinearSRGBColorSpace);
+}
+
+export function paintPalette(stage: Stage, colorA: Three.Color, colorB: Three.Color) {
+  paint(stage, colorA, 0);
+  paint(stage, colorB, 1);
 }
 
 export function pointScale(camera: Three.PerspectiveCamera) {

@@ -1,7 +1,21 @@
 import type * as Three from 'three';
-import { approach, decay, randomRange, signedRandom, TAU } from '../math';
+import { approach, clamp, clamp01, decay, randomRange, TAU } from '../math';
 import { clock, fx, signal } from '../state';
-import { createRenderer, fitStage, GLOW_POINT_FRAGMENT, paint, pointScale, presentStage, type ThreeModule } from './three-stage';
+import {
+  additiveOptions,
+  cameraJitter,
+  createKick,
+  createRenderer,
+  fitStage,
+  GLOW_POINT_FRAGMENT,
+  glowLevel,
+  lazyStage,
+  paint,
+  paintPalette,
+  pointScale,
+  presentStage,
+  type ThreeModule,
+} from './three-stage';
 
 const CUBE = 240;
 const FIELD_RADIUS = CUBE / 2;
@@ -169,10 +183,8 @@ interface Billboard {
   hue?: number;
 }
 
-let stage: DeepSpaceStage | null = null;
-let loading = false;
+const kick = createKick();
 let speed = 8;
-let kick = 0;
 let yaw = 0;
 let pitch = 0;
 let yawRate = 0;
@@ -183,7 +195,6 @@ let bank = 0;
 let roll = 0;
 let rollVelocity = 0;
 let dropping = false;
-
 
 function createStarGeometry(THREE: ThreeModule) {
   const positions = new Float32Array(STAR_COUNT * 3);
@@ -271,10 +282,8 @@ function buildStage(THREE: ThreeModule) {
       vertexShader,
       fragmentShader,
       uniforms: { ...shared, ...uniforms },
-      blending: THREE.AdditiveBlending,
+      ...additiveOptions(THREE),
       depthTest: false,
-      depthWrite: false,
-      transparent: true,
     });
 
   const scene = new THREE.Scene();
@@ -345,16 +354,13 @@ function buildStage(THREE: ThreeModule) {
 
 function createStage(THREE: ThreeModule) {
   const created = buildStage(THREE);
-  stage = created;
   const { suns, nebulae } = created;
   suns.forEach((sun, i) => spawnBillboard(created, sun, (FAR * i) / SUN_COUNT, (FAR * (i + 1)) / SUN_COUNT, 10, 32));
   nebulae.forEach((nebula, i) => spawnBillboard(created, nebula, (FAR * i) / NEBULA_COUNT, (FAR * (i + 1)) / NEBULA_COUNT, 30, 90));
+  return created;
 }
 
-function loadStage() {
-  loading = true;
-  import('three').then(createStage).catch(() => {});
-}
+const deepSpace = lazyStage(() => import('three').then(createStage));
 
 const wrapAngle = (angle: number) => Math.atan2(Math.sin(angle), Math.cos(angle));
 
@@ -379,7 +385,7 @@ function steer(stage: DeepSpaceStage) {
   turnYaw *= decay(0.25, delta);
   turnPitch *= decay(0.25, delta);
   yaw += yawRate * delta;
-  pitch = Math.max(-1.1, Math.min(1.1, pitch + pitchRate * delta));
+  pitch = clamp(pitch + pitchRate * delta, -1.1, 1.1);
   bank = approach(bank, yawRate * 0.7, 3, delta);
   rollVelocity *= decay(0.25, delta);
   roll += rollVelocity * delta;
@@ -391,7 +397,7 @@ function steer(stage: DeepSpaceStage) {
 
 function fly(stage: DeepSpaceStage) {
   const { gate, energy, punchBass } = signal;
-  const target = 8 + gate * (energy * 40 + punchBass * 90 + kick * 40) + fx.drop * 650;
+  const target = 8 + gate * (energy * 40 + punchBass * 90 + kick.value * 40) + fx.drop * 650;
   speed += (target - speed) * Math.min(1, clock.delta * (target > speed ? 8 : 2.5));
   const offset = stage.shared.uOffset.value.addScaledVector(stage.heading, speed * clock.delta);
   offset.set(offset.x % CUBE, offset.y % CUBE, offset.z % CUBE);
@@ -400,15 +406,14 @@ function fly(stage: DeepSpaceStage) {
 function updateUniforms(stage: DeepSpaceStage) {
   const { shared, starMaterial, streakMaterial, camera } = stage;
   shared.uTime.value = clock.time;
-  shared.uKick.value = kick;
+  shared.uKick.value = kick.value;
   shared.uScale.value = pointScale(camera);
-  shared.uGlow.value = 0.7 + signal.mid * 0.8 + kick * 0.8 + fx.drop;
-  paint(stage, shared.uColorA.value, 0);
-  paint(stage, shared.uColorB.value, 1);
-  starMaterial.uniforms.uSize.value = 0.45 + kick * 0.35 + signal.punchHigh * 0.3;
+  shared.uGlow.value = glowLevel(kick.value);
+  paintPalette(stage, shared.uColorA.value, shared.uColorB.value);
+  starMaterial.uniforms.uSize.value = 0.45 + kick.value * 0.35 + signal.punchHigh * 0.3;
   streakMaterial.uniforms.uStreak.value = speed * 0.12;
   streakMaterial.uniforms.uHeading.value.copy(stage.heading);
-  streakMaterial.uniforms.uStreakAlpha.value = Math.min(1, Math.max(0, (speed - 20) / 120));
+  streakMaterial.uniforms.uStreakAlpha.value = clamp01((speed - 20) / 120);
 }
 
 function drift(stage: DeepSpaceStage, body: Billboard, behind: number, minOffset: number, maxOffset: number) {
@@ -424,43 +429,41 @@ function advanceBodies(stage: DeepSpaceStage) {
     const { ahead, distance } = drift(stage, sun, 2, 10, 32);
     const { uniforms } = sun.material;
     paint(stage, uniforms.uColor.value, sun.hue);
-    uniforms.uIntensity.value = (0.9 + signal.punchBass * 0.8 + kick * 0.5) * Math.min(1, (FAR - distance) / 80) * Math.min(1, Math.max(0, ahead / 6));
+    uniforms.uIntensity.value = (0.9 + signal.punchBass * 0.8 + kick.value * 0.5) * Math.min(1, (FAR - distance) / 80) * clamp01(ahead / 6);
   }
   for (const nebula of stage.nebulae) {
     const { ahead, distance } = drift(stage, nebula, 10, 30, 90);
-    nebula.material.uniforms.uIntensity.value = (0.18 + signal.mid * 0.25 + fx.drop * 0.3) * Math.min(1, (FAR - distance) / 120) * Math.min(1, Math.max(0, ahead / 40));
+    nebula.material.uniforms.uIntensity.value = (0.18 + signal.mid * 0.25 + fx.drop * 0.3) * Math.min(1, (FAR - distance) / 120) * clamp01(ahead / 40);
   }
   const { core, galaxy } = stage;
   paint(stage, core.material.uniforms.uColor.value, 0.5, 70);
-  core.material.uniforms.uIntensity.value = 0.55 + signal.mid * 0.5 + kick * 0.4 + fx.drop * 1.5;
+  core.material.uniforms.uIntensity.value = 0.55 + signal.mid * 0.5 + kick.value * 0.4 + fx.drop * 1.5;
   galaxy.rotation.y = -fx.spin * 0.25 - clock.time * 0.02;
 }
 
 function moveCamera(stage: DeepSpaceStage) {
   const { camera } = stage;
   const { time } = clock;
-  const jitter = () => signedRandom(fx.shake * 0.6);
+  const jitter = cameraJitter(0.6);
   camera.position.set(Math.sin(time * 0.31) * 4 + jitter(), Math.cos(time * 0.23) * 3 + jitter(), 0);
   camera.rotation.set(
     pitch + Math.sin(time * 0.17) * 0.05,
     yaw + Math.sin(time * 0.13) * 0.06,
     bank + roll + fx.spin * 0.15 + Math.sin(time * 0.09) * 0.2,
   );
-  camera.fov = BASE_FOV + kick * 6 + Math.min(40, fx.drop * 35 + Math.max(0, speed - 60) * 0.04);
+  camera.fov = BASE_FOV + kick.value * 6 + Math.min(40, fx.drop * 35 + Math.max(0, speed - 60) * 0.04);
   camera.updateProjectionMatrix();
 }
 
 export function pulseDeepSpace() {
-  kick = Math.max(kick, fx.beat);
+  kick.pulse();
   if (fx.beat > 0.5 && Math.random() < 0.35 + signal.energy * 0.4) throwTurn(fx.beat);
 }
 
 export function drawDeepSpace() {
-  if (!stage) {
-    if (!loading) loadStage();
-    return;
-  }
-  kick *= decay(0.03, clock.delta);
+  const stage = deepSpace.get();
+  if (!stage) return;
+  kick.decay();
   fitStage(stage);
   steer(stage);
   fly(stage);
