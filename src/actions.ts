@@ -103,6 +103,8 @@ export function leaveVisualizer() {
 
 export const openPresets = () => leaveLive('presets');
 
+export const leaveSetup = () => (ui.liveMode === 'explore' ? leaveVisualizer() : openPresets());
+
 export function goLive() {
   ui.screen = 'live';
   if (ui.liveMode === 'play') startPlaybackAt(0);

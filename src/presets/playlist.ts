@@ -3,7 +3,7 @@ import { clock, settings } from '../state';
 import { notify } from '../store';
 import type { TransitionKind } from '../effects/transition';
 import { changeOption, DEFAULT_CHANGE_ON, type ChangeOn } from './change';
-import { applyPreset, currentFolder, playlist, saveLibrary, selectFolder } from './library';
+import { applyPreset, currentFolder, playlist, saveLibrary } from './library';
 
 export const currentChangeOn = () => currentFolder()?.changeOn ?? DEFAULT_CHANGE_ON;
 
@@ -101,10 +101,4 @@ export function setTransition(transition: TransitionKind) {
   if (!folder) return;
   folder.transition = transition;
   saveLibrary();
-}
-
-export function playFolder(index: number) {
-  selectFolder(index);
-  playlist.playing = false;
-  togglePlayback();
 }

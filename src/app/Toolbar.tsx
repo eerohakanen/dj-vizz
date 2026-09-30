@@ -44,7 +44,7 @@ import { shortcutFor } from '@/controls';
 import { triggerDrop } from '@/events';
 import { setMode } from '@/mode';
 import { MODES } from '@/modes/index';
-import { PALETTES, type Palette } from '@/palettes';
+import { PALETTES } from '@/palettes';
 import { currentFolder, playlist } from '@/presets/library';
 import { togglePlayback } from '@/presets/playlist';
 import { settings } from '@/state';
@@ -52,7 +52,7 @@ import { ui, useEngine } from '@/store';
 import { MIRROR_NAMES, PSY_NAMES } from '@/effects/options';
 import { cn } from '@/lib/utils';
 import { SOURCES, sourceLabel } from './labels';
-import { GLASS_PANEL, SourcePicker } from './shared';
+import { GLASS_PANEL, SourcePicker, swatchStyle } from './shared';
 import { StableLabel } from './StableLabel';
 
 const NO_INPUT_LABEL = 'No input';
@@ -95,12 +95,6 @@ function ModeSelect() {
       </SelectContent>
     </Select>
   );
-}
-
-function swatchStyle(palette: Palette) {
-  if (palette.rainbow) return { background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)' };
-  const colors = palette.stops.map(([h, s, l]) => `hsl(${h} ${s}% ${l}%)`);
-  return { background: `linear-gradient(90deg, ${colors.join(', ')})` };
 }
 
 function PaletteSelect() {

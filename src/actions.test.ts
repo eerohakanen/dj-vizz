@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { enterEdit, enterPlay, explore, goLive, newPreset, openPresets, switchToEdit, switchToPlay } from './actions';
+import {
+  enterEdit,
+  enterPlay,
+  explore,
+  goLive,
+  leaveSetup,
+  newPreset,
+  openPresets,
+  switchToEdit,
+  switchToPlay,
+} from './actions';
 import { audio } from './audio/input';
 import { createPreset, library, playlist } from './presets/library';
 import { settings } from './state';
@@ -83,6 +93,24 @@ describe('navigation actions', () => {
     expect(ui.screen).toBe('presets');
     expect(playlist.playing).toBe(false);
     expect(audio.live).toBe(true);
+  });
+
+  it('leaving setup returns to presets for play and edit', () => {
+    audio.live = false;
+    enterEdit(0);
+    leaveSetup();
+    expect(ui.screen).toBe('presets');
+    enterPlay(0);
+    leaveSetup();
+    expect(ui.screen).toBe('presets');
+  });
+
+  it('leaving setup from explore returns to landing', () => {
+    audio.live = false;
+    explore();
+    expect(ui.screen).toBe('setup');
+    leaveSetup();
+    expect(ui.screen).toBe('landing');
   });
 
   it('explore goes live in explore mode', () => {

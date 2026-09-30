@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { explore, goLive, leaveVisualizer } from '@/actions';
+import { goLive, leaveSetup, leaveVisualizer } from '@/actions';
 import { holdWakeLock } from '@/wake-lock';
-import { notify, ui, useEngine, type Screen } from '@/store';
+import { ui, useEngine } from '@/store';
 import { AnalysisHud } from './AnalysisHud';
 import { ExitDialog } from './ExitDialog';
 import { HelpDialog } from './HelpDialog';
 import { Landing } from './Landing';
+import { PresetsMenu } from './PresetsMenu';
 import { PresetsSheet } from './PresetsSheet';
 import { RevealButton } from './RevealButton';
 import { Setup } from './Setup';
@@ -28,15 +29,11 @@ export function App() {
     if (screen === 'live') return holdWakeLock();
   }, [screen]);
 
-  const goTo = (next: Screen) => {
-    ui.screen = next;
-    notify();
-  };
-
   return (
     <TooltipProvider delayDuration={300}>
-      {screen === 'landing' && <Landing onStart={explore} onResume={() => goTo('live')} />}
-      {screen === 'setup' && <Setup onBack={() => goTo('landing')} onDone={goLive} />}
+      {screen === 'landing' && <Landing />}
+      {screen === 'presets' && <PresetsMenu />}
+      {screen === 'setup' && <Setup onBack={leaveSetup} onDone={goLive} />}
       {screen === 'live' && (
         <>
           <Toolbar />

@@ -9,11 +9,12 @@ import { currentFolder, library } from '@/presets/library';
 import { currentChangeOn, currentShuffle, setChangeOn, setShuffle, setTransition } from '@/presets/playlist';
 import { clamp01 } from '@/math';
 import { ui, type Overlay } from '@/store';
-import { cn, pluralize } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { CHANGE_OPTIONS, findChangeOption } from '@/presets/change';
 import { DEFAULT_TRANSITION, findTransition, TRANSITIONS } from '@/effects/transition';
 import { audio } from '@/audio/input';
 import { Button } from '@/components/ui/button';
+import type { Palette } from '@/palettes';
 import { SOURCES, type SourceOption } from './labels';
 
 export const GLASS_PANEL = 'bg-card/80 shadow-2xl backdrop-blur-xl';
@@ -80,6 +81,12 @@ export function SourcePicker() {
   );
 }
 
+export function swatchStyle(palette: Palette) {
+  if (palette.rainbow) return { background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)' };
+  const colors = palette.stops.map(([h, s, l]) => `hsl(${h} ${s}% ${l}%)`);
+  return { background: `linear-gradient(90deg, ${colors.join(', ')})` };
+}
+
 export function IconTile({ children }: { children: ReactNode }) {
   return (
     <div className="mb-2 flex size-11 items-center justify-center rounded-lg bg-primary/15 text-primary">{children}</div>
@@ -105,10 +112,9 @@ interface FolderSelectProps {
   value: number;
   onChange: (index: number) => void;
   className?: string;
-  verbose?: boolean;
 }
 
-export function FolderSelect({ value, onChange, className, verbose }: FolderSelectProps) {
+export function FolderSelect({ value, onChange, className }: FolderSelectProps) {
   return (
     <Select value={String(value)} onValueChange={(next) => onChange(+next)}>
       <SelectTrigger className={className}>
@@ -117,7 +123,7 @@ export function FolderSelect({ value, onChange, className, verbose }: FolderSele
       <SelectContent>
         {library.folders.map((folder, index) => (
           <SelectItem key={index} value={String(index)}>
-            {folder.name} · {verbose ? pluralize(folder.presets.length, 'preset') : folder.presets.length}
+            {folder.name} · {folder.presets.length}
           </SelectItem>
         ))}
       </SelectContent>
