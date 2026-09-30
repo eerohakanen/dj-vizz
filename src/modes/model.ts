@@ -169,7 +169,7 @@ function buildStage([THREE, { MeshSurfaceSampler }]: Modules) {
   return {
     THREE,
     MeshSurfaceSampler,
-    renderer: createRenderer(THREE),
+    renderer: createRenderer(THREE, '#000'),
     scene,
     camera: new THREE.PerspectiveCamera(BASE_FOV, 1, 0.05, 50),
     shared,

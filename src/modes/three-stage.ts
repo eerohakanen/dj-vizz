@@ -111,10 +111,10 @@ export const additiveOptions = (THREE: ThreeModule) => ({
   transparent: true,
 });
 
-export function createRenderer(THREE: ThreeModule) {
+export function createRenderer(THREE: ThreeModule, background = BACKGROUND) {
   const renderer = new THREE.WebGLRenderer({ canvas: createCanvas(), antialias: false, alpha: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(1);
-  renderer.setClearColor(new THREE.Color().setStyle(BACKGROUND, THREE.LinearSRGBColorSpace));
+  renderer.setClearColor(new THREE.Color().setStyle(background, THREE.LinearSRGBColorSpace));
   return renderer;
 }
 
