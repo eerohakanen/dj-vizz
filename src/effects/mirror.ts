@@ -1,8 +1,9 @@
 import { BACKGROUND, kaleidoBuffer, kaleidoCtx, output } from '../canvas';
+import { mirrorIndex } from './options';
 import { fx, settings, view } from '../state';
 
-const MIRROR = 1;
-const QUAD = 2;
+const MIRROR = mirrorIndex('Mirror');
+const QUAD = mirrorIndex('Quad');
 const KALEIDO_SLICES = 6;
 const SLICE_HALF_ANGLE = Math.PI / 6 + 0.01;
 

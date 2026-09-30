@@ -7,7 +7,7 @@ import { clock, fx, signal, view } from '../state';
 
 export type ThreeModule = typeof Three;
 
-export interface Stage {
+interface Stage {
   THREE: ThreeModule;
   renderer: Three.WebGLRenderer;
   scene: Three.Scene;

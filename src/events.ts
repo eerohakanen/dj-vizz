@@ -5,11 +5,10 @@ import { addShockwave, burst, sparkle } from './effects/particles';
 import { currentMode, setMode } from './mode';
 import { MODES } from './modes/index';
 import { PALETTES } from './palettes';
+import { changeOption } from './presets/change';
 import { playlist } from './presets/library';
 import { nextPreset } from './presets/playlist';
 import { clock, fx, settings, signal, view } from './state';
-
-const BEATS_PER_CHANGE: Partial<Record<string, number>> = { b16: 16, b32: 32 };
 
 function randomOtherMode() {
   let next;
@@ -45,7 +44,7 @@ export function triggerDrop() {
 export function onBeat() {
   fx.hue += (12 + fx.beat * 20) * settings.colorSpeed;
   fx.beatCount++;
-  const every = BEATS_PER_CHANGE[playlist.changeOn];
+  const every = changeOption(playlist.changeOn).beats;
   if (playlist.playing) {
     playlist.beats++;
     if (every && playlist.beats >= every / 2 && signal.phraseBeat % every === 0) nextPreset();

@@ -1,21 +1,7 @@
 import { MicIcon, MonitorSpeaker, type LucideIcon } from 'lucide-react';
-import {
-  WINDOW_UNSUPPORTED,
-  canCaptureWindow,
-  captureMicrophone,
-  captureWindow,
-  type AudioSourceKind,
-} from '@/audio/input';
+import { WINDOW_UNSUPPORTED, canCaptureWindow, captureMicrophone, captureWindow } from '@/audio/input';
+import type { AudioSourceKind } from '@/audio/sources';
 import type { TuningGroup } from '@/tuning';
-
-export const CHANGE_OPTIONS = [
-  { value: 'drop', label: 'On each drop' },
-  { value: 'b16', label: 'Every 16 beats' },
-  { value: 'b32', label: 'Every 32 beats' },
-  { value: 's15', label: 'Every 15 s' },
-  { value: 's30', label: 'Every 30 s' },
-  { value: 's60', label: 'Every 60 s' },
-];
 
 interface SourceOption {
   kind: AudioSourceKind;

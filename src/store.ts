@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
+export type Screen = 'landing' | 'setup' | 'live';
 export type Overlay = 'exit' | 'help' | 'presets' | 'tuning';
 
 const listeners = new Set<() => void>();
@@ -11,7 +12,7 @@ export const ui = {
   peek: false,
   overlay: null as Overlay | null,
   paused: false,
-  live: false,
+  screen: 'landing' as Screen,
   debug: false,
 };
 

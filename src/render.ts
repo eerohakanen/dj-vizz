@@ -102,14 +102,8 @@ function drawLiquid(o: CanvasRenderingContext2D) {
 function drawRainbowWash(o: CanvasRenderingContext2D) {
   const { width, height } = view;
   const { time } = clock;
-  let gradient;
-  if (o.createConicGradient) {
-    gradient = o.createConicGradient(fx.spin * 1.5 + time * 0.3, width / 2, height / 2);
-    for (let i = 0; i <= 6; i++) gradient.addColorStop(i / 6, `hsl(${((i * 60 + fx.hue) % 360) | 0},100%,50%)`);
-  } else {
-    gradient = o.createLinearGradient(0, 0, width, height);
-    for (let i = 0; i <= 6; i++) gradient.addColorStop(i / 6, `hsl(${((i * 60 + fx.hue + time * 40) % 360) | 0},100%,50%)`);
-  }
+  const gradient = o.createConicGradient(fx.spin * 1.5 + time * 0.3, width / 2, height / 2);
+  for (let i = 0; i <= 6; i++) gradient.addColorStop(i / 6, `hsl(${((i * 60 + fx.hue) % 360) | 0},100%,50%)`);
   o.globalCompositeOperation = 'hue';
   o.globalAlpha = fx.rainbowMix * 0.85;
   o.fillStyle = gradient;

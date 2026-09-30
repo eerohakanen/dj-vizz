@@ -1,5 +1,6 @@
 import { showMessage } from '../dom';
 import { notify } from '../store';
+import type { AudioSourceKind } from './sources';
 
 const UNPROCESSED = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
 
@@ -12,8 +13,6 @@ const DISPLAY_CAPTURE = {
   surfaceSwitching: 'include',
   monitorTypeSurfaces: 'include',
 };
-
-export type AudioSourceKind = 'window' | 'mic';
 
 export const WINDOW_UNSUPPORTED = 'Window audio is not supported on mobile browsers. Use Microphone instead.';
 
@@ -30,10 +29,6 @@ export const audio = {
 };
 
 declare global {
-  interface Window {
-    webkitAudioContext?: typeof AudioContext;
-  }
-
   class CaptureController {
     setFocusBehavior(behavior: 'focus-captured-surface' | 'no-focus-change'): void;
   }
@@ -45,7 +40,7 @@ let stream: MediaStream | null = null;
 
 function ensureContext() {
   if (!context) {
-    context = new (window.AudioContext || window.webkitAudioContext!)();
+    context = new AudioContext();
     const analyser = context.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0.7;

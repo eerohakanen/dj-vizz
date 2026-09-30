@@ -7,7 +7,7 @@ import { notify } from './store';
 const LUT_SIZE = 64;
 const MINOR_DIMMING = 4;
 const lut = new Float32Array(LUT_SIZE * 3);
-const styleCache = new Map();
+const styleCache = new Map<number, string>();
 const currentHsl = new Float32Array(3);
 const previousHsl = new Float32Array(3);
 let previousPalette = 1;

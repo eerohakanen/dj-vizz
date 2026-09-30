@@ -5,19 +5,19 @@ import { analyse } from './audio/analysis';
 import { adaptQuality, resize } from './canvas';
 import { advancePaletteFade, buildLut } from './color';
 import { bindControls } from './controls';
+import { psyIndex, type PsyName } from './effects/options';
 import { advanceTimedPlaylist } from './presets/playlist';
 import { approach } from './math';
 import { presentFrame, renderScene } from './render';
 import { restoreSession, saveSession } from './session';
 import { clock, fx, settings } from './state';
 import { ui } from './store';
-import { PSY_NAMES } from './ui';
 
 let lastTimestamp = 0;
 
-function psyTarget(name: string) {
-  const active = PSY_NAMES[settings.psy];
-  return active === name || active === 'Trip' ? 1 : 0;
+function psyTarget(name: PsyName) {
+  const active = settings.psy;
+  return active === psyIndex(name) || active === psyIndex('Trip') ? 1 : 0;
 }
 
 function updateEffectMixes() {

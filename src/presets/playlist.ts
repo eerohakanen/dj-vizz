@@ -1,6 +1,7 @@
 import { showMessage } from '../dom';
 import { clock, settings } from '../state';
 import { notify } from '../store';
+import { changeOption, type ChangeOn } from './change';
 import { applyPreset, currentFolder, playlist, selectFolder } from './library';
 
 export function loadPreset(index: number) {
@@ -46,11 +47,12 @@ export function togglePlayback() {
 }
 
 export function advanceTimedPlaylist() {
-  if (!playlist.playing || playlist.changeOn[0] !== 's') return;
-  if (clock.time - playlist.startedAt >= +playlist.changeOn.slice(1)) nextPreset();
+  if (!playlist.playing) return;
+  const { seconds } = changeOption(playlist.changeOn);
+  if (seconds && clock.time - playlist.startedAt >= seconds) nextPreset();
 }
 
-export function setChangeOn(changeOn: string) {
+export function setChangeOn(changeOn: ChangeOn) {
   playlist.changeOn = changeOn;
   playlist.beats = 0;
   playlist.startedAt = clock.time;

@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { leaveVisualizer } from '@/actions';
-import { notify, ui, useEngine } from '@/store';
+import { notify, ui, useEngine, type Screen } from '@/store';
 import { AnalysisHud } from './AnalysisHud';
 import { ExitDialog } from './ExitDialog';
 import { HelpDialog } from './HelpDialog';
@@ -15,28 +15,22 @@ import { TuningSheet } from './TuningSheet';
 
 export function App() {
   useEngine();
-  const [screen, setScreen] = useState('landing');
+  const { screen } = ui;
   const cursorHidden = ui.controlsHidden && !ui.peek;
 
   useEffect(() => {
     document.body.classList.toggle('cursor-none', cursorHidden);
   }, [cursorHidden]);
 
-  const goLive = () => {
-    ui.live = true;
-    setScreen('live');
+  const goTo = (next: Screen) => {
+    ui.screen = next;
     notify();
-  };
-
-  const exitToMenu = () => {
-    leaveVisualizer();
-    setScreen('landing');
   };
 
   return (
     <TooltipProvider delayDuration={300}>
-      {screen === 'landing' && <Landing onStart={() => setScreen('setup')} />}
-      {screen === 'setup' && <Setup onBack={() => setScreen('landing')} onDone={goLive} />}
+      {screen === 'landing' && <Landing onStart={() => goTo('setup')} />}
+      {screen === 'setup' && <Setup onBack={() => goTo('landing')} onDone={() => goTo('live')} />}
       {screen === 'live' && (
         <>
           <Toolbar />
@@ -44,7 +38,7 @@ export function App() {
           <PresetsSheet />
           <TuningSheet />
           <HelpDialog />
-          <ExitDialog onExit={exitToMenu} />
+          <ExitDialog onExit={leaveVisualizer} />
           {ui.debug && <AnalysisHud />}
         </>
       )}

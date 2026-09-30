@@ -14,7 +14,7 @@ export interface TuningControl {
 
 export type TuningGroup = 'calibration' | 'look';
 
-export interface TuningSection {
+interface TuningSection {
   title: string;
   group: TuningGroup;
   description: string;
@@ -157,7 +157,6 @@ type SectionIn<G extends TuningGroup> = Extract<(typeof TUNING_SECTIONS)[number]
 
 export type LookTuningKey = SectionIn<'look'>['controls'][number]['key'];
 export type CalibrationTuningKey = Exclude<TuningKey, LookTuningKey>;
-export type CalibrationKey = CalibrationTuningKey | 'autoGain';
 
 interface GroupControl<K extends TuningKey> extends TuningControl {
   key: K;

@@ -236,7 +236,7 @@ function blurToolbarFocus() {
 }
 
 function handleKey(event: KeyboardEvent) {
-  if (!ui.live || event.metaKey || event.ctrlKey || event.altKey) return;
+  if (ui.screen !== 'live' || event.metaKey || event.ctrlKey || event.altKey) return;
   const target = event.target as Element;
   if (isTyping(target) || isInMenu(target)) return;
   const entry = resolveKey(event);

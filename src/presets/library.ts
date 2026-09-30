@@ -1,4 +1,5 @@
 import { setPalette } from '../color';
+import { DEFAULT_CHANGE_ON, type ChangeOn } from './change';
 import { setMode } from '../mode';
 import { isNumber, isRecord } from '../lib/utils';
 import { clamp, wrap } from '../math';
@@ -7,7 +8,7 @@ import { PALETTES } from '../palettes';
 import { settings, TUNING_DEFAULTS } from '../state';
 import { notify } from '../store';
 import { LOOK_CONTROLS, type LookTuningKey } from '../tuning';
-import { MIRROR_NAMES, PSY_NAMES } from '../ui';
+import { MIRROR_NAMES, PSY_NAMES } from '../effects/options';
 
 const STORAGE_KEY = 'djviz.presets.v3';
 const LEGACY_STORAGE_KEYS = ['djviz.presets.v2', 'djviz.presets.v1'];
@@ -39,7 +40,7 @@ export interface Folder {
   presets: Preset[];
 }
 
-export interface Library {
+interface Library {
   version: number;
   cur: number;
   folders: Folder[];
@@ -47,12 +48,17 @@ export interface Library {
 
 const EFFECT_KEYS = ['trails', 'lasers', 'glitch', 'strobe'] as const;
 
+type EffectKey = (typeof EFFECT_KEYS)[number];
+
 const LEGACY_EFFECT_KEYS: Record<keyof PresetEffects, string> = { trails: 'fb', lasers: 'las', glitch: 'gl', strobe: 'stb' };
 
 const DEFAULT_EFFECTS: PresetEffects = { trails: true, lasers: false, glitch: false, strobe: false };
 
 const lookTuning = (source: Partial<Record<LookTuningKey, number>>): LookTuning =>
   Object.fromEntries(LOOK_CONTROLS.map(({ key }) => [key, source[key]]));
+
+const effectFlags = (read: (key: EffectKey) => boolean): PresetEffects =>
+  Object.fromEntries(EFFECT_KEYS.map((key) => [key, read(key)])) as Record<EffectKey, boolean>;
 
 export const createPreset = (
   name: string,
@@ -99,7 +105,7 @@ function migratePreset(raw: Record<string, unknown>, version: number): Preset {
   const effectSource = legacy ? raw : isRecord(raw.effects) ? raw.effects : {};
   const tuningSource: Record<string, unknown> = isRecord(raw.tuning) ? { ...raw.tuning } : {};
   if (legacy && isNumber(raw.react)) tuningSource.reactivity = raw.react;
-  const effect = (key: keyof PresetEffects) => {
+  const effect = (key: EffectKey) => {
     const value = effectSource[legacy ? LEGACY_EFFECT_KEYS[key] : key];
     return typeof value === 'boolean' ? value : DEFAULT_EFFECTS[key];
   };
@@ -109,7 +115,7 @@ function migratePreset(raw: Record<string, unknown>, version: number): Preset {
     palette,
     mirror: numberOr(legacy ? raw.kal : raw.mirror, 0),
     psy: numberOr(raw.psy, 0),
-    effects: { trails: effect('trails'), lasers: effect('lasers'), glitch: effect('glitch'), strobe: effect('strobe') },
+    effects: effectFlags(effect),
     tuning: Object.fromEntries(
       LOOK_CONTROLS.flatMap(({ key }) => (isNumber(tuningSource[key]) ? [[key, tuningSource[key]]] : [])),
     ),
@@ -161,7 +167,7 @@ export const library = loadLibrary();
 
 export const playlist = {
   playing: false,
-  changeOn: 'b32' as string,
+  changeOn: DEFAULT_CHANGE_ON as ChangeOn,
   shuffle: false,
   index: -1,
   selected: -1,
@@ -169,7 +175,7 @@ export const playlist = {
   startedAt: 0,
 };
 
-export function saveLibrary() {
+function saveLibrary() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(library));
   } catch {}
@@ -185,7 +191,7 @@ export function snapshot(name: string): Preset {
     palette: settings.palette,
     mirror: settings.mirror,
     psy: settings.psy,
-    effects: { trails: settings.trails, lasers: settings.lasers, glitch: settings.glitch, strobe: settings.strobe },
+    effects: effectFlags((key) => settings[key]),
     tuning: lookTuning(settings),
   };
 }

@@ -45,7 +45,7 @@ import { currentFolder, playlist } from '@/presets/library';
 import { togglePlayback } from '@/presets/playlist';
 import { settings } from '@/state';
 import { ui, useEngine } from '@/store';
-import { MIRROR_NAMES, PSY_NAMES } from '@/ui';
+import { MIRROR_NAMES, PSY_NAMES } from '@/effects/options';
 import { cn } from '@/lib/utils';
 import { SOURCES, sourceLabel } from './labels';
 import { GLASS_PANEL } from './shared';

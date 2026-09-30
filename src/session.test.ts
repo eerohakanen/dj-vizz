@@ -4,13 +4,7 @@ import { CALIBRATION_CONTROLS, LOOK_CONTROLS } from './tuning';
 vi.mock('./modes/index', () => ({ MODES: Array.from({ length: 12 }, (_, index) => ({ name: `Mode ${index}` })) }));
 vi.mock('./mode', () => ({ setMode: vi.fn() }));
 vi.mock('./color', () => ({ setPalette: vi.fn() }));
-vi.mock('./audio/input', () => ({
-  audio: { source: null },
-  canCaptureWindow: true,
-  WINDOW_UNSUPPORTED: '',
-  captureWindow: vi.fn(),
-  captureMicrophone: vi.fn(),
-}));
+vi.mock('./audio/input', () => ({ audio: { source: null } }));
 
 let stored: Map<string, string>;
 

@@ -5,7 +5,7 @@ import { wrap } from './math';
 import { playlist } from './presets/library';
 import { settings, TUNING_DEFAULTS } from './state';
 import { notify, ui, type Overlay } from './store';
-import { MIRROR_NAMES, PSY_NAMES } from './ui';
+import { MIRROR_NAMES, PSY_NAMES } from './effects/options';
 
 type Settings = typeof settings;
 
@@ -76,7 +76,7 @@ export function setPeek(peek: boolean) {
 export function leaveVisualizer() {
   disconnectAudio();
   playlist.playing = false;
-  Object.assign(ui, { live: false, overlay: null, paused: false, hideLocked: false, peek: false, controlsHidden: false });
+  Object.assign(ui, { screen: 'landing', overlay: null, paused: false, hideLocked: false, peek: false, controlsHidden: false });
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   notify();
 }

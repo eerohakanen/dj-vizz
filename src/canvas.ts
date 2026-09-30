@@ -1,4 +1,3 @@
-import { $ } from './dom';
 import { view } from './state';
 
 export const BACKGROUND = '#05050a';
@@ -12,7 +11,13 @@ export function createCanvas(width?: number, height?: number) {
   return canvas;
 }
 
-export const output = $('cv') as HTMLCanvasElement;
+function findOutput() {
+  const element = document.getElementById('cv');
+  if (!(element instanceof HTMLCanvasElement)) throw new Error('Missing output canvas');
+  return element;
+}
+
+export const output = findOutput();
 export const outputCtx = output.getContext('2d', { alpha: false })!;
 export const scene = createCanvas();
 export const sceneCtx = scene.getContext('2d', { alpha: false })!;

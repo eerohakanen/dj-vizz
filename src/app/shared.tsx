@@ -8,7 +8,7 @@ import { setChangeOn, setShuffle } from '@/presets/playlist';
 import { clamp01 } from '@/math';
 import { ui, type Overlay } from '@/store';
 import { cn, pluralize } from '@/lib/utils';
-import { CHANGE_OPTIONS } from './labels';
+import { CHANGE_OPTIONS, findChangeOption } from '@/presets/change';
 
 export const GLASS_PANEL = 'bg-card/80 shadow-2xl backdrop-blur-xl';
 
@@ -85,7 +85,10 @@ export function FolderSelect({ value, onChange, className, verbose }: FolderSele
 
 function ChangeOnSelect({ triggerProps }: { triggerProps: ComponentProps<typeof SelectTrigger> }) {
   return (
-    <Select value={playlist.changeOn} onValueChange={setChangeOn}>
+    <Select value={playlist.changeOn} onValueChange={(value) => {
+        const option = findChangeOption(value);
+        if (option) setChangeOn(option.value);
+      }}>
       <SelectTrigger {...triggerProps}>
         <SelectValue />
       </SelectTrigger>

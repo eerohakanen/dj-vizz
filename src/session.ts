@@ -1,7 +1,8 @@
-import { CHANGE_OPTIONS } from './app/labels';
-import { audio, type AudioSourceKind } from './audio/input';
+import { audio } from './audio/input';
+import { isAudioSourceKind, type AudioSourceKind } from './audio/sources';
 import { isNumber, isRecord } from './lib/utils';
 import { clamp } from './math';
+import { findChangeOption } from './presets/change';
 import { playlist, readPreset, resolveLook, snapshot } from './presets/library';
 import { settings } from './state';
 import { subscribe } from './store';
@@ -71,10 +72,10 @@ function restoreCalibration(stored: Record<string, unknown>) {
 function restoreLook(stored: Record<string, unknown>) {
   if (isRecord(stored.look)) Object.assign(settings, resolveLook(readPreset(stored.look)));
   if (typeof stored.auto === 'boolean') settings.auto = stored.auto;
-  const changeOn = CHANGE_OPTIONS.find(({ value }) => value === stored.changeOn);
+  const changeOn = findChangeOption(stored.changeOn);
   if (changeOn) playlist.changeOn = changeOn.value;
   if (typeof stored.shuffle === 'boolean') playlist.shuffle = stored.shuffle;
-  if (stored.source === 'window' || stored.source === 'mic') lastSource = stored.source;
+  if (isAudioSourceKind(stored.source)) lastSource = stored.source;
 }
 
 export function restoreSession() {
