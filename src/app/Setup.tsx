@@ -4,7 +4,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { currentFolder } from '@/presets/library';
 import { ui } from '@/store';
 import { SOURCES } from './labels';
-import { IconTile, useSourceCapture } from './shared';
+import { IconTile, MenuBackdrop, useSourceCapture } from './shared';
 
 function setupHeading() {
   const name = currentFolder()?.name;
@@ -48,8 +48,9 @@ function SourceStep({ onConnected }: { onConnected: () => void }) {
 
 export function Setup({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
   return (
-    <main className="fixed inset-0 overflow-y-auto bg-background/80 backdrop-blur-sm">
-      <div className="mx-auto flex min-h-full max-w-3xl flex-col justify-center gap-8 px-6 py-12">
+    <main className="fixed inset-0 overflow-y-auto">
+      <MenuBackdrop />
+      <div className="relative mx-auto flex min-h-full max-w-3xl flex-col justify-center gap-8 px-6 py-12">
         <div>
           <Button variant="ghost" size="sm" onClick={onBack}>
             <ArrowLeft />

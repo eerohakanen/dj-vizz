@@ -19,6 +19,14 @@ import { SOURCES, type SourceOption } from './labels';
 
 export const GLASS_PANEL = 'bg-card/80 shadow-2xl backdrop-blur-xl';
 
+export const SIDE_PANEL_WIDTH = 'sm:max-w-(--side-panel-width)';
+
+export function MenuBackdrop() {
+  return (
+    <div className="pointer-events-none fixed inset-0 bg-background bg-[radial-gradient(ellipse_at_30%_20%,oklch(0.55_0.25_320/0.35),transparent_55%),radial-gradient(ellipse_at_75%_80%,oklch(0.6_0.2_200/0.3),transparent_55%)]" />
+  );
+}
+
 export function blurAfterPointerClick(event: MouseEvent) {
   if (!event.detail || !(event.target instanceof Element)) return;
   const control = event.target.closest('button, [role="button"]');

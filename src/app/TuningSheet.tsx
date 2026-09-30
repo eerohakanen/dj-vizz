@@ -11,9 +11,9 @@ import { shortcutFor } from '@/controls';
 import { settings, signal } from '@/state';
 import { ui, useEngine } from '@/store';
 import { GAIN_CONTROL, tuningSectionsFor, type TuningControl } from '@/tuning';
-import { TUNING_GROUP_NOTES } from './labels';
+import { tuningGroupNote } from './labels';
 import { cn } from '@/lib/utils';
-import { blurAfterPointerClick, GLASS_PANEL, MeterBar, SourcePicker, useOverlay, useTicker } from './shared';
+import { blurAfterPointerClick, GLASS_PANEL, SIDE_PANEL_WIDTH, MeterBar, SourcePicker, useOverlay, useTicker } from './shared';
 
 const LIVE_INTERVAL = 150;
 
@@ -96,7 +96,7 @@ export function TuningSheet() {
         overlay={false}
         onClick={blurAfterPointerClick}
         onInteractOutside={(event) => event.preventDefault()}
-        className={cn(GLASS_PANEL, 'flex w-full flex-col gap-0 sm:max-w-md')}
+        className={cn(GLASS_PANEL, 'flex w-full flex-col gap-0', SIDE_PANEL_WIDTH)}
       >
         <SheetHeader>
           <SheetTitle>Tune</SheetTitle>
@@ -111,7 +111,7 @@ export function TuningSheet() {
               <div>
                 <h3 className="text-sm font-semibold">{section.title}</h3>
                 <p className="text-xs text-muted-foreground">
-                  {section.description} {TUNING_GROUP_NOTES[section.group]}
+                  {section.description} {tuningGroupNote(section.group, ui.liveMode)}
                 </p>
               </div>
               {index === 0 && <SourcePicker />}

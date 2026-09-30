@@ -1,5 +1,3 @@
-import { audio } from './audio/input';
-import { isAudioSourceKind, type AudioSourceKind } from './audio/sources';
 import { isNumber, isRecord } from './lib/utils';
 import { clamp } from './math';
 import { readPreset, resolveLook, snapshot } from './presets/library';
@@ -11,11 +9,8 @@ const CALIBRATION_KEY = 'djviz.calibration.v1';
 const SESSION_KEY = 'djviz.session.v1';
 const SAVE_DELAY_MS = 500;
 
-let lastSource: AudioSourceKind | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 const written = new Map<string, string>();
-
-export const lastAudioSource = () => lastSource;
 
 function read(key: string) {
   try {
@@ -43,7 +38,6 @@ const calibrationSnapshot = () => ({
 const sessionSnapshot = () => ({
   look: snapshot(''),
   auto: settings.auto,
-  source: lastSource,
 });
 
 export function saveSession() {
@@ -54,7 +48,6 @@ export function saveSession() {
 }
 
 function scheduleSave() {
-  if (audio.source) lastSource = audio.source;
   saveTimer ??= setTimeout(saveSession, SAVE_DELAY_MS);
 }
 
@@ -69,7 +62,6 @@ function restoreCalibration(stored: Record<string, unknown>) {
 function restoreLook(stored: Record<string, unknown>) {
   if (isRecord(stored.look)) Object.assign(settings, resolveLook(readPreset(stored.look)));
   if (typeof stored.auto === 'boolean') settings.auto = stored.auto;
-  if (isAudioSourceKind(stored.source)) lastSource = stored.source;
 }
 
 export function restoreSession() {

@@ -1,6 +1,7 @@
 import { MicIcon, MonitorSpeaker, type LucideIcon } from 'lucide-react';
 import { WINDOW_UNSUPPORTED, canCaptureWindow, captureMicrophone, captureWindow } from '@/audio/input';
 import type { AudioSourceKind } from '@/audio/sources';
+import type { LiveMode } from '@/store';
 import type { TuningGroup } from '@/tuning';
 
 export interface SourceOption {
@@ -32,7 +33,10 @@ export const SOURCES: readonly SourceOption[] = [
 
 export const sourceLabel = (kind: AudioSourceKind | null) => SOURCES.find((source) => source.kind === kind)?.label;
 
-export const TUNING_GROUP_NOTES: Record<TuningGroup, string> = {
+const TUNING_GROUP_NOTES: Record<TuningGroup, string> = {
   calibration: 'Remembered on this device.',
   look: 'Saved with each scene.',
 };
+
+export const tuningGroupNote = (group: TuningGroup, mode: LiveMode) =>
+  group === 'look' && mode !== 'edit' ? '' : TUNING_GROUP_NOTES[group];

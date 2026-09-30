@@ -59,7 +59,7 @@ import {
 } from '@/actions';
 import { audio } from '@/audio/input';
 import { setPalette } from '@/color';
-import { shortcutFor } from '@/controls';
+import { shortcutFor, shortcutKeys } from '@/controls';
 import { triggerDrop } from '@/events';
 import { setMode } from '@/mode';
 import { MODES } from '@/modes/index';
@@ -503,16 +503,17 @@ function NowPlaying() {
 
 function PlayControls() {
   const stepDisabled = !playlist.playing || (currentFolder()?.presets.length ?? 0) < 2;
+  const [previousKey, nextKey] = shortcutKeys('sceneStep');
   return (
     <>
       <NowPlaying />
       <Separator orientation="vertical" className="h-6!" />
-      <Hint label="Previous scene" shortcut="←">
+      <Hint label="Previous scene" shortcut={previousKey}>
         <Button variant="outline" size="icon-sm" disabled={stepDisabled} onClick={previousScene} aria-label="Previous scene">
           <SkipBack />
         </Button>
       </Hint>
-      <Hint label="Next scene" shortcut={`→, ${shortcutFor('sceneNext')}`}>
+      <Hint label="Next scene" shortcut={`${nextKey}, ${shortcutFor('sceneNext')}`}>
         <Button variant="outline" size="icon-sm" disabled={stepDisabled} onClick={nextScene} aria-label="Next scene">
           <SkipForward />
         </Button>
@@ -543,7 +544,7 @@ export function Toolbar() {
       aria-hidden={ui.controlsHidden}
       className={cn(
         'fixed inset-x-0 bottom-0 flex justify-center px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] transition-[opacity,padding] duration-500',
-        sidePanelOpen && 'lg:pr-[calc(28rem+0.75rem)]',
+        sidePanelOpen && 'sm:pr-[calc(var(--side-panel-width)+0.75rem)]',
         ui.controlsHidden && 'pointer-events-none opacity-0',
       )}
     >

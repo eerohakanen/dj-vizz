@@ -2,7 +2,7 @@ import './index.css';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { analyse } from './audio/analysis';
-import { adaptQuality, resize } from './canvas';
+import { adaptQuality, output, resize } from './canvas';
 import { advancePaletteFade, buildLut } from './color';
 import { bindControls } from './controls';
 import { psyIndex, type PsyName } from './effects/options';
@@ -13,7 +13,7 @@ import { approach } from './math';
 import { presentFrame, renderScene } from './render';
 import { restoreSession, saveSession } from './session';
 import { clock, fx, settings } from './state';
-import { ui } from './store';
+import { subscribe, ui } from './store';
 
 let lastTimestamp = 0;
 let wasPaused = false;
@@ -31,10 +31,16 @@ function updateEffectMixes() {
   fx.tripMix = approach(fx.tripMix, psyTarget('Trip'), 2.5, clock.delta);
 }
 
+const visualsShown = () => ui.screen === 'live';
+
+function syncCanvasVisibility() {
+  output.hidden = !visualsShown();
+}
+
 function frame(timestamp: number) {
   const elapsed = timestamp - lastTimestamp;
   lastTimestamp = timestamp;
-  if (ui.paused) {
+  if (ui.paused || !visualsShown()) {
     wasPaused = true;
     requestAnimationFrame(frame);
     return;
@@ -64,9 +70,11 @@ addEventListener('pagehide', () => {
 });
 addEventListener('resize', () => {
   resize();
-  if (ui.paused) presentFrame();
+  if (ui.paused && visualsShown()) presentFrame();
 });
 resize();
+syncCanvasVisibility();
+subscribe(syncCanvasVisibility);
 bindControls();
 createRoot(document.getElementById('root')!).render(<App />);
 requestAnimationFrame(frame);

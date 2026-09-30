@@ -289,7 +289,9 @@ export const keysFor = (mode: LiveMode) => KEYMAP.filter((entry) => !entry.modes
 
 export const resolveKey = (event: KeyLike, mode: LiveMode) => keysFor(mode).find((entry) => entry.matches(event));
 
-export const shortcutFor = (id: string) => KEYMAP.find((entry) => entry.id === id)?.display.join(', ') ?? '';
+export const shortcutKeys = (id: string) => KEYMAP.find((entry) => entry.id === id)?.display ?? [];
+
+export const shortcutFor = (id: string) => shortcutKeys(id).join(', ');
 
 export interface ShortcutTarget {
   matches: (selector: string) => boolean;

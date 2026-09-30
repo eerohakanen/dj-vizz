@@ -41,7 +41,7 @@ import { deleteFolder, exportLibrary, importLibraryFile, library, renameFolder, 
 import { useEngine } from '@/store';
 import { pluralize } from '@/lib/utils';
 import { NameDialog, type NameRequest } from './NameDialog';
-import { IconTile, swatchStyle } from './shared';
+import { IconTile, MenuBackdrop, swatchStyle } from './shared';
 
 const SWATCH_LIMIT = 6;
 
@@ -189,8 +189,8 @@ export function PresetsMenu() {
   };
 
   return (
-    <main className="fixed inset-0 overflow-y-auto bg-background/80 backdrop-blur-sm">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_30%_20%,oklch(0.55_0.25_320/0.2),transparent_55%),radial-gradient(ellipse_at_75%_80%,oklch(0.6_0.2_200/0.18),transparent_55%)]" />
+    <main className="fixed inset-0 overflow-y-auto">
+      <MenuBackdrop />
       <div className="relative mx-auto flex min-h-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
         <div>
           <Button variant="ghost" size="sm" onClick={leaveVisualizer}>
