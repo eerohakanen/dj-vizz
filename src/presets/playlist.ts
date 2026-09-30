@@ -3,6 +3,7 @@ import { clock, settings } from '../state';
 import { notify } from '../store';
 import type { TransitionKind } from '../effects/transition';
 import { changeOption, DEFAULT_CHANGE_ON, type ChangeOn } from './change';
+import { markSceneClean } from './autosave';
 import { applyPreset, currentFolder, playlist, saveLibrary } from './library';
 
 export const currentChangeOn = () => currentFolder()?.changeOn ?? DEFAULT_CHANGE_ON;
@@ -23,15 +24,16 @@ export function loadPreset(index: number, { announce = !playlist.playing, transi
   playlist.beats = 0;
   playlist.startedAt = clock.time;
   applyPreset(preset, transition ?? folder.transition);
+  markSceneClean();
   if (announce) showMessage(`▶ ${preset.name}  (${index + 1}/${presets.length})`);
   notify();
 }
 
 export function nextPreset() {
   const count = currentFolder()?.presets.length ?? 0;
-  if (!count) return;
+  if (count < 2) return;
   let index: number;
-  if (currentShuffle() && count > 1) {
+  if (currentShuffle() && playlist.playing) {
     do index = (Math.random() * count) | 0;
     while (index === playlist.index);
   } else {

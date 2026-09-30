@@ -23,7 +23,10 @@ import { ui } from './store';
 
 vi.mock('./canvas', () => ({ output: {}, transitionCtx: {}, transitionFrame: {} }));
 vi.mock('./modes/index', () => ({ MODES: Array.from({ length: 12 }, (_, index) => ({ name: `Mode ${index}` })) }));
-vi.mock('./mode', () => ({ setMode: vi.fn() }));
+vi.mock('./mode', async () => {
+  const { settings } = await import('./state');
+  return { setMode: vi.fn((index: number) => (settings.mode = index)) };
+});
 vi.mock('./color', () => ({ setPalette: vi.fn() }));
 vi.mock('./dom', () => ({ showMessage: vi.fn() }));
 vi.mock('./audio/input', () => ({ audio: { live: true }, disconnectAudio: vi.fn() }));
@@ -150,6 +153,17 @@ describe('scene editing actions', () => {
     expect(scenes().map((scene) => scene.name)).toEqual(['One', 'One copy', 'Two']);
     expect(scenes()[1].mode).toBe(7);
     expect(playlist.index).toBe(1);
+  });
+
+  it('steps through scenes in order while editing even with shuffle on', () => {
+    library.folders[0].presets.push(createPreset('Three', 4, 5), createPreset('Four', 6, 7));
+    library.folders[0].shuffle = true;
+    const visited = [1, 2, 3, 0].map(() => {
+      nextScene();
+      return playlist.selected;
+    });
+    expect(visited).toEqual([1, 2, 3, 0]);
+    library.folders[0].shuffle = false;
   });
 
   it('steps through scenes while playing', () => {

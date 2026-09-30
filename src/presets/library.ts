@@ -1,4 +1,3 @@
-import { effectEnabled } from '../motion';
 import { setPalette } from '../color';
 import { DEFAULT_CHANGE_ON, findChangeOption, type ChangeOn } from './change';
 import { DEFAULT_TRANSITION, findTransition, type TransitionKind } from '../effects/transition';
@@ -193,19 +192,21 @@ export function saveLibrary() {
 
 export const currentFolder = (): Folder | undefined => library.folders[library.cur];
 
-export function snapshot(name: string): Preset {
-  return {
-    name,
-    mode: settings.mode,
-    palette: settings.palette,
-    mirror: settings.mirror,
-    psy: settings.psy,
-    effects: effectFlags(effectEnabled),
-    tuning: lookTuning(settings),
-  };
-}
+type Look = Pick<typeof settings, 'mode' | 'palette' | 'psy' | 'mirror' | keyof PresetEffects | LookTuningKey>;
 
-export function resolveLook(preset: Preset) {
+const presetFromLook = (name: string, look: Look): Preset => ({
+  name,
+  mode: look.mode,
+  palette: look.palette,
+  mirror: look.mirror,
+  psy: look.psy,
+  effects: effectFlags((key) => look[key]),
+  tuning: lookTuning(look),
+});
+
+export const snapshot = (name: string) => presetFromLook(name, settings);
+
+export function resolveLook(preset: Preset): Look {
   return {
     mode: wrap(numberOr(preset.mode, settings.mode), MODES.length),
     palette: wrap(numberOr(preset.palette, settings.palette), PALETTES.length),
@@ -218,8 +219,10 @@ export function resolveLook(preset: Preset) {
         return [key, isNumber(value) ? clamp(value, min, max) : TUNING_DEFAULTS[key]];
       }),
     ),
-  } as Pick<typeof settings, 'mode' | 'palette' | 'psy' | 'mirror' | keyof PresetEffects | LookTuningKey>;
+  } as Look;
 }
+
+export const normalizePreset = (preset: Preset) => presetFromLook(preset.name, resolveLook(preset));
 
 export function applyPreset(preset: Preset | undefined, transition?: TransitionKind) {
   if (!preset) return;
@@ -245,9 +248,16 @@ export function selectFolder(index: number) {
   saveLibrary();
 }
 
+function unusedFolderName() {
+  const taken = new Set(library.folders.map((folder) => folder.name));
+  let number = 1;
+  while (taken.has(`Preset ${number}`)) number++;
+  return `Preset ${number}`;
+}
+
 export function createFolder(name?: string) {
   library.folders.push({
-    name: cleanName(name, `Preset ${library.folders.length + 1}`),
+    name: cleanName(name, unusedFolderName()),
     presets: [],
     transition: DEFAULT_TRANSITION,
     changeOn: DEFAULT_CHANGE_ON,

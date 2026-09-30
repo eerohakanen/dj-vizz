@@ -244,7 +244,15 @@ describe('folder management', () => {
     const index = createFolder();
     expect(index).toBe(1);
     expect(library.cur).toBe(1);
-    expect(currentFolder()).toMatchObject({ name: 'Preset 2', transition: 'random', changeOn: 'b32', shuffle: false });
+    expect(currentFolder()).toMatchObject({ name: 'Preset 1', transition: 'random', changeOn: 'b32', shuffle: false });
+  });
+
+  it('picks the first unused default name', () => {
+    createFolder('Preset 1');
+    createFolder('Preset 3');
+    createFolder();
+    createFolder();
+    expect(library.folders.map((folder) => folder.name)).toEqual(['Default', 'Preset 1', 'Preset 3', 'Preset 2', 'Preset 4']);
   });
 
   it('renames a given folder', () => {
