@@ -17,8 +17,15 @@ export const shakeLevel = () => settings.punch * motionScale();
 
 export const strobeActive = () => settings.strobe && (!comfort.reduced || comfort.strobeOptIn);
 
+export const effectEnabled = (key: 'trails' | 'lasers' | 'glitch' | 'strobe') =>
+  key === 'strobe' ? strobeActive() : settings[key];
+
 export function allowStrobe() {
   comfort.strobeOptIn = true;
+}
+
+export function revokeStrobe() {
+  comfort.strobeOptIn = false;
 }
 
 export function bindReducedMotion() {

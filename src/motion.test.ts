@@ -42,3 +42,16 @@ describe('reduced motion', () => {
     expect(strobeActive()).toBe(true);
   });
 });
+
+describe('strobe opt-in', () => {
+  it('shows a suppressed strobe as off and lets one toggle turn it on', async () => {
+    const { effectEnabled, revokeStrobe } = await import('./motion');
+    comfort.reduced = true;
+    settings.strobe = true;
+    expect(effectEnabled('strobe')).toBe(false);
+    allowStrobe();
+    expect(effectEnabled('strobe')).toBe(true);
+    revokeStrobe();
+    expect(effectEnabled('strobe')).toBe(false);
+  });
+});

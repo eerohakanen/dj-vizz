@@ -209,7 +209,11 @@ function removePreset(index: number) {
   const folder = currentFolder();
   const removed = deletePreset(index);
   if (!removed) return;
-  showMessage(`Deleted "${removed.name}"`, { label: 'Undo', onClick: () => restorePreset(removed, index, folder) });
+  const undo = () => {
+    if (library.folders.includes(folder)) restorePreset(removed, index, folder);
+    else showWarning(`Could not restore "${removed.name}" because its folder was deleted.`);
+  };
+  showMessage(`Deleted "${removed.name}"`, { label: 'Undo', onClick: undo });
 }
 
 function PresetRow({ preset, index, count }: { preset: Preset; index: number; count: number }) {

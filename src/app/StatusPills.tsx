@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { openOverlay } from '@/actions';
@@ -8,7 +8,7 @@ import { signal } from '@/state';
 import { ui, useEngine } from '@/store';
 import { cn } from '@/lib/utils';
 import { SOURCES } from './labels';
-import { GLASS_PANEL, useSourceCapture, useTicker } from './shared';
+import { GLASS_PANEL, useSourceCapture } from './shared';
 
 const SILENCE_POLL_MS = 250;
 const PILL = 'pointer-events-auto flex items-center gap-3 rounded-full border py-1.5 pr-1.5 pl-4 text-sm';
@@ -30,8 +30,12 @@ function ReconnectPill() {
 
 function SilencePill() {
   const tracker = useRef({ since: null as number | null });
-  useTicker(audio.live, SILENCE_POLL_MS);
-  const silent = trackSilence(tracker.current, audio.live && !ui.paused, signal.energy, performance.now());
+  const [silent, setSilent] = useState(false);
+  useEffect(() => {
+    const check = () => setSilent(trackSilence(tracker.current, audio.live && !ui.paused, signal.energy, performance.now()));
+    const timer = setInterval(check, SILENCE_POLL_MS);
+    return () => clearInterval(timer);
+  }, []);
   if (!silent) return null;
   return (
     <div role="status" className={cn(PILL, GLASS_PANEL)}>

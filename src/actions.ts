@@ -2,7 +2,7 @@ import { disconnectAudio } from './audio/input';
 import { showMessage } from './dom';
 import { startTransition } from './effects/transition';
 import { wrap } from './math';
-import { allowStrobe } from './motion';
+import { allowStrobe, revokeStrobe, strobeActive } from './motion';
 import { playlist } from './presets/library';
 import { settings, TUNING_DEFAULTS } from './state';
 import { notify, ui, type Overlay } from './store';
@@ -11,14 +11,14 @@ import { MIRROR_NAMES, PSY_NAMES } from './effects/options';
 type Settings = typeof settings;
 
 export function setSetting<K extends keyof Settings>(key: K, value: Settings[K]) {
-  if (key === 'strobe' && value) allowStrobe();
+  if (key === 'strobe') (value ? allowStrobe : revokeStrobe)();
   settings[key] = value;
   notify();
 }
 
 type BooleanSetting = { [K in keyof Settings]: Settings[K] extends boolean ? K : never }[keyof Settings];
 
-export const toggleSetting = (key: BooleanSetting) => setSetting(key, !settings[key]);
+export const toggleSetting = (key: BooleanSetting) => setSetting(key, key === 'strobe' ? !strobeActive() : !settings[key]);
 
 export function setMirror(index: number) {
   startTransition();

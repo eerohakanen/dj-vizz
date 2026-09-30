@@ -1,4 +1,3 @@
-import { showMessage } from '../dom';
 import { notify } from '../store';
 import type { AudioSourceKind } from './sources';
 
@@ -94,7 +93,6 @@ function useStream(mediaStream: MediaStream, kind: AudioSourceKind) {
       audio.live = false;
       audio.source = null;
       audio.lost = kind;
-      showMessage('Audio source ended.');
       notify();
     };
   });

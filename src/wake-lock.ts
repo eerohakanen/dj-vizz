@@ -1,8 +1,10 @@
 let sentinel: WakeLockSentinel | null = null;
+let requesting = false;
 let wanted = false;
 
 async function acquire() {
-  if (!wanted || sentinel || document.visibilityState !== 'visible' || !navigator.wakeLock) return;
+  if (!wanted || sentinel || requesting || document.visibilityState !== 'visible' || !navigator.wakeLock) return;
+  requesting = true;
   try {
     const lock = await navigator.wakeLock.request('screen');
     if (!wanted) {
@@ -13,7 +15,10 @@ async function acquire() {
     lock.addEventListener('release', () => {
       if (sentinel === lock) sentinel = null;
     });
-  } catch {}
+  } catch {
+  } finally {
+    requesting = false;
+  }
 }
 
 const reacquire = () => {

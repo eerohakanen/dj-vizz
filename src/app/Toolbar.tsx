@@ -36,6 +36,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { effectEnabled, strobeActive } from '@/motion';
 import { fullscreenSupported, openOverlay, setMirror, setPsy, setHideLocked, setSetting, toggleFullscreen, togglePaused } from '@/actions';
 import { audio } from '@/audio/input';
 import { setPalette } from '@/color';
@@ -153,7 +154,7 @@ function OptionSubmenu({ label, shortcut, names, value, onChange }: OptionSubmen
 }
 
 function activeEffectCount() {
-  return TOGGLES.filter(({ key }) => settings[key]).length + Number(settings.psy > 0) + Number(settings.mirror > 0);
+  return TOGGLES.filter(({ key }) => effectEnabled(key)).length + Number(settings.psy > 0) + Number(settings.mirror > 0);
 }
 
 function EffectsMenu() {
@@ -183,7 +184,7 @@ function EffectsMenu() {
         {TOGGLES.map(({ key, label }) => (
           <DropdownMenuCheckboxItem
             key={key}
-            checked={settings[key]}
+            checked={effectEnabled(key)}
             onCheckedChange={(checked) => setSetting(key, checked)}
             onSelect={(event) => event.preventDefault()}
           >
@@ -201,7 +202,7 @@ function EffectsMenu() {
           Auto-switch on drops
           <DropdownMenuShortcut>{shortcutFor('auto')}</DropdownMenuShortcut>
         </DropdownMenuCheckboxItem>
-        {settings.strobe && (
+        {strobeActive() && (
           <p className="px-2 pt-1 pb-1.5 text-xs text-muted-foreground">Strobe flashes on beats. Avoid if sensitive to flashing light.</p>
         )}
       </DropdownMenuContent>
