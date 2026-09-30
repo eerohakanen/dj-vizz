@@ -47,12 +47,13 @@ import { settings } from '@/state';
 import { ui, useEngine } from '@/store';
 import { MIRROR_NAMES, PSY_NAMES } from '@/ui';
 import { cn } from '@/lib/utils';
-import { SOURCE_LABELS } from './labels';
+import { SOURCES, sourceLabel } from './labels';
+import { GLASS_PANEL } from './shared';
 import { StableLabel } from './StableLabel';
 import { SourcePicker } from './TuningSheet';
 
 const NO_INPUT_LABEL = 'No input';
-const AUDIO_LABELS = [...Object.values(SOURCE_LABELS), NO_INPUT_LABEL];
+const AUDIO_LABELS = [...SOURCES.map((source) => source.label), NO_INPUT_LABEL];
 
 const TOGGLES = [
   { key: 'trails', label: 'Trails' },
@@ -119,6 +120,35 @@ function PaletteSelect() {
   );
 }
 
+interface OptionSubmenuProps {
+  label: string;
+  shortcut: string;
+  names: readonly string[];
+  value: number;
+  onChange: (index: number) => void;
+}
+
+function OptionSubmenu({ label, shortcut, names, value, onChange }: OptionSubmenuProps) {
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        {label}
+        <span className="ml-auto text-xs text-muted-foreground">{names[value]}</span>
+        <DropdownMenuShortcut className="ml-2">{shortcut}</DropdownMenuShortcut>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent>
+        <DropdownMenuRadioGroup value={String(value)} onValueChange={(next) => onChange(+next)}>
+          {names.map((name, index) => (
+            <DropdownMenuRadioItem key={name} value={String(index)} onSelect={(event) => event.preventDefault()}>
+              {name}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+}
+
 function activeEffectCount() {
   return TOGGLES.filter(({ key }) => settings[key]).length + Number(settings.psy > 0) + Number(settings.mirror > 0);
 }
@@ -143,38 +173,8 @@ function EffectsMenu() {
         </DropdownMenuTrigger>
       </Hint>
       <DropdownMenuContent side="top" align="start" className="w-56">
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            Psychedelic
-            <span className="ml-auto text-xs text-muted-foreground">{PSY_NAMES[settings.psy]}</span>
-            <DropdownMenuShortcut className="ml-2">{shortcutFor('psy')}</DropdownMenuShortcut>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup value={String(settings.psy)} onValueChange={(value) => setPsy(+value)}>
-              {PSY_NAMES.map((name, index) => (
-                <DropdownMenuRadioItem key={name} value={String(index)} onSelect={(event) => event.preventDefault()}>
-                  {name}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            Mirror
-            <span className="ml-auto text-xs text-muted-foreground">{MIRROR_NAMES[settings.mirror]}</span>
-            <DropdownMenuShortcut className="ml-2">{shortcutFor('mirror')}</DropdownMenuShortcut>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup value={String(settings.mirror)} onValueChange={(value) => setMirror(+value)}>
-              {MIRROR_NAMES.map((name, index) => (
-                <DropdownMenuRadioItem key={name} value={String(index)} onSelect={(event) => event.preventDefault()}>
-                  {name}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        <OptionSubmenu label="Psychedelic" shortcut={shortcutFor('psy')} names={PSY_NAMES} value={settings.psy} onChange={setPsy} />
+        <OptionSubmenu label="Mirror" shortcut={shortcutFor('mirror')} names={MIRROR_NAMES} value={settings.mirror} onChange={setMirror} />
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-xs text-muted-foreground">Layers</DropdownMenuLabel>
         {TOGGLES.map(({ key, label }) => (
@@ -221,7 +221,7 @@ function AudioPopover() {
           <Button variant="outline" size="sm">
             <span className={cn('size-2 rounded-full', audio.live ? 'bg-emerald-400' : 'bg-destructive')} />
             <AudioLines />
-            <StableLabel value={(audio.source && SOURCE_LABELS[audio.source]) ?? NO_INPUT_LABEL} options={AUDIO_LABELS} />
+            <StableLabel value={sourceLabel(audio.source) ?? NO_INPUT_LABEL} options={AUDIO_LABELS} />
           </Button>
         </PopoverTrigger>
       </Hint>
@@ -263,7 +263,7 @@ export function Toolbar() {
         ui.controlsHidden && 'pointer-events-none opacity-0',
       )}
     >
-      <div className="flex max-w-full flex-wrap items-center justify-center gap-2 rounded-2xl border bg-card/80 p-2 shadow-2xl backdrop-blur-xl">
+      <div className={cn('flex max-w-full flex-wrap items-center justify-center gap-2 rounded-2xl border p-2', GLASS_PANEL)}>
         <AudioPopover />
         <Separator orientation="vertical" className="h-6! max-sm:hidden" />
         <ModeSelect />

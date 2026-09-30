@@ -1,21 +1,10 @@
-import { useEffect, useState } from 'react';
 import { fx, signal } from '@/state';
 import { cn } from '@/lib/utils';
+import { GLASS_PANEL, MeterBar, useTicker } from './shared';
 
 const PITCHES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 
 const keyName = (key: number) => (key < 0 ? '—' : key >= 12 ? `${PITCHES[key - 12]}m` : PITCHES[key]);
-
-function useFrame() {
-  const [, setFrame] = useState(0);
-  useEffect(() => {
-    let id = requestAnimationFrame(function tick() {
-      setFrame((frame) => frame + 1);
-      id = requestAnimationFrame(tick);
-    });
-    return () => cancelAnimationFrame(id);
-  }, []);
-}
 
 function Hit({ label, level }: { label: string; level: number }) {
   return (
@@ -32,18 +21,16 @@ function Meter({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-center gap-2">
       <span className="w-16 text-muted-foreground">{label}</span>
-      <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
-        <div className="h-full bg-foreground" style={{ width: `${Math.min(1, Math.max(0, value)) * 100}%` }} />
-      </div>
+      <MeterBar value={value} className="w-28" fillClassName="bg-foreground" />
     </div>
   );
 }
 
 export function AnalysisHud() {
-  useFrame();
+  useTicker();
   const bar = Math.floor(signal.phraseBeat / 4) + 1;
   return (
-    <div className="pointer-events-none fixed bottom-3 left-3 flex flex-col gap-2 rounded-lg border border-border bg-card/80 p-3 font-mono text-xs shadow-2xl backdrop-blur-xl">
+    <div className={cn('pointer-events-none fixed bottom-3 left-3 flex flex-col gap-2 rounded-lg border border-border p-3 font-mono text-xs', GLASS_PANEL)}>
       <div className="flex items-center gap-2">
         <Hit label="K" level={fx.kick} />
         <Hit label="S" level={fx.snare} />

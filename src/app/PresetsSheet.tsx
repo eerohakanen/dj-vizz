@@ -42,12 +42,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Switch } from '@/components/ui/switch';
-import { closeOverlay } from '@/actions';
-import { showMessage } from '@/dom';
+import { showMessage, showWarning } from '@/dom';
 import {
   NAME_LIMIT,
   createFolder,
@@ -67,10 +64,10 @@ import {
   selectFolder,
   type Preset,
 } from '@/presets/library';
-import { loadPreset, setChangeOn, setShuffle, togglePlayback } from '@/presets/playlist';
-import { ui, useEngine } from '@/store';
-import { cn } from '@/lib/utils';
-import { CHANGE_OPTIONS } from './labels';
+import { loadPreset, togglePlayback } from '@/presets/playlist';
+import { useEngine } from '@/store';
+import { cn, pluralize } from '@/lib/utils';
+import { FolderSelect, PlaybackOptions, useOverlay } from './shared';
 
 interface NameRequest {
   title: string;
@@ -125,18 +122,7 @@ interface FolderBarProps {
 function FolderBar({ onRequestName, onRequestDelete, onImport }: FolderBarProps) {
   return (
     <div className="flex gap-2">
-      <Select value={String(library.cur)} onValueChange={(value) => selectFolder(+value)}>
-        <SelectTrigger className="min-w-0 flex-1">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {library.folders.map((folder, index) => (
-            <SelectItem key={index} value={String(index)}>
-              {folder.name} · {folder.presets.length}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <FolderSelect value={library.cur} onChange={selectFolder} className="min-w-0 flex-1" />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon" aria-label="Folder actions">
@@ -275,25 +261,7 @@ function PresetRow({ preset, index, count }: { preset: Preset; index: number; co
 function PlaybackControls() {
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <Label className="shrink-0">Change look</Label>
-        <Select value={playlist.changeOn} onValueChange={setChangeOn}>
-          <SelectTrigger size="sm" className="flex-1">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {CHANGE_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Label htmlFor="sheet-shuffle" className="shrink-0">
-          Shuffle
-        </Label>
-        <Switch id="sheet-shuffle" checked={playlist.shuffle} onCheckedChange={setShuffle} />
-      </div>
+      <PlaybackOptions compact />
       <Button className="w-full" variant={playlist.playing ? 'secondary' : 'default'} onClick={togglePlayback}>
         {playlist.playing ? <Square className="fill-current" /> : <Play />}
         {playlist.playing ? 'Stop playing' : 'Play folder'}
@@ -315,20 +283,15 @@ export function PresetsSheet() {
     if (!file) return;
     try {
       const count = await importLibraryFile(file);
-      showMessage(`Imported ${count} folder${count === 1 ? '' : 's'}`);
+      showMessage(`Imported ${pluralize(count, 'folder')}`);
     } catch {
-      showMessage('Could not read that file. Use a file made with Export.');
+      showWarning('Could not read that file. Use a file made with Export.');
     }
   };
 
   return (
     <>
-      <Sheet
-        open={ui.overlay === 'presets'}
-        onOpenChange={(open) => {
-          if (!open) closeOverlay();
-        }}
-      >
+      <Sheet {...useOverlay('presets')}>
         <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md">
           <SheetHeader>
             <SheetTitle>Presets</SheetTitle>
@@ -367,7 +330,7 @@ export function PresetsSheet() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete "{folder.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the folder and its {folder.presets.length} preset{folder.presets.length === 1 ? '' : 's'}. Export
+              This removes the folder and its {pluralize(folder.presets.length, 'preset')}. Export
               first if you want a backup.
             </AlertDialogDescription>
           </AlertDialogHeader>

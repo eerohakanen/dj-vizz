@@ -15,6 +15,8 @@ const DISPLAY_CAPTURE = {
 
 export type AudioSourceKind = 'window' | 'mic';
 
+export const WINDOW_UNSUPPORTED = 'Window audio is not supported on mobile browsers. Use Microphone instead.';
+
 export const audio = {
   analyser: null as AnalyserNode | null,
   detector: null as AnalyserNode | null,
@@ -117,7 +119,7 @@ function keepFocusHere(controller: CaptureController | undefined) {
 
 export async function captureWindow(): Promise<CaptureResult> {
   if (!canCaptureWindow) {
-    return { error: 'Window audio is not supported on mobile browsers. Use Microphone instead.' };
+    return { error: WINDOW_UNSUPPORTED };
   }
   const controller = createCaptureController();
   let captured: MediaStream;

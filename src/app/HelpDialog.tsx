@@ -1,19 +1,14 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
-import { closeOverlay } from '@/actions';
 import { KEYMAP, KEY_GROUPS } from '@/controls';
 import { view } from '@/state';
-import { ui, useEngine } from '@/store';
+import { useEngine } from '@/store';
+import { useOverlay } from './shared';
 
 export function HelpDialog() {
   useEngine();
   return (
-    <Dialog
-      open={ui.overlay === 'help'}
-      onOpenChange={(open) => {
-        if (!open) closeOverlay();
-      }}
-    >
+    <Dialog {...useOverlay('help')}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Keyboard shortcuts</DialogTitle>

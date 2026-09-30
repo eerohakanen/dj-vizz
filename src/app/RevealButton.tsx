@@ -4,6 +4,7 @@ import { Kbd } from '@/components/ui/kbd';
 import { setHideLocked } from '@/actions';
 import { ui, useEngine } from '@/store';
 import { cn } from '@/lib/utils';
+import { GLASS_PANEL } from './shared';
 
 export function RevealButton() {
   useEngine();
@@ -22,7 +23,7 @@ export function RevealButton() {
         size="sm"
         tabIndex={visible ? 0 : -1}
         onClick={() => setHideLocked(false)}
-        className="bg-card/80 shadow-2xl backdrop-blur-xl"
+        className={GLASS_PANEL}
       >
         <Eye />
         Show controls

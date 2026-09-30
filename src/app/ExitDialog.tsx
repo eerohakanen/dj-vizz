@@ -8,18 +8,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { closeOverlay } from '@/actions';
-import { ui, useEngine } from '@/store';
+import { useEngine } from '@/store';
+import { useOverlay } from './shared';
 
 export function ExitDialog({ onExit }: { onExit: () => void }) {
   useEngine();
   return (
-    <AlertDialog
-      open={ui.overlay === 'exit'}
-      onOpenChange={(open) => {
-        if (!open) closeOverlay();
-      }}
-    >
+    <AlertDialog {...useOverlay('exit')}>
       <AlertDialogContent size="sm">
         <AlertDialogHeader>
           <AlertDialogTitle>Back to main menu?</AlertDialogTitle>
