@@ -1,21 +1,24 @@
 import { bandAt } from '../audio/spectrum';
-import { BACKGROUND, sceneCtx as ctx } from '../canvas';
+import { BACKGROUND, gradientCache, sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
 import { TAU } from '../math';
 import { fx, signal, view } from '../state';
+
+const sunGradient = gradientCache(() => ctx.createLinearGradient(0, -1, 0, 1));
 
 function drawSun(horizon: number) {
   const { width, minSide } = view;
   const { punchBass } = signal;
   const radius = minSide * (0.24 + 0.05 * Math.min(1, punchBass));
   const centerY = horizon - radius * 0.55;
-  const gradient = ctx.createLinearGradient(0, centerY - radius, 0, centerY + radius);
-  gradient.addColorStop(0, color(1.3, 1, 62));
-  gradient.addColorStop(1, color(0, 1, 52));
-  ctx.fillStyle = gradient;
+  ctx.save();
+  ctx.fillStyle = sunGradient(color(1.3, 1, 62), color(0, 1, 52));
+  ctx.translate(width / 2, centerY);
+  ctx.scale(radius, radius);
   ctx.beginPath();
-  ctx.arc(width / 2, centerY, radius, 0, TAU);
+  ctx.arc(0, 0, 1, 0, TAU);
   ctx.fill();
+  ctx.restore();
   ctx.fillStyle = BACKGROUND;
   for (let k = 0; k < 7; k++) {
     const y = centerY + radius * (0.05 + k * 0.15);

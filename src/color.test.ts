@@ -1,6 +1,21 @@
-import { describe, expect, it } from 'vitest';
-import { KEY_CONFIDENCE_FLOOR, keyHue, keyPalette, keyTintOffset, keyTintStrength, paletteHue, rankPalettesByHue } from './color';
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  advancePaletteFade,
+  buildLut,
+  color,
+  colorHsl,
+  KEY_CONFIDENCE_FLOOR,
+  keyHue,
+  keyPalette,
+  keyTintOffset,
+  keyTintStrength,
+  paletteHue,
+  rankPalettesByHue,
+  setPalette,
+  styleKey,
+} from './color';
 import { PALETTES } from './palettes';
+import { fx, signal } from './state';
 
 const indexOf = (name: string) => PALETTES.findIndex((palette) => palette.name === name);
 
@@ -107,5 +122,85 @@ describe('keyPalette', () => {
 
   it('never returns the current palette', () => {
     for (let step = 0; step < 10; step++) expect(keyPalette(20, indexOf('Fire'), () => step / 10)).not.toBe(indexOf('Fire'));
+  });
+});
+
+describe('styleKey', () => {
+  it('shares a key for alphas that round to the same thousandth', () => {
+    expect(styleKey(200, 90, 50, 0.5)).toBe(styleKey(200, 90, 50, 0.5004));
+    expect(styleKey(200, 90, 50, 0.5)).not.toBe(styleKey(200, 90, 50, 0.502));
+  });
+
+  it('clamps alpha to the unit interval', () => {
+    expect(styleKey(10, 20, 30, -0.4)).toBe(styleKey(10, 20, 30, 0));
+    expect(styleKey(10, 20, 30, 3)).toBe(styleKey(10, 20, 30, 1));
+  });
+
+  it('gives every hue, saturation, lightness and alpha step its own key', () => {
+    const keys = new Set<number>();
+    for (const hue of [0, 1, 359]) {
+      for (const saturation of [0, 1, 100]) {
+        for (const lightness of [5, 6, 95]) {
+          for (const alpha of [0, 0.001, 1]) keys.add(styleKey(hue, saturation, lightness, alpha));
+        }
+      }
+    }
+    expect(keys.size).toBe(81);
+  });
+});
+
+describe('buildLut', () => {
+  beforeEach(() => {
+    setPalette(3, true);
+    advancePaletteFade(10);
+    signal.key = 0;
+    signal.keyConfidence = 1;
+    fx.keyHue = 100;
+    buildLut();
+  });
+
+  it('skips the rebuild when nothing changed', () => {
+    expect(buildLut()).toBe(false);
+  });
+
+  it('ignores key hue drift below the quantization step', () => {
+    fx.keyHue = 100.2;
+    expect(buildLut()).toBe(false);
+    fx.keyHue = 101;
+    expect(buildLut()).toBe(true);
+  });
+
+  it('rebuilds when the key tint strength or mode changes', () => {
+    signal.keyConfidence = 0.65;
+    expect(buildLut()).toBe(true);
+    signal.key = 12;
+    expect(buildLut()).toBe(true);
+    signal.key = -1;
+    expect(buildLut()).toBe(true);
+  });
+
+  it('rebuilds on every step of a palette crossfade and stops once it settles', () => {
+    setPalette(5, true);
+    expect(buildLut()).toBe(true);
+    advancePaletteFade(0.5);
+    expect(buildLut()).toBe(true);
+    advancePaletteFade(0.5);
+    expect(buildLut()).toBe(true);
+    advancePaletteFade(10);
+    expect(buildLut()).toBe(true);
+    expect(buildLut()).toBe(false);
+  });
+
+  it('serves colours that follow the rebuilt table', () => {
+    fx.hue = 0;
+    fx.beat = 0;
+    signal.brightness = 0.5;
+    const before = color(0);
+    setPalette(5, true);
+    advancePaletteFade(10);
+    buildLut();
+    const hsl = colorHsl(0);
+    expect(color(0)).not.toBe(before);
+    expect(color(0)).toBe(`hsla(${hsl[0]},${hsl[1]}%,${hsl[2]}%,1.000)`);
   });
 });

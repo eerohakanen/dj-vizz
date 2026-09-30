@@ -1,4 +1,4 @@
-import { BACKGROUND, outputCtx, scene, sceneCtx } from './canvas';
+import { BACKGROUND, gradientCache, outputCtx, scene, sceneCtx } from './canvas';
 import { color } from './color';
 import { applyBloom } from './effects/bloom';
 import { applyGlitch } from './effects/glitch';
@@ -16,6 +16,10 @@ const TRAIL_CALM_SHORTENING = 0.15;
 const CALM_DAMPING = 0.6;
 
 let washAngle = 0;
+let washHue = NaN;
+let wash: CanvasGradient | undefined;
+
+const centerGlow = gradientCache(() => sceneCtx.createRadialGradient(0, 0, 0, 0, 0, 1));
 
 const calmScale = () => 1 - CALM_DAMPING * fx.calm;
 
@@ -45,14 +49,16 @@ function feedPreviousFrame(ctx: CanvasRenderingContext2D) {
 
 function drawCenterGlow(ctx: CanvasRenderingContext2D) {
   const { width, height, diagonal } = view;
-  const glow = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, diagonal * 0.55);
+  const radius = diagonal * 0.55;
   const intensity = 0.07 * signal.punchBass + 0.2 * fx.drop + 0.12 * signal.tension + 0.08 * signal.vocal;
-  glow.addColorStop(0, color(0, Math.min(0.35, intensity), 40 + signal.vocal * 15));
-  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, width, height);
-  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = clamp01(Math.min(0.35, intensity));
+  ctx.fillStyle = centerGlow(color(0, 1, 40 + signal.vocal * 15), 'rgba(0,0,0,0)');
+  ctx.translate(width / 2, height / 2);
+  ctx.scale(radius, radius);
+  ctx.fillRect(-width / 2 / radius, -height / 2 / radius, width / radius, height / radius);
+  ctx.restore();
 }
 
 function applyBeatShake(ctx: CanvasRenderingContext2D) {
@@ -73,8 +79,10 @@ export function renderScene() {
   ctx.globalAlpha = 1;
   const feedback = (settings.trails && mode.trails) || fx.vortexMix > 0.02;
   if (feedback && signal.gate > 0.01) feedPreviousFrame(ctx);
-  ctx.fillStyle = `rgba(5,5,10,${frameAlpha(feedback ? 0.13 : mode.fade, clock.delta)})`;
+  ctx.globalAlpha = frameAlpha(feedback ? 0.13 : mode.fade, clock.delta);
+  ctx.fillStyle = BACKGROUND;
   ctx.fillRect(0, 0, width, height);
+  ctx.globalAlpha = 1;
   if (signal.gate > 0.02 && !mode.opaque) drawCenterGlow(ctx);
 
   ctx.save();
@@ -107,16 +115,26 @@ function drawLiquid(o: CanvasRenderingContext2D) {
   }
 }
 
+function washGradient(o: CanvasRenderingContext2D) {
+  const hue = Math.floor(fx.hue);
+  if (wash && hue === washHue) return wash;
+  washHue = hue;
+  wash = o.createConicGradient(0, 0, 0);
+  for (let i = 0; i <= 6; i++) wash.addColorStop(i / 6, `hsl(${((i * 60 + fx.hue) % 360) | 0},100%,50%)`);
+  return wash;
+}
+
 function drawRainbowWash(o: CanvasRenderingContext2D) {
-  const { width, height } = view;
+  const { width, height, diagonal } = view;
   washAngle += clock.delta * WASH_RATE * settings.colorSpeed;
-  const gradient = o.createConicGradient(fx.spin * 1.5 + washAngle, width / 2, height / 2);
-  for (let i = 0; i <= 6; i++) gradient.addColorStop(i / 6, `hsl(${((i * 60 + fx.hue) % 360) | 0},100%,50%)`);
+  o.save();
   o.globalCompositeOperation = 'hue';
   o.globalAlpha = fx.rainbowMix * 0.85;
-  o.fillStyle = gradient;
-  o.fillRect(0, 0, width, height);
-  o.globalAlpha = 1;
+  o.fillStyle = washGradient(o);
+  o.translate(width / 2, height / 2);
+  o.rotate(fx.spin * 1.5 + washAngle);
+  o.fillRect(-diagonal, -diagonal, diagonal * 2, diagonal * 2);
+  o.restore();
 }
 
 function fillWith(o: CanvasRenderingContext2D, operation: GlobalCompositeOperation, style: string) {
@@ -136,7 +154,11 @@ function drawFlashes(o: CanvasRenderingContext2D) {
     o.globalAlpha = 1;
   }
   o.globalCompositeOperation = 'source-over';
-  if (fx.flash > 0.02) fillWith(o, 'source-over', `rgba(255,255,255,${(fx.flash * 0.75 * calm).toFixed(3)})`);
+  if (fx.flash > 0.02) {
+    o.globalAlpha = clamp01(fx.flash * 0.75 * calm);
+    fillWith(o, 'source-over', '#fff');
+    o.globalAlpha = 1;
+  }
 }
 
 export function presentFrame() {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { approach, clamp, clamp01, decay, follow, frameAlpha, hueDelta, keepNewest, lerp, randomRange, signedRandom, smoothstep, updatePeak, wrap } from './math';
+import { approach, clamp, clamp01, decay, follow, frameAlpha, hueDelta, keepNewest, lerp, quantize, randomRange, signedRandom, smoothstep, updatePeak, wrap } from './math';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -221,5 +221,13 @@ describe('keepNewest', () => {
     const items = [1, 2];
     keepNewest(items, 3);
     expect(items).toEqual([1, 2]);
+  });
+});
+
+describe('quantize', () => {
+  it('rounds to the nearest step', () => {
+    expect(quantize(100.2, 0.5)).toBe(100);
+    expect(quantize(100.3, 0.5)).toBe(100.5);
+    expect(quantize(0.3, 1 / 4)).toBe(0.25);
   });
 });

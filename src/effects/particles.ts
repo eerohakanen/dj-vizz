@@ -1,6 +1,7 @@
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
 import { decay, frameScale, signedRandom, TAU } from '../math';
+import { createPool } from '../pool';
 import { clock, settings, view } from '../state';
 
 const MAX_PARTICLES = 1500;
@@ -16,7 +17,7 @@ interface Particle {
   size: number;
 }
 
-const particles: Particle[] = [];
+const particles = createPool<Particle>(MAX_PARTICLES, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0, group: 0, size: 0 }));
 const shockwaves: { radius: number }[] = [];
 
 export function burst(count: number, minSpeed: number, speedRange: number, life: number, scatter = 0, sizeScale = 1) {
@@ -25,17 +26,15 @@ export function burst(count: number, minSpeed: number, speedRange: number, life:
   for (let i = 0; i < scaled; i++) {
     const angle = Math.random() * TAU;
     const speed = (minSpeed + Math.random() * speedRange) * pixelRatio;
-    particles.push({
-      x: width / 2 + signedRandom(width * scatter),
-      y: height / 2 + signedRandom(height * scatter),
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      life,
-      group: (Math.random() * COLOR_GROUPS) | 0,
-      size: (2 + Math.random() * 6) * pixelRatio * sizeScale,
-    });
+    const particle = particles.acquire();
+    particle.x = width / 2 + signedRandom(width * scatter);
+    particle.y = height / 2 + signedRandom(height * scatter);
+    particle.vx = Math.cos(angle) * speed;
+    particle.vy = Math.sin(angle) * speed;
+    particle.life = life;
+    particle.group = (Math.random() * COLOR_GROUPS) | 0;
+    particle.size = (2 + Math.random() * 6) * pixelRatio * sizeScale;
   }
-  if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
 }
 
 export const sparkle = (count: number) => burst(count, 0.2, 1.2, 0.5, 0.9, 0.45);
@@ -65,19 +64,21 @@ export function drawShockwaves() {
 export function drawParticles() {
   const step = frameScale(clock.delta);
   const drag = decay(0.985, step);
-  let alive = 0;
-  for (const particle of particles) {
+  const { items } = particles;
+  for (let i = 0; i < particles.active; ) {
+    const particle = items[i];
     particle.x += particle.vx * step;
     particle.y += particle.vy * step;
     particle.vx *= drag;
     particle.vy *= drag;
     particle.life -= 0.02 * step;
-    if (particle.life > 0) particles[alive++] = particle;
+    if (particle.life > 0) i++;
+    else particles.release(i);
   }
-  particles.length = alive;
   for (let group = 0; group < COLOR_GROUPS; group++) {
     ctx.fillStyle = color(group * 0.75);
-    for (const particle of particles) {
+    for (let i = 0; i < particles.active; i++) {
+      const particle = items[i];
       if (particle.group !== group) continue;
       ctx.globalAlpha = Math.min(1, particle.life);
       ctx.fillRect(particle.x, particle.y, particle.size, particle.size);

@@ -1,6 +1,6 @@
 import type * as Three from 'three';
 import { BACKGROUND, createCanvas, sceneCtx } from '../canvas';
-import { color } from '../color';
+import { colorHsl } from '../color';
 import { showWarning } from '../dom';
 import { approach, decay, hueDelta, lerp, signedRandom, TAU } from '../math';
 import { clock, fx, signal, view } from '../state';
@@ -128,7 +128,8 @@ export function fitStage(stage: Stage) {
 }
 
 export function paint(stage: Stage, target: Three.Color, position: number, lightness?: number) {
-  target.setStyle(color(position, 1, lightness), stage.THREE.LinearSRGBColorSpace);
+  const hsl = colorHsl(position, lightness);
+  target.setHSL(hsl[0] / 360, hsl[1] / 100, hsl[2] / 100, stage.THREE.LinearSRGBColorSpace);
 }
 
 export function paintPalette(stage: Stage, colorA: Three.Color, colorB: Three.Color) {

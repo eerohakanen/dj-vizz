@@ -10,8 +10,10 @@ const KEY_WINDOW = 8;
 const KEY_HOLD = 2;
 const KEY_HUE_SPEED = 0.6;
 const SILENCE_RMS = 0.01;
+const EXTRACT_INTERVAL = 0.03;
 
 const chroma = new Float32Array(12);
+const extracted = { at: -Infinity, silent: true, brightness: 0.5, chroma: new Float32Array(12), midShare: 0, tonal: 0 };
 const smoothed = { highFast: 0, highSlow: 0, brightFast: 0.5, brightSlow: 0.5, tensionPeak: 0 };
 let candidateKey = -1;
 let candidateSince = 0;
@@ -94,30 +96,40 @@ export function releaseTension() {
   smoothed.tensionPeak = 0;
 }
 
+function extractFeatures(time: number) {
+  extracted.at = time;
+  Meyda.bufferSize = audio.samples.length;
+  Meyda.sampleRate = audio.sampleRate;
+  const features = Meyda.extract(['rms', 'spectralCentroid', 'spectralFlatness', 'chroma', 'amplitudeSpectrum'], audio.samples);
+  extracted.silent = !features || (features.rms ?? 0) < SILENCE_RMS;
+  if (!features || extracted.silent) return;
+  const centroidHz = ((features.spectralCentroid ?? 0) * audio.sampleRate) / Meyda.bufferSize;
+  extracted.brightness = clamp01(Math.log2(Math.max(1, centroidHz) / 400) / 4);
+  const frame = features.chroma ?? [];
+  for (let i = 0; i < 12; i++) extracted.chroma[i] = frame[i] ?? 0;
+  extracted.midShare = bandShare(features.amplitudeSpectrum!, 300, 3000);
+  extracted.tonal = clamp01((0.3 - (features.spectralFlatness ?? 1)) / 0.25);
+}
+
 export function analyseMusic(time: number, delta: number, snareRate: number) {
   if (!audio.live) {
+    extracted.at = -Infinity;
     signal.vocal = approach(signal.vocal, 0, 2, delta);
     followTension(delta, 0);
     return;
   }
-  Meyda.bufferSize = audio.samples.length;
-  Meyda.sampleRate = audio.sampleRate;
-  const features = Meyda.extract(['rms', 'spectralCentroid', 'spectralFlatness', 'chroma', 'amplitudeSpectrum'], audio.samples);
-  if (!features || (features.rms ?? 0) < SILENCE_RMS) {
+  if (time - extracted.at >= EXTRACT_INTERVAL || time < extracted.at) extractFeatures(time);
+  if (extracted.silent) {
     followTension(delta, snareRate);
     return;
   }
 
-  const centroidHz = ((features.spectralCentroid ?? 0) * audio.sampleRate) / Meyda.bufferSize;
-  signal.brightness = approach(signal.brightness, clamp01(Math.log2(Math.max(1, centroidHz) / 400) / 4), 2, delta);
+  signal.brightness = approach(signal.brightness, extracted.brightness, 2, delta);
 
-  const frame = features.chroma ?? [];
-  for (let i = 0; i < 12; i++) chroma[i] = approach(chroma[i], frame[i] ?? 0, 1 / KEY_WINDOW, delta);
+  for (let i = 0; i < 12; i++) chroma[i] = approach(chroma[i], extracted.chroma[i], 1 / KEY_WINDOW, delta);
   followKey(time, delta);
 
-  const midShare = bandShare(features.amplitudeSpectrum!, 300, 3000);
-  const tonal = clamp01((0.3 - (features.spectralFlatness ?? 1)) / 0.25);
-  const vocal = clamp01((midShare - 0.3) / 0.3) * tonal * signal.gate;
+  const vocal = clamp01((extracted.midShare - 0.3) / 0.3) * extracted.tonal * signal.gate;
   signal.vocal = approach(signal.vocal, vocal, vocal > signal.vocal ? 1.5 : 0.7, delta);
 
   followTension(delta, snareRate);

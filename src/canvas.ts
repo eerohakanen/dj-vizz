@@ -33,23 +33,49 @@ export const glitchRed = createCanvas();
 export const glitchRedCtx = glitchRed.getContext('2d')!;
 export const glitchCyan = createCanvas();
 export const glitchCyanCtx = glitchCyan.getContext('2d')!;
+const snapshot = createCanvas(1);
+const snapshotCtx = snapshot.getContext('2d')!;
+const fullSize = [output, scene, kaleidoBuffer, transitionFrame];
+let sized = false;
+
+export function gradientCache(create: () => CanvasGradient) {
+  let gradient: CanvasGradient | undefined;
+  let from = '';
+  let to = '';
+  return (fromColor: string, toColor: string) => {
+    if (!gradient || fromColor !== from || toColor !== to) {
+      gradient = create();
+      gradient.addColorStop(0, fromColor);
+      gradient.addColorStop(1, toColor);
+      from = fromColor;
+      to = toColor;
+    }
+    return gradient;
+  };
+}
+
+function takeSnapshot() {
+  snapshot.width = view.width;
+  snapshot.height = view.height;
+  snapshotCtx.drawImage(output, 0, 0);
+}
 
 export function resize() {
-  let previous = null;
-  if (view.width > 2) {
-    previous = createCanvas(view.width, view.height);
-    previous.getContext('2d')!.drawImage(output, 0, 0);
-  }
   const pixels = innerWidth * innerHeight;
   const ratio = Math.min(Math.min(devicePixelRatio || 1, 1.5), Math.sqrt(2.2e6 / pixels)) * view.quality;
+  const width = Math.max(2, Math.round(innerWidth * ratio));
+  const height = Math.max(2, Math.round(innerHeight * ratio));
   view.pixelRatio = ratio;
-  view.width = Math.max(2, Math.round(innerWidth * ratio));
-  view.height = Math.max(2, Math.round(innerHeight * ratio));
-  view.diagonal = Math.hypot(view.width, view.height);
-  view.minSide = Math.min(view.width, view.height);
-  const { width, height } = view;
+  if (sized && width === view.width && height === view.height) return;
+  const keep = view.width > 2;
+  if (keep) takeSnapshot();
+  sized = true;
+  view.width = width;
+  view.height = height;
+  view.diagonal = Math.hypot(width, height);
+  view.minSide = Math.min(width, height);
 
-  for (const canvas of [output, scene, kaleidoBuffer, transitionFrame]) {
+  for (const canvas of fullSize) {
     canvas.width = width;
     canvas.height = height;
   }
@@ -71,7 +97,9 @@ export function resize() {
   sceneCtx.fillStyle = outputCtx.fillStyle = BACKGROUND;
   sceneCtx.fillRect(0, 0, width, height);
   outputCtx.fillRect(0, 0, width, height);
-  if (previous) sceneCtx.drawImage(previous, 0, 0, width, height);
+  if (!keep) return;
+  sceneCtx.drawImage(snapshot, 0, 0, width, height);
+  snapshot.width = snapshot.height = 1;
 }
 
 let averageFrameMs = 16;

@@ -1,5 +1,5 @@
 import { bandAt } from '../audio/spectrum';
-import { sceneCtx as ctx } from '../canvas';
+import { gradientCache, sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
 import { signedRandom, TAU } from '../math';
 import { clock, fx, settings, signal, view } from '../state';
@@ -37,6 +37,7 @@ function recycle(star: Star) {
 }
 
 const stars = Array.from({ length: 600 }, () => respawn({ x: 0, y: 0, z: 0, previousZ: 0, hue: 0, turn: 0 }));
+const centerGlow = gradientCache(() => ctx.createRadialGradient(0, 0, 0, 0, 0, 1));
 const buckets = Array.from({ length: HUES * DEPTH_BUCKETS * LEVEL_BUCKETS }, (): number[] => []);
 
 function collectStreaks() {
@@ -94,11 +95,12 @@ export function drawWarp() {
     ctx.stroke();
   });
   const glowRadius = (20 + punchBass * 140) * pixelRatio;
-  const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowRadius);
-  glow.addColorStop(0, color(0, 0.8, 75));
-  glow.addColorStop(1, color(1, 0));
-  ctx.fillStyle = glow;
+  ctx.save();
+  ctx.fillStyle = centerGlow(color(0, 0.8, 75), color(1, 0));
+  ctx.translate(cx, cy);
+  ctx.scale(glowRadius, glowRadius);
   ctx.beginPath();
-  ctx.arc(cx, cy, glowRadius, 0, TAU);
+  ctx.arc(0, 0, 1, 0, TAU);
   ctx.fill();
+  ctx.restore();
 }

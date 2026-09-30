@@ -1,5 +1,5 @@
 import { showMessage } from './dom';
-import { clamp, clamp01, hueDelta, lerp, smoothstep, wrap } from './math';
+import { clamp, clamp01, hueDelta, lerp, quantize, smoothstep, wrap } from './math';
 import { PALETTES, type Palette } from './palettes';
 import { fx, settings, signal } from './state';
 import { notify } from './store';
@@ -13,8 +13,13 @@ const MODE_LIGHTNESS_SHIFT = 3;
 const WARM_HUE = 30;
 const COOL_HUE = 220;
 const LUT_SIZE = 64;
+const KEY_HUE_STEP = 0.5;
+const KEY_STRENGTH_STEP = 1 / 128;
+const STYLE_CACHE_LIMIT = 4096;
 const lut = new Float32Array(LUT_SIZE * 3);
 const styleCache = new Map<number, string>();
+const shade = new Int16Array(3);
+const built = { palette: -1, previousPalette: -1, fade: -1, hue: NaN, keyStrength: NaN, minor: false };
 const currentHsl = new Float32Array(3);
 const previousHsl = new Float32Array(3);
 let previousPalette = 1;
@@ -82,7 +87,6 @@ function samplePalette(index: number, position: number, out: Float32Array) {
 }
 
 function fillLut(hue: number, keyStrength: number, minor: boolean) {
-  styleCache.clear();
   const currentOffset = keyTintOffset(PALETTE_HUES[settings.palette], hue) * keyStrength;
   const previousOffset = keyTintOffset(PALETTE_HUES[previousPalette], hue) * keyStrength;
   const modeHue = minor ? COOL_HUE : WARM_HUE;
@@ -109,26 +113,59 @@ function fillLut(hue: number, keyStrength: number, minor: boolean) {
 }
 
 export function buildLut() {
-  const keyStrength = signal.key < 0 ? 0 : keyTintStrength(signal.keyConfidence);
-  fillLut(fx.keyHue, keyStrength, signal.key >= 12);
+  const keyStrength = quantize(signal.key < 0 ? 0 : keyTintStrength(signal.keyConfidence), KEY_STRENGTH_STEP);
+  const hue = quantize(fx.keyHue, KEY_HUE_STEP);
+  const minor = signal.key >= 12;
+  if (
+    built.palette === settings.palette &&
+    built.previousPalette === previousPalette &&
+    built.fade === fade &&
+    built.hue === hue &&
+    built.keyStrength === keyStrength &&
+    built.minor === minor
+  )
+    return false;
+  built.palette = settings.palette;
+  built.previousPalette = previousPalette;
+  built.fade = fade;
+  built.hue = hue;
+  built.keyStrength = keyStrength;
+  built.minor = minor;
+  fillLut(hue, keyStrength, minor);
+  return true;
 }
 
 export function advancePaletteFade(delta: number) {
   fade = Math.min(1, fade + delta / 1.5);
 }
 
-export function color(position: number, alpha = 1, lightness?: number) {
+const alphaSteps = (alpha: number) => (alpha < 0 ? 0 : alpha > 1 ? 1000 : Math.round(alpha * 1000));
+
+export const styleKey = (hue: number, saturation: number, lightness: number, alpha: number) =>
+  (hue * 10201 + saturation * 101 + lightness) * 1001 + alphaSteps(alpha);
+
+export function colorHsl(position: number, lightness?: number) {
   let x = (position * 0.5 + fx.hue / 360) % 1;
   if (x < 0) x += 1;
   const k = ((x * LUT_SIZE) | 0) * 3;
   const mood = (signal.brightness - 0.5) * 14;
-  let light = lut[k + 2] + (lightness == null ? 0 : lightness - 58) + fx.beat * 8 + mood;
-  light = light < 5 ? 5 : light > 95 ? 95 : light;
-  const alphaSteps = alpha < 0 ? 0 : alpha > 1 ? 1000 : Math.round(alpha * 1000);
-  const key = (k * 96 + (light | 0)) * 1001 + alphaSteps;
+  const light = lut[k + 2] + (lightness == null ? 0 : lightness - 58) + fx.beat * 8 + mood;
+  shade[0] = lut[k];
+  shade[1] = lut[k + 1];
+  shade[2] = light < 5 ? 5 : light > 95 ? 95 : light;
+  return shade;
+}
+
+export function color(position: number, alpha = 1, lightness?: number) {
+  colorHsl(position, lightness);
+  const hue = shade[0];
+  const saturation = shade[1];
+  const light = shade[2];
+  const key = styleKey(hue, saturation, light, alpha);
   let style = styleCache.get(key);
   if (style === undefined) {
-    style = `hsla(${lut[k] | 0},${lut[k + 1] | 0}%,${light | 0}%,${(alphaSteps / 1000).toFixed(3)})`;
+    if (styleCache.size >= STYLE_CACHE_LIMIT) styleCache.clear();
+    style = `hsla(${hue},${saturation}%,${light}%,${(alphaSteps(alpha) / 1000).toFixed(3)})`;
     styleCache.set(key, style);
   }
   return style;

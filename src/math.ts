@@ -29,6 +29,8 @@ export const smoothstep = (t: number) => t * t * (3 - 2 * t);
 
 export const wrap = (value: number, length: number) => ((value % length) + length) % length;
 
+export const quantize = (value: number, step: number) => Math.round(value / step) * step;
+
 export const hueDelta = (from: number, to: number) => ((((to - from) % 360) + 540) % 360) - 180;
 
 export const randomRange = (min: number, max: number) => min + Math.random() * (max - min);
