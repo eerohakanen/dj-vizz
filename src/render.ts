@@ -1,4 +1,4 @@
-import { BACKGROUND, gradientCache, outputCtx, scene, sceneCtx } from './canvas';
+import { BACKGROUND, fillWith, gradientCache, outputCtx, scene, sceneCtx } from './canvas';
 import { color } from './color';
 import { applyBloom } from './effects/bloom';
 import { applyGlitch } from './effects/glitch';
@@ -137,12 +137,6 @@ function drawRainbowWash(o: CanvasRenderingContext2D) {
   o.rotate(fx.spin * 1.5 + washAngle);
   o.fillRect(-diagonal, -diagonal, diagonal * 2, diagonal * 2);
   o.restore();
-}
-
-function fillWith(o: CanvasRenderingContext2D, operation: GlobalCompositeOperation, style: string) {
-  o.globalCompositeOperation = operation;
-  o.fillStyle = style;
-  o.fillRect(0, 0, view.width, view.height);
 }
 
 function drawFlashes(o: CanvasRenderingContext2D) {

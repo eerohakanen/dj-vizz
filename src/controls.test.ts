@@ -40,9 +40,10 @@ describe('modeIndexFor', () => {
     expect(modeIndexFor(press('0', 'Digit0'))).toBe(9);
   });
 
-  it('maps Shift+1 and Shift+2 by physical key to modes 11 and 12', () => {
+  it('maps Shift+1 to Shift+3 by physical key to modes 11 to 13', () => {
     expect(modeIndexFor(press('!', 'Digit1', true))).toBe(10);
     expect(modeIndexFor(press('@', 'Digit2', true))).toBe(11);
+    expect(modeIndexFor(press('#', 'Digit3', true))).toBe(12);
     expect(modeIndexFor(press('&', 'Digit1', true))).toBe(10);
   });
 
@@ -52,7 +53,7 @@ describe('modeIndexFor', () => {
   });
 
   it('ignores other shifted digits and non-digits', () => {
-    expect(modeIndexFor(press('#', 'Digit3', true))).toBeUndefined();
+    expect(modeIndexFor(press('$', 'Digit4', true))).toBeUndefined();
     expect(modeIndexFor(press('a', 'KeyA'))).toBeUndefined();
   });
 });
@@ -136,7 +137,7 @@ describe('resolveKey', () => {
 
   it('returns nothing for unbound keys', () => {
     expect(idFor('z')).toBeUndefined();
-    expect(idFor('#', 'Digit3', true)).toBeUndefined();
+    expect(idFor('$', 'Digit4', true)).toBeUndefined();
   });
 });
 

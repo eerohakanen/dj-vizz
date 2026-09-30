@@ -11,6 +11,7 @@ import {
   GLOW_POINT_FRAGMENT,
   glowLevel,
   lazyStage,
+  normalizeGeometry,
   paint,
   paintPalette,
   pointScale,
@@ -90,15 +91,6 @@ function injectDisplacement<T extends Three.Material>(material: T, uniforms: Rec
   return material;
 }
 
-function normalize(geometry: Three.BufferGeometry) {
-  geometry.computeBoundingSphere();
-  const { center, radius } = geometry.boundingSphere!;
-  geometry.translate(-center.x, -center.y, -center.z);
-  geometry.scale(1 / radius, 1 / radius, 1 / radius);
-  geometry.computeBoundingSphere();
-  return geometry;
-}
-
 function samplePoints(THREE: ThreeModule, MeshSurfaceSampler: typeof Sampler, geometry: Three.BufferGeometry) {
   const sampler = new MeshSurfaceSampler(new THREE.Mesh(geometry)).build();
   const positions = new Float32Array(POINT_COUNT * 3);
@@ -121,7 +113,7 @@ function samplePoints(THREE: ThreeModule, MeshSurfaceSampler: typeof Sampler, ge
 
 function useShape(stage: ModelStage, index: number) {
   const { THREE, MeshSurfaceSampler, solid, wire, points } = stage;
-  const geometry = normalize(SHAPES[index](THREE));
+  const geometry = normalizeGeometry(SHAPES[index](THREE));
   solid.geometry.dispose();
   points.geometry.dispose();
   solid.geometry = wire.geometry = geometry;

@@ -2,7 +2,7 @@ import type * as Three from 'three';
 import { BACKGROUND, createCanvas, sceneCtx } from '../canvas';
 import { colorHsl } from '../color';
 import { showWarning } from '../dom';
-import { approach, decay, hueDelta, lerp, signedRandom, TAU } from '../math';
+import { approach, decay, hueDelta, lerp, randomRange, signedRandom, TAU } from '../math';
 import { clock, fx, signal, view } from '../state';
 
 export type ThreeModule = typeof Three;
@@ -144,4 +144,112 @@ export function pointScale(camera: Three.PerspectiveCamera) {
 export function presentStage(stage: Stage) {
   stage.renderer.render(stage.scene, stage.camera);
   sceneCtx.drawImage(stage.renderer.domElement, 0, 0, view.width, view.height);
+}
+
+export const STREAM = `
+  uniform vec3 uOffset;
+  uniform float uCube;
+  uniform float uFieldRadius;
+  vec3 streamed(vec3 p) {
+    return mod(p - uOffset, uCube) - uCube * 0.5;
+  }
+`;
+
+export const STREAK_VERTEX = `
+  ${STREAM}
+  uniform float uStreak;
+  uniform vec3 uHeading;
+  attribute float aSeed;
+  attribute float aTail;
+  varying float vFade;
+  varying float vSeed;
+  void main() {
+    vec3 p = streamed(position);
+    p += uHeading * aTail * uStreak * (0.5 + aSeed);
+    vec4 eye = modelViewMatrix * vec4(p, 1.0);
+    gl_Position = projectionMatrix * eye;
+    float distance = length(eye.xyz);
+    vFade = (1.0 - aTail) * (1.0 - smoothstep(uFieldRadius * 0.5, uFieldRadius, distance)) * smoothstep(0.5, 3.0, distance);
+    vSeed = aSeed;
+  }
+`;
+
+export const STREAK_FRAGMENT = `
+  uniform vec3 uColorA;
+  uniform vec3 uColorB;
+  uniform float uStreakAlpha;
+  varying float vFade;
+  varying float vSeed;
+  void main() {
+    vec3 tint = mix(vec3(0.8), mix(uColorA, uColorB, fract(vSeed * 7.31)), 0.7);
+    gl_FragColor = vec4(tint * vFade * uStreakAlpha, 1.0);
+  }
+`;
+
+export const BILLBOARD_VERTEX = `
+  uniform float uRadius;
+  varying vec2 vUv;
+  void main() {
+    vec4 eye = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    eye.xy += position.xy * uRadius;
+    gl_Position = projectionMatrix * eye;
+    vUv = uv;
+  }
+`;
+
+export const SUN_FRAGMENT = `
+  uniform vec3 uColor;
+  uniform float uTime;
+  uniform float uSpin;
+  uniform float uIntensity;
+  varying vec2 vUv;
+  void main() {
+    vec2 c = vUv * 2.0 - 1.0;
+    float d = length(c);
+    if (d > 1.0) discard;
+    float a = atan(c.y, c.x);
+    float core = (1.0 - smoothstep(0.15, 0.2, d));
+    float glow = exp(-d * 6.0) * 1.3 + exp(-d * 16.0);
+    float rays = pow(abs(sin(a * 5.0 + uTime * 0.6 + uSpin)), 24.0) * exp(-d * 3.5) * 0.7
+      + pow(abs(sin(a * 9.0 - uTime * 0.35)), 36.0) * exp(-d * 2.6) * 0.45;
+    float light = (core + glow + rays) * (1.0 - smoothstep(0.6, 1.0, d));
+    gl_FragColor = vec4(mix(uColor, vec3(1.0), clamp(core + exp(-d * 12.0), 0.0, 1.0)) * light * uIntensity, 1.0);
+  }
+`;
+
+export function createStarGeometry(THREE: ThreeModule, count: number, cube: number) {
+  const positions = new Float32Array(count * 3);
+  const seeds = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    positions.set([randomRange(0, cube), randomRange(0, cube), randomRange(0, cube)], i * 3);
+    seeds[i] = Math.random();
+  }
+  const stars = new THREE.BufferGeometry();
+  stars.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  stars.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
+
+  const streakPositions = new Float32Array(count * 6);
+  const streakSeeds = new Float32Array(count * 2);
+  const tails = new Float32Array(count * 2);
+  for (let i = 0; i < count; i++) {
+    const star = positions.subarray(i * 3, i * 3 + 3);
+    streakPositions.set(star, i * 6);
+    streakPositions.set(star, i * 6 + 3);
+    streakSeeds[i * 2] = streakSeeds[i * 2 + 1] = seeds[i];
+    tails[i * 2 + 1] = 1;
+  }
+  const streaks = new THREE.BufferGeometry();
+  streaks.setAttribute('position', new THREE.BufferAttribute(streakPositions, 3));
+  streaks.setAttribute('aSeed', new THREE.BufferAttribute(streakSeeds, 1));
+  streaks.setAttribute('aTail', new THREE.BufferAttribute(tails, 1));
+  return { stars, streaks };
+}
+
+export function normalizeGeometry(geometry: Three.BufferGeometry) {
+  geometry.computeBoundingSphere();
+  const { center, radius } = geometry.boundingSphere!;
+  geometry.translate(-center.x, -center.y, -center.z);
+  geometry.scale(1 / radius, 1 / radius, 1 / radius);
+  geometry.computeBoundingSphere();
+  return geometry;
 }

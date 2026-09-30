@@ -8,6 +8,7 @@ import { drawHypno } from './hypno';
 import { drawModel, pulseModel } from './model';
 import { drawRadial } from './radial';
 import { drawScope } from './scope';
+import { drawSolar, pulseSolar } from './solar';
 import { drawTunnel, spawnRing } from './tunnel';
 import { drawWarp } from './warp';
 
@@ -45,4 +46,5 @@ export const MODES = [
   defineMode('Hypno', drawHypno),
   defineMode('Deep Space', drawDeepSpace, { trails: false, opaque: true, threeD: true, onBeat: pulseDeepSpace }),
   defineMode('Model', drawModel, { trails: false, opaque: true, threeD: true, onBeat: pulseModel }),
+  defineMode('Solar System', drawSolar, { trails: false, opaque: true, threeD: true, onBeat: pulseSolar }),
 ];

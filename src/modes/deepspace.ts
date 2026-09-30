@@ -4,9 +4,11 @@ import { clock, fx, settings, signal } from '../state';
 import {
   additiveOptions,
   advanceSway,
+  BILLBOARD_VERTEX,
   cameraJitter,
   createKick,
   createRenderer,
+  createStarGeometry,
   fitStage,
   GLOW_POINT_FRAGMENT,
   glowLevel,
@@ -15,6 +17,10 @@ import {
   paintPalette,
   pointScale,
   presentStage,
+  STREAK_FRAGMENT,
+  STREAK_VERTEX,
+  STREAM,
+  SUN_FRAGMENT,
   sway,
   type ThreeModule,
 } from './three-stage';
@@ -29,15 +35,6 @@ const GALAXY_ARMS = 3;
 const SUN_COUNT = 3;
 const NEBULA_COUNT = 10;
 const BASE_FOV = 70;
-
-const STREAM = `
-  uniform vec3 uOffset;
-  uniform float uCube;
-  uniform float uFieldRadius;
-  vec3 streamed(vec3 p) {
-    return mod(p - uOffset, uCube) - uCube * 0.5;
-  }
-`;
 
 const STAR_VERTEX = `
   ${STREAM}
@@ -54,37 +51,6 @@ const STAR_VERTEX = `
     vFade = (1.0 - smoothstep(uFieldRadius * 0.55, uFieldRadius, distance)) * smoothstep(0.5, 4.0, distance) * min(1.0, size / 1.5);
     vSeed = aSeed;
     gl_PointSize = clamp(size, 1.5, 48.0);
-  }
-`;
-
-const STREAK_VERTEX = `
-  ${STREAM}
-  uniform float uStreak;
-  uniform vec3 uHeading;
-  attribute float aSeed;
-  attribute float aTail;
-  varying float vFade;
-  varying float vSeed;
-  void main() {
-    vec3 p = streamed(position);
-    p += uHeading * aTail * uStreak * (0.5 + aSeed);
-    vec4 eye = modelViewMatrix * vec4(p, 1.0);
-    gl_Position = projectionMatrix * eye;
-    float distance = length(eye.xyz);
-    vFade = (1.0 - aTail) * (1.0 - smoothstep(uFieldRadius * 0.5, uFieldRadius, distance)) * smoothstep(0.5, 3.0, distance);
-    vSeed = aSeed;
-  }
-`;
-
-const STREAK_FRAGMENT = `
-  uniform vec3 uColorA;
-  uniform vec3 uColorB;
-  uniform float uStreakAlpha;
-  varying float vFade;
-  varying float vSeed;
-  void main() {
-    vec3 tint = mix(vec3(0.8), mix(uColorA, uColorB, fract(vSeed * 7.31)), 0.7);
-    gl_FragColor = vec4(tint * vFade * uStreakAlpha, 1.0);
   }
 `;
 
@@ -118,37 +84,6 @@ const GALAXY_FRAGMENT = `
     vec3 core = vec3(1.0, 0.92, 0.8);
     vec3 tint = mix(core, mix(uColorA, uColorB, smoothstep(0.3, 1.0, vRadius)), smoothstep(0.0, 0.35, vRadius));
     gl_FragColor = vec4(tint * exp(-d * d * 5.0) * vLight * uGlow * 0.55, 1.0);
-  }
-`;
-
-const BILLBOARD_VERTEX = `
-  uniform float uRadius;
-  varying vec2 vUv;
-  void main() {
-    vec4 eye = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-    eye.xy += position.xy * uRadius;
-    gl_Position = projectionMatrix * eye;
-    vUv = uv;
-  }
-`;
-
-const SUN_FRAGMENT = `
-  uniform vec3 uColor;
-  uniform float uTime;
-  uniform float uSpin;
-  uniform float uIntensity;
-  varying vec2 vUv;
-  void main() {
-    vec2 c = vUv * 2.0 - 1.0;
-    float d = length(c);
-    if (d > 1.0) discard;
-    float a = atan(c.y, c.x);
-    float core = (1.0 - smoothstep(0.15, 0.2, d));
-    float glow = exp(-d * 6.0) * 1.3 + exp(-d * 16.0);
-    float rays = pow(abs(sin(a * 5.0 + uTime * 0.6 + uSpin)), 24.0) * exp(-d * 3.5) * 0.7
-      + pow(abs(sin(a * 9.0 - uTime * 0.35)), 36.0) * exp(-d * 2.6) * 0.45;
-    float light = (core + glow + rays) * (1.0 - smoothstep(0.6, 1.0, d));
-    gl_FragColor = vec4(mix(uColor, vec3(1.0), clamp(core + exp(-d * 12.0), 0.0, 1.0)) * light * uIntensity, 1.0);
   }
 `;
 
@@ -197,34 +132,6 @@ let bank = 0;
 let roll = 0;
 let rollVelocity = 0;
 let dropping = false;
-
-function createStarGeometry(THREE: ThreeModule) {
-  const positions = new Float32Array(STAR_COUNT * 3);
-  const seeds = new Float32Array(STAR_COUNT);
-  for (let i = 0; i < STAR_COUNT; i++) {
-    positions.set([randomRange(0, CUBE), randomRange(0, CUBE), randomRange(0, CUBE)], i * 3);
-    seeds[i] = Math.random();
-  }
-  const stars = new THREE.BufferGeometry();
-  stars.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  stars.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
-
-  const streakPositions = new Float32Array(STAR_COUNT * 6);
-  const streakSeeds = new Float32Array(STAR_COUNT * 2);
-  const tails = new Float32Array(STAR_COUNT * 2);
-  for (let i = 0; i < STAR_COUNT; i++) {
-    const star = positions.subarray(i * 3, i * 3 + 3);
-    streakPositions.set(star, i * 6);
-    streakPositions.set(star, i * 6 + 3);
-    streakSeeds[i * 2] = streakSeeds[i * 2 + 1] = seeds[i];
-    tails[i * 2 + 1] = 1;
-  }
-  const streaks = new THREE.BufferGeometry();
-  streaks.setAttribute('position', new THREE.BufferAttribute(streakPositions, 3));
-  streaks.setAttribute('aSeed', new THREE.BufferAttribute(streakSeeds, 1));
-  streaks.setAttribute('aTail', new THREE.BufferAttribute(tails, 1));
-  return { stars, streaks };
-}
 
 function createGalaxyGeometry(THREE: ThreeModule) {
   const positions = new Float32Array(GALAXY_COUNT * 3);
@@ -289,7 +196,7 @@ function buildStage(THREE: ThreeModule) {
     });
 
   const scene = new THREE.Scene();
-  const { stars, streaks } = createStarGeometry(THREE);
+  const { stars, streaks } = createStarGeometry(THREE, STAR_COUNT, CUBE);
   const starMaterial = additive(STAR_VERTEX, GLOW_POINT_FRAGMENT, { uSize: { value: 0.5 } });
   const streakMaterial = additive(STREAK_VERTEX, STREAK_FRAGMENT, {
     uStreak: { value: 0 },

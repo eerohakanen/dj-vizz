@@ -1,0 +1,178 @@
+import { describe, expect, it } from 'vitest';
+import {
+  BARS_PER_SHOT,
+  CALM_BARS_PER_SHOT,
+  createTour,
+  eclipseProgress,
+  eclipsing,
+  MIN_DWELL_SECONDS,
+  PHRASES_PER_STOP,
+  stepTour,
+  type Tour,
+  type TourInput,
+  traveling,
+  UNLOCKED_DWELL_SECONDS,
+  UNLOCKED_SHOT_SECONDS,
+  warpLevel,
+} from './tour';
+
+const STOPS = 4;
+const SHOTS = 3;
+
+const input = (overrides: Partial<TourInput> = {}): TourInput => ({
+  delta: 0.1,
+  drop: false,
+  phraseEnded: false,
+  downbeat: false,
+  calm: 0,
+  tempoLocked: true,
+  cruiseSeconds: 5,
+  jumpSeconds: 1.5,
+  eclipseSeconds: 8,
+  canEclipse: false,
+  shotCount: SHOTS,
+  ...overrides,
+});
+
+const step = (tour: Tour, overrides: Partial<TourInput> = {}) => stepTour(tour, input(overrides), STOPS);
+
+function arrive(tour: Tour) {
+  while (traveling(tour)) step(tour);
+}
+
+describe('stepTour departures', () => {
+  it('starts parked at the first stop on the first shot', () => {
+    const tour = createTour();
+    expect(traveling(tour)).toBe(false);
+    expect([tour.to, tour.shot]).toEqual([0, 0]);
+  });
+
+  it('jumps on a drop once the minimum dwell has passed', () => {
+    const tour = createTour();
+    step(tour, { delta: MIN_DWELL_SECONDS / 2, drop: true });
+    expect(traveling(tour)).toBe(false);
+    step(tour, { delta: MIN_DWELL_SECONDS, drop: true });
+    expect(traveling(tour)).toBe(true);
+    expect(tour.jumping).toBe(true);
+    expect(tour.travelSeconds).toBe(1.5);
+    expect([tour.from, tour.to]).toEqual([0, 1]);
+  });
+
+  it('cruises after the phrase count when tempo is locked', () => {
+    const tour = createTour();
+    step(tour, { delta: MIN_DWELL_SECONDS });
+    for (let i = 1; i < PHRASES_PER_STOP; i++) step(tour, { phraseEnded: true });
+    expect(traveling(tour)).toBe(false);
+    step(tour, { phraseEnded: true });
+    expect(traveling(tour)).toBe(true);
+    expect(tour.jumping).toBe(false);
+    expect(tour.travelSeconds).toBe(5);
+  });
+
+  it('lingers through calm sections but still jumps on a drop', () => {
+    const tour = createTour();
+    step(tour, { delta: MIN_DWELL_SECONDS });
+    for (let i = 0; i < PHRASES_PER_STOP * 3; i++) step(tour, { phraseEnded: true, calm: 1 });
+    expect(traveling(tour)).toBe(false);
+    step(tour, { calm: 1, drop: true });
+    expect(traveling(tour)).toBe(true);
+  });
+
+  it('falls back to a timed dwell without a tempo lock', () => {
+    const tour = createTour();
+    step(tour, { delta: UNLOCKED_DWELL_SECONDS - 1, tempoLocked: false });
+    expect(traveling(tour)).toBe(false);
+    step(tour, { delta: 1, tempoLocked: false });
+    expect(traveling(tour)).toBe(true);
+  });
+
+  it('peaks warp midway and resets the stop state on departure', () => {
+    const tour = createTour();
+    step(tour, { delta: MIN_DWELL_SECONDS, drop: true });
+    expect([tour.shot, tour.dwell, tour.phrases, tour.eclipsed]).toEqual([0, 0, 0, false]);
+    step(tour, { delta: 0.75 });
+    expect(warpLevel(tour)).toBeCloseTo(1);
+    step(tour, { delta: 0.75 });
+    expect(traveling(tour)).toBe(false);
+  });
+
+  it('ignores drops while travelling and wraps after the last stop', () => {
+    const tour = createTour();
+    for (let i = 0; i < STOPS; i++) {
+      step(tour, { delta: MIN_DWELL_SECONDS, drop: true });
+      step(tour, { drop: true });
+      expect(tour.to).toBe((i + 1) % STOPS);
+      arrive(tour);
+    }
+    expect([tour.from, tour.to]).toEqual([STOPS - 1, 0]);
+    expect(tour.leg).toBe(STOPS);
+  });
+});
+
+describe('stepTour shots', () => {
+  it('cuts only on the downbeat that completes the bar count', () => {
+    const tour = createTour();
+    for (let i = 0; i < 50; i++) step(tour);
+    expect(tour.shot).toBe(0);
+    for (let i = 1; i < BARS_PER_SHOT; i++) step(tour, { downbeat: true });
+    expect(tour.shot).toBe(0);
+    step(tour, { downbeat: true });
+    expect(tour.shot).toBe(1);
+  });
+
+  it('holds shots twice as long when calm', () => {
+    const tour = createTour();
+    for (let i = 0; i < BARS_PER_SHOT; i++) step(tour, { downbeat: true, calm: 1 });
+    expect(tour.shot).toBe(0);
+    for (let i = BARS_PER_SHOT; i < CALM_BARS_PER_SHOT; i++) step(tour, { downbeat: true, calm: 1 });
+    expect(tour.shot).toBe(1);
+  });
+
+  it('cycles through the shot list', () => {
+    const tour = createTour();
+    for (let i = 0; i < BARS_PER_SHOT * SHOTS; i++) step(tour, { downbeat: true });
+    expect(tour.shot).toBe(0);
+    expect(tour.cuts).toBe(SHOTS);
+  });
+
+  it('cuts on a timer without a tempo lock', () => {
+    const tour = createTour();
+    step(tour, { delta: UNLOCKED_SHOT_SECONDS - 0.5, tempoLocked: false });
+    expect(tour.shot).toBe(0);
+    step(tour, { delta: 0.5, tempoLocked: false });
+    expect(tour.shot).toBe(1);
+  });
+});
+
+describe('stepTour eclipses', () => {
+  it('turns the first drop at an eclipsable stop into an eclipse, then jumps on the next', () => {
+    const tour = createTour();
+    step(tour, { drop: true, canEclipse: true });
+    expect(eclipsing(tour)).toBe(true);
+    expect(traveling(tour)).toBe(false);
+    step(tour, { delta: 4 });
+    expect(eclipseProgress(tour)).toBeCloseTo(0.5, 1);
+    step(tour, { delta: 4 });
+    expect(eclipsing(tour)).toBe(false);
+    expect(tour.shot).toBe(1);
+    step(tour, { drop: true, canEclipse: true });
+    expect(traveling(tour)).toBe(true);
+    expect(tour.jumping).toBe(true);
+  });
+
+  it('ignores drops, phrases and downbeats during an eclipse', () => {
+    const tour = createTour();
+    step(tour, { delta: MIN_DWELL_SECONDS, drop: true, canEclipse: true });
+    for (let i = 0; i < 10; i++) step(tour, { drop: true, phraseEnded: true, downbeat: true, canEclipse: true });
+    expect(eclipsing(tour)).toBe(true);
+    expect(traveling(tour)).toBe(false);
+    expect(tour.phrases).toBe(0);
+  });
+
+  it('jumps straight away at stops that cannot eclipse', () => {
+    const tour = createTour();
+    step(tour, { delta: MIN_DWELL_SECONDS, drop: true });
+    expect(eclipsing(tour)).toBe(false);
+    expect(traveling(tour)).toBe(true);
+  });
+});

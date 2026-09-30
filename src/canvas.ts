@@ -133,3 +133,9 @@ export function adaptQuality(frameMs: number) {
     resize();
   }
 }
+
+export function fillWith(o: CanvasRenderingContext2D, operation: GlobalCompositeOperation, style: string) {
+  o.globalCompositeOperation = operation;
+  o.fillStyle = style;
+  o.fillRect(0, 0, view.width, view.height);
+}
