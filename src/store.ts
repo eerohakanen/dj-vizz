@@ -12,6 +12,7 @@ export const ui = {
   peek: false,
   overlay: null as Overlay | null,
   paused: false,
+  fullscreen: false,
   screen: 'landing' as Screen,
   debug: false,
 };

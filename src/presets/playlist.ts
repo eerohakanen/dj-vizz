@@ -12,7 +12,7 @@ export function loadPreset(index: number) {
   playlist.beats = 0;
   playlist.startedAt = clock.time;
   applyPreset(preset);
-  showMessage(`▶ ${preset.name}  (${index + 1}/${presets.length})`);
+  if (!playlist.playing) showMessage(`▶ ${preset.name}  (${index + 1}/${presets.length})`);
   notify();
 }
 

@@ -38,10 +38,21 @@ export function resetTuning() {
   notify();
 }
 
-export const toggleFullscreen = () =>
-  document.fullscreenElement
-    ? document.exitFullscreen()
-    : document.documentElement.requestFullscreen().catch(() => {});
+export const fullscreenSupported = () => document.fullscreenEnabled;
+
+export const toggleFullscreen = () => {
+  if (!fullscreenSupported()) {
+    showMessage('Fullscreen is not available on this device.');
+    return;
+  }
+  const request = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  request.catch(() => showMessage('Could not change fullscreen.'));
+};
+
+export function syncFullscreen() {
+  ui.fullscreen = !!document.fullscreenElement;
+  notify();
+}
 
 export function togglePaused() {
   ui.paused = !ui.paused;

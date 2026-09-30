@@ -1,4 +1,4 @@
-import { cycleMirror, cyclePsy, nudgeGain, openOverlay, setControlsHidden, setHideLocked, setPeek, toggleDebug, toggleFullscreen, togglePaused, toggleSetting } from './actions';
+import { cycleMirror, cyclePsy, nudgeGain, openOverlay, setControlsHidden, setHideLocked, setPeek, syncFullscreen, toggleDebug, toggleFullscreen, togglePaused, toggleSetting } from './actions';
 import { audio } from './audio/input';
 import { setPalette } from './color';
 import { triggerDrop } from './events';
@@ -272,6 +272,7 @@ function wake() {
 
 export function bindControls() {
   addEventListener('keydown', handleKey);
+  document.addEventListener('fullscreenchange', syncFullscreen);
   addEventListener('pointermove', wake);
   addEventListener('touchstart', wake, { passive: true });
 }

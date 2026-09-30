@@ -83,7 +83,7 @@ function ModeSelect() {
           <SelectValue />
         </SelectTrigger>
       </Hint>
-      <SelectContent position="popper" side="top" align="start" avoidCollisions={false} className="max-h-none">
+      <SelectContent position="popper" side="top" align="start">
         {MODES.map((mode, index) => (
           <SelectItem key={mode.name} value={String(index)}>
             {mode.name}
@@ -102,13 +102,13 @@ function swatchStyle(palette: Palette) {
 
 function PaletteSelect() {
   return (
-    <Select value={String(settings.palette)} onValueChange={(value) => setPalette(+value, true)}>
+    <Select value={String(settings.palette)} onValueChange={(value) => setPalette(+value)}>
       <Hint label="Colour palette" shortcut={shortcutFor('palette')}>
         <SelectTrigger size="sm" className="w-40">
           <SelectValue />
         </SelectTrigger>
       </Hint>
-      <SelectContent position="popper" side="top" align="start" avoidCollisions={false} className="max-h-none">
+      <SelectContent position="popper" side="top" align="start">
         {PALETTES.map((palette, index) => (
           <SelectItem key={palette.name} value={String(index)}>
             <span className="size-3.5 shrink-0 rounded-full" style={swatchStyle(palette)} />

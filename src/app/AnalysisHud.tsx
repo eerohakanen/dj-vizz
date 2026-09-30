@@ -30,7 +30,7 @@ export function AnalysisHud() {
   useTicker();
   const bar = Math.floor(signal.phraseBeat / 4) + 1;
   return (
-    <div className={cn('pointer-events-none fixed bottom-3 left-3 flex flex-col gap-2 rounded-lg border border-border p-3 font-mono text-xs', GLASS_PANEL)}>
+    <div className={cn('pointer-events-none fixed top-3 left-3 flex flex-col gap-2 rounded-lg border border-border p-3 font-mono text-xs', GLASS_PANEL)}>
       <div className="flex items-center gap-2">
         <Hit label="K" level={fx.kick} />
         <Hit label="S" level={fx.snare} />

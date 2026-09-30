@@ -117,8 +117,12 @@ export function TuningSheet() {
   useEngine();
   const overlay = useOverlay('tuning');
   return (
-    <Sheet {...overlay}>
-      <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md">
+    <Sheet {...overlay} modal={false}>
+      <SheetContent
+        overlay={false}
+        onInteractOutside={(event) => event.preventDefault()}
+        className="flex w-full flex-col gap-0 sm:max-w-md"
+      >
         <SheetHeader>
           <SheetTitle>Tune</SheetTitle>
           <SheetDescription>Adjust what the visualizer hears and how strongly it reacts.</SheetDescription>
