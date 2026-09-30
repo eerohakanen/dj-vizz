@@ -300,6 +300,13 @@ export function duplicateScene(index: number) {
   return index + 1;
 }
 
+export function renameScene(index: number, name?: string) {
+  const scene = currentFolder()?.presets[index];
+  if (!scene) return;
+  scene.name = cleanName(name, scene.name);
+  saveLibrary();
+}
+
 export function movePreset(index: number, step: number) {
   const presets = currentFolder()?.presets;
   const target = index + step;

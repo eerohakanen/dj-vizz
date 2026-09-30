@@ -3,16 +3,20 @@ import {
   AudioLines,
   CircleHelp,
   EyeOff,
-  FolderOpen,
+  Layers,
+  ListMusic,
   LogOut,
   Maximize,
   Minimize,
   MoreHorizontal,
   Pause,
+  Pencil,
   Play,
+  Save,
+  SkipBack,
+  SkipForward,
   SlidersHorizontal,
   Sparkles,
-  Square,
   Zap,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +41,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { effectEnabled, strobeActive } from '@/motion';
-import { fullscreenSupported, openOverlay, setMirror, setPsy, setHideLocked, setSetting, toggleFullscreen, togglePaused } from '@/actions';
+import {
+  fullscreenSupported,
+  newPreset,
+  nextScene,
+  openOverlay,
+  openPresets,
+  previousScene,
+  setHideLocked,
+  setMirror,
+  setPsy,
+  setSetting,
+  switchToEdit,
+  switchToPlay,
+  toggleFullscreen,
+  togglePaused,
+} from '@/actions';
 import { audio } from '@/audio/input';
 import { setPalette } from '@/color';
 import { shortcutFor } from '@/controls';
@@ -46,7 +65,7 @@ import { setMode } from '@/mode';
 import { MODES } from '@/modes/index';
 import { PALETTES } from '@/palettes';
 import { currentFolder, playlist } from '@/presets/library';
-import { togglePlayback } from '@/presets/playlist';
+import { showMessage } from '@/dom';
 import { settings } from '@/state';
 import { ui, useEngine } from '@/store';
 import { MIRROR_NAMES, PSY_NAMES } from '@/effects/options';
@@ -185,16 +204,19 @@ function EffectsMenu() {
             <DropdownMenuShortcut>{shortcutFor(key)}</DropdownMenuShortcut>
           </DropdownMenuCheckboxItem>
         ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuCheckboxItem
-          checked={settings.auto}
-          disabled={playlist.playing}
-          onCheckedChange={(checked) => setSetting('auto', checked)}
-          onSelect={(event) => event.preventDefault()}
-        >
-          Auto-switch on drops
-          <DropdownMenuShortcut>{shortcutFor('auto')}</DropdownMenuShortcut>
-        </DropdownMenuCheckboxItem>
+        {ui.liveMode === 'explore' && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              checked={settings.auto}
+              onCheckedChange={(checked) => setSetting('auto', checked)}
+              onSelect={(event) => event.preventDefault()}
+            >
+              Auto-switch on drops
+              <DropdownMenuShortcut>{shortcutFor('auto')}</DropdownMenuShortcut>
+            </DropdownMenuCheckboxItem>
+          </>
+        )}
         {strobeActive() && (
           <p className="px-2 pt-1 pb-1.5 text-xs text-muted-foreground">Strobe flashes on beats. Avoid if sensitive to flashing light.</p>
         )}
@@ -231,22 +253,6 @@ function AudioPopover() {
         </Button>
       </PopoverContent>
     </Popover>
-  );
-}
-
-function PlaylistStatus() {
-  const folder = currentFolder();
-  if (!playlist.playing || !folder) return null;
-  return (
-    <Hint label="Stop playing folder">
-      <Button variant="secondary" size="sm" onClick={togglePlayback}>
-        <Square className="fill-current" />
-        <span className="max-w-32 truncate">{folder.name}</span>
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {playlist.index + 1}/{folder.presets.length}
-        </span>
-      </Button>
-    </Hint>
   );
 }
 
@@ -320,84 +326,229 @@ function MoreMenu() {
           <DropdownMenuShortcut>{shortcutFor('hide')}</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => openOverlay('exit')}>
-          <LogOut />
-          Exit
-          <DropdownMenuShortcut>{shortcutFor('exit')}</DropdownMenuShortcut>
-        </DropdownMenuItem>
+        {ui.liveMode === 'explore' ? (
+          <DropdownMenuItem onSelect={() => openOverlay('exit')}>
+            <LogOut />
+            Exit
+            <DropdownMenuShortcut>{shortcutFor('exit')}</DropdownMenuShortcut>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onSelect={openPresets}>
+            <ListMusic />
+            Presets menu
+            <DropdownMenuShortcut>{shortcutFor('menu')}</DropdownMenuShortcut>
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
+function PauseButton({ className }: { className?: string }) {
+  return (
+    <Hint label={ui.paused ? 'Resume visuals' : 'Pause visuals'} shortcut={shortcutFor('pause')}>
+      <Button variant={ui.paused ? 'default' : 'outline'} size="sm" className={className} onClick={togglePaused} aria-pressed={ui.paused}>
+        {ui.paused ? <Play /> : <Pause />}
+        <StableLabel value={ui.paused ? 'Resume' : 'Pause'} options={['Pause', 'Resume']} />
+      </Button>
+    </Hint>
+  );
+}
+
+function ViewButtons({ showHideOnMobile }: { showHideOnMobile?: boolean }) {
+  return (
+    <>
+      <FullscreenButton />
+      <Hint label="Keyboard shortcuts" shortcut={shortcutFor('help')}>
+        <Button variant="ghost" size="icon-sm" className="max-sm:hidden" onClick={() => openOverlay('help')} aria-label="Keyboard shortcuts">
+          <CircleHelp />
+        </Button>
+      </Hint>
+      <Hint label="Hide controls" shortcut={shortcutFor('hide')}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className={cn(!showHideOnMobile && 'max-sm:hidden')}
+          onClick={() => setHideLocked(true)}
+          aria-label="Hide controls"
+        >
+          <EyeOff />
+        </Button>
+      </Hint>
+    </>
+  );
+}
+
+function MenuButton({ labelled }: { labelled?: boolean }) {
+  return (
+    <Hint label="Back to presets menu" shortcut={shortcutFor('menu')}>
+      {labelled ? (
+        <Button variant="outline" size="sm" onClick={openPresets}>
+          <ListMusic />
+          Menu
+        </Button>
+      ) : (
+        <Button variant="ghost" size="icon-sm" className="max-sm:hidden" onClick={openPresets} aria-label="Presets menu">
+          <ListMusic />
+        </Button>
+      )}
+    </Hint>
+  );
+}
+
+function ExitButton() {
+  return (
+    <Hint label="Back to main menu" shortcut={shortcutFor('exit')}>
+      <Button variant="ghost" size="icon-sm" className="max-sm:hidden" onClick={() => openOverlay('exit')} aria-label="Back to main menu">
+        <LogOut />
+      </Button>
+    </Hint>
+  );
+}
+
+function saveAsPreset() {
+  newPreset();
+  showMessage(`Saved as "${currentFolder()?.name}". Keep tweaking, or add more scenes.`);
+}
+
+function ExploreActions() {
+  return (
+    <Hint label="Save these visuals as the first scene of a new preset">
+      <Button size="sm" onClick={saveAsPreset}>
+        <Save />
+        Save as preset
+      </Button>
+    </Hint>
+  );
+}
+
+function EditActions() {
+  const open = ui.overlay === 'scenes';
+  const count = currentFolder()?.presets.length ?? 0;
+  return (
+    <>
+      <Hint label={open ? 'Hide scene list' : 'Show scene list'} shortcut={shortcutFor('scenes')}>
+        <Button variant={open ? 'secondary' : 'outline'} size="sm" onClick={() => openOverlay('scenes')} aria-pressed={open}>
+          <Layers />
+          Scenes
+          <Badge variant="secondary" className="h-5 min-w-5 rounded-full px-1.5 tabular-nums">
+            {count}
+          </Badge>
+        </Button>
+      </Hint>
+      <Hint label={count ? 'Play this preset' : 'Add a scene to play'}>
+        <Button size="sm" disabled={!count} onClick={switchToPlay}>
+          <Play />
+          Play
+        </Button>
+      </Hint>
+    </>
+  );
+}
+
+function StudioControls() {
+  const editing = ui.liveMode === 'edit';
+  return (
+    <>
+      <AudioPopover />
+      <Separator orientation="vertical" className="h-6! max-sm:hidden" />
+      <ModeSelect />
+      <PaletteSelect />
+      <EffectsMenu />
+      <Hint label="Tune levels and effect strength" shortcut={shortcutFor('tune')}>
+        <Button variant="outline" size="sm" className="max-sm:hidden" onClick={() => openOverlay('tuning')}>
+          <SlidersHorizontal />
+          Tune
+        </Button>
+      </Hint>
+      <Hint label="Fire a drop" shortcut={shortcutFor('drop')}>
+        <Button variant="outline" size="sm" className="max-sm:hidden" onClick={triggerDrop}>
+          <Zap />
+          Drop
+        </Button>
+      </Hint>
+      <PauseButton className="max-sm:hidden" />
+      <Separator orientation="vertical" className="h-6! max-sm:hidden" />
+      {editing ? <EditActions /> : <ExploreActions />}
+      <MoreMenu />
+      <ViewButtons />
+      <Separator orientation="vertical" className="h-6! max-sm:hidden" />
+      {editing ? <MenuButton /> : <ExitButton />}
+    </>
+  );
+}
+
+function NowPlaying() {
+  const folder = currentFolder();
+  const count = folder?.presets.length ?? 0;
+  const scene = folder?.presets[playlist.index];
+  return (
+    <div className="flex min-w-0 max-w-48 flex-col px-2 leading-tight">
+      <span className="truncate text-sm font-medium">{folder?.name}</span>
+      <span className="truncate text-xs text-muted-foreground">
+        {scene ? (
+          <>
+            <span className="tabular-nums">
+              {playlist.index + 1}/{count}
+            </span>{' '}
+            · {scene.name}
+          </>
+        ) : (
+          'Not playing'
+        )}
+      </span>
+    </div>
+  );
+}
+
+function PlayControls() {
+  const stepDisabled = !playlist.playing || (currentFolder()?.presets.length ?? 0) < 2;
+  return (
+    <>
+      <NowPlaying />
+      <Separator orientation="vertical" className="h-6!" />
+      <Hint label="Previous scene" shortcut="←">
+        <Button variant="outline" size="icon-sm" disabled={stepDisabled} onClick={previousScene} aria-label="Previous scene">
+          <SkipBack />
+        </Button>
+      </Hint>
+      <Hint label="Next scene" shortcut={`→, ${shortcutFor('sceneNext')}`}>
+        <Button variant="outline" size="icon-sm" disabled={stepDisabled} onClick={nextScene} aria-label="Next scene">
+          <SkipForward />
+        </Button>
+      </Hint>
+      <PauseButton />
+      <Separator orientation="vertical" className="h-6! max-sm:hidden" />
+      <Hint label="Edit this preset" shortcut={shortcutFor('edit')}>
+        <Button variant="outline" size="sm" onClick={switchToEdit}>
+          <Pencil />
+          Edit
+        </Button>
+      </Hint>
+      <MenuButton labelled />
+      <ViewButtons showHideOnMobile />
+    </>
+  );
+}
+
+const SIDE_PANELS = new Set(['scenes', 'tuning']);
+
 export function Toolbar() {
   useEngine();
+  const sidePanelOpen = SIDE_PANELS.has(ui.overlay ?? '');
   return (
     <div
       data-toolbar
       inert={ui.controlsHidden}
       aria-hidden={ui.controlsHidden}
       className={cn(
-        'fixed inset-x-0 bottom-0 flex justify-center px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] transition-opacity duration-500',
+        'fixed inset-x-0 bottom-0 flex justify-center px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] transition-[opacity,padding] duration-500',
+        sidePanelOpen && 'lg:pr-[calc(28rem+0.75rem)]',
         ui.controlsHidden && 'pointer-events-none opacity-0',
       )}
     >
       <div className={cn('flex max-w-full flex-wrap items-center justify-center gap-2 rounded-2xl border p-2', GLASS_PANEL)}>
-        <AudioPopover />
-        <Separator orientation="vertical" className="h-6! max-sm:hidden" />
-        <ModeSelect />
-        <PaletteSelect />
-        <EffectsMenu />
-        <Hint label="Tune levels and effect strength" shortcut={shortcutFor('tune')}>
-          <Button variant="outline" size="sm" className="max-sm:hidden" onClick={() => openOverlay('tuning')}>
-            <SlidersHorizontal />
-            Tune
-          </Button>
-        </Hint>
-        <Hint label="Fire a drop" shortcut={shortcutFor('drop')}>
-          <Button variant="outline" size="sm" className="max-sm:hidden" onClick={triggerDrop}>
-            <Zap />
-            Drop
-          </Button>
-        </Hint>
-        <Hint label={ui.paused ? 'Resume visuals' : 'Pause visuals'} shortcut={shortcutFor('pause')}>
-          <Button
-            variant={ui.paused ? 'default' : 'outline'}
-            size="sm"
-            className="max-sm:hidden"
-            onClick={togglePaused}
-            aria-pressed={ui.paused}
-          >
-            {ui.paused ? <Play /> : <Pause />}
-            <StableLabel value={ui.paused ? 'Resume' : 'Pause'} options={['Pause', 'Resume']} />
-          </Button>
-        </Hint>
-        <Separator orientation="vertical" className="h-6! max-sm:hidden" />
-        <PlaylistStatus />
-        <Hint label="Presets" shortcut={shortcutFor('presets')}>
-          <Button size="sm" onClick={() => openOverlay('scenes')}>
-            <FolderOpen />
-            Presets
-          </Button>
-        </Hint>
-        <MoreMenu />
-        <FullscreenButton />
-        <Hint label="Keyboard shortcuts" shortcut={shortcutFor('help')}>
-          <Button variant="ghost" size="icon-sm" className="max-sm:hidden" onClick={() => openOverlay('help')} aria-label="Keyboard shortcuts">
-            <CircleHelp />
-          </Button>
-        </Hint>
-        <Hint label="Hide controls" shortcut={shortcutFor('hide')}>
-          <Button variant="ghost" size="icon-sm" className="max-sm:hidden" onClick={() => setHideLocked(true)} aria-label="Hide controls">
-            <EyeOff />
-          </Button>
-        </Hint>
-        <Separator orientation="vertical" className="h-6! max-sm:hidden" />
-        <Hint label="Back to main menu" shortcut={shortcutFor('exit')}>
-          <Button variant="ghost" size="icon-sm" className="max-sm:hidden" onClick={() => openOverlay('exit')} aria-label="Back to main menu">
-            <LogOut />
-          </Button>
-        </Hint>
+        {ui.liveMode === 'play' ? <PlayControls /> : <StudioControls />}
       </div>
     </div>
   );

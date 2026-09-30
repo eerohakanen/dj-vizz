@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import type { AudioSourceKind } from '@/audio/sources';
 import { showWarning } from '@/dom';
 import { closeOverlay } from '@/actions';
-import { currentFolder, library } from '@/presets/library';
+import { currentFolder } from '@/presets/library';
 import { currentChangeOn, currentShuffle, setChangeOn, setShuffle, setTransition } from '@/presets/playlist';
 import { clamp01 } from '@/math';
 import { ui, type Overlay } from '@/store';
@@ -108,29 +108,6 @@ export function MeterBar({ value, hot, className, fillClassName }: MeterBarProps
   );
 }
 
-interface FolderSelectProps {
-  value: number;
-  onChange: (index: number) => void;
-  className?: string;
-}
-
-export function FolderSelect({ value, onChange, className }: FolderSelectProps) {
-  return (
-    <Select value={String(value)} onValueChange={(next) => onChange(+next)}>
-      <SelectTrigger className={className}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {library.folders.map((folder, index) => (
-          <SelectItem key={index} value={String(index)}>
-            {folder.name} · {folder.presets.length}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
 function ChangeOnSelect({ triggerProps }: { triggerProps: ComponentProps<typeof SelectTrigger> }) {
   return (
     <Select
@@ -177,39 +154,28 @@ function TransitionSelect({ triggerProps }: { triggerProps: ComponentProps<typeo
   );
 }
 
-export function PlaybackOptions({ compact }: { compact?: boolean }) {
+export function PlaybackOptions() {
+  const changeId = useId();
+  const transitionId = useId();
   const shuffleId = useId();
-  const shuffle = <Switch id={shuffleId} checked={currentShuffle()} onCheckedChange={setShuffle} />;
-
-  if (compact) {
-    return (
-      <div className="flex items-center gap-3">
-        <Label className="shrink-0">Change scene</Label>
-        <ChangeOnSelect triggerProps={{ size: 'sm', className: 'flex-1' }} />
-        <Label className="shrink-0">Transition</Label>
-        <TransitionSelect triggerProps={{ size: 'sm', className: 'flex-1' }} />
-        <Label htmlFor={shuffleId} className="shrink-0">
-          Shuffle
-        </Label>
-        {shuffle}
-      </div>
-    );
-  }
-
   return (
-    <>
-      <div className="space-y-2">
-        <Label>Change scene</Label>
-        <ChangeOnSelect triggerProps={{ className: 'w-full' }} />
+    <div className="grid grid-cols-2 gap-3">
+      <div className="min-w-0 space-y-1.5">
+        <Label htmlFor={changeId} className="text-xs text-muted-foreground">
+          Change scene
+        </Label>
+        <ChangeOnSelect triggerProps={{ id: changeId, size: 'sm', className: 'w-full' }} />
       </div>
-      <div className="space-y-2">
-        <Label>Transition</Label>
-        <TransitionSelect triggerProps={{ className: 'w-full' }} />
+      <div className="min-w-0 space-y-1.5">
+        <Label htmlFor={transitionId} className="text-xs text-muted-foreground">
+          Transition
+        </Label>
+        <TransitionSelect triggerProps={{ id: transitionId, size: 'sm', className: 'w-full' }} />
       </div>
-      <div className="flex items-center justify-between">
-        <Label htmlFor={shuffleId}>Shuffle</Label>
-        {shuffle}
+      <div className="col-span-2 flex items-center justify-between gap-3">
+        <Label htmlFor={shuffleId}>Shuffle scene order</Label>
+        <Switch id={shuffleId} checked={currentShuffle()} onCheckedChange={setShuffle} />
       </div>
-    </>
+    </div>
   );
 }

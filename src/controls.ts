@@ -1,15 +1,31 @@
-import { cycleMirror, cyclePsy, nudgeGain, openOverlay, setControlsHidden, setHideLocked, setPeek, syncFullscreen, toggleDebug, toggleFullscreen, togglePaused, toggleSetting } from './actions';
+import {
+  cycleMirror,
+  cyclePsy,
+  nextScene,
+  nudgeGain,
+  openOverlay,
+  openPresets,
+  previousScene,
+  setControlsHidden,
+  setHideLocked,
+  setPeek,
+  switchToEdit,
+  syncFullscreen,
+  toggleDebug,
+  toggleFullscreen,
+  togglePaused,
+  toggleSetting,
+} from './actions';
 import { audio } from './audio/input';
 import { setPalette } from './color';
 import { triggerDrop } from './events';
 import { setMode } from './mode';
-import { nextPreset } from './presets/playlist';
 import { settings } from './state';
-import { ui } from './store';
+import { ui, type LiveMode } from './store';
 
 const IDLE_HIDE_MS = 4000;
 
-export type KeyGroup = 'Modes' | 'Looks' | 'Effects' | 'Audio' | 'View';
+export type KeyGroup = 'Scenes' | 'Modes' | 'Style' | 'Effects' | 'Audio' | 'View';
 
 export type KeyLike = Pick<KeyboardEvent, 'key' | 'code' | 'shiftKey'>;
 
@@ -18,6 +34,7 @@ export interface KeyEntry {
   group: KeyGroup;
   help: string;
   display: string[];
+  modes?: readonly LiveMode[];
   matches: (event: KeyLike) => boolean;
   run: (event: KeyboardEvent) => void;
 }
@@ -39,15 +56,55 @@ const keyIn =
   ({ key }: KeyLike) =>
     keys.includes(key.toLowerCase());
 
+const LOOK_EDITING: readonly LiveMode[] = ['explore', 'edit'];
+const PRESET_MODES: readonly LiveMode[] = ['play', 'edit'];
+
 const gainUp = () => nudgeGain(5);
 const gainDown = () => nudgeGain(-5);
 
 export const KEYMAP: KeyEntry[] = [
   {
+    id: 'sceneStep',
+    group: 'Scenes',
+    help: 'Previous / next scene',
+    display: ['←', '→'],
+    modes: ['play'],
+    matches: keyIn('arrowleft', 'arrowright'),
+    run: (event) => (event.key === 'ArrowRight' ? nextScene() : previousScene()),
+  },
+  {
+    id: 'sceneNext',
+    group: 'Scenes',
+    help: 'Next scene',
+    display: ['Space'],
+    modes: PRESET_MODES,
+    matches: keyIn(' '),
+    run: nextScene,
+  },
+  {
+    id: 'scenes',
+    group: 'Scenes',
+    help: 'Show / hide the scene list',
+    display: ['M'],
+    modes: ['edit'],
+    matches: keyIn('m'),
+    run: () => openOverlay('scenes'),
+  },
+  {
+    id: 'edit',
+    group: 'Scenes',
+    help: 'Edit this preset',
+    display: ['E'],
+    modes: ['play'],
+    matches: keyIn('e'),
+    run: switchToEdit,
+  },
+  {
     id: 'mode',
     group: 'Modes',
     help: 'Pick a mode',
     display: ['1–0', '⇧1–⇧2'],
+    modes: LOOK_EDITING,
     matches: (event) => modeIndexFor(event) !== undefined,
     run: (event) => setMode(modeIndexFor(event) ?? settings.mode),
   },
@@ -56,48 +113,34 @@ export const KEYMAP: KeyEntry[] = [
     group: 'Modes',
     help: 'Previous / next mode',
     display: ['←', '→'],
+    modes: LOOK_EDITING,
     matches: keyIn('arrowleft', 'arrowright'),
     run: (event) => setMode(settings.mode + (event.key === 'ArrowRight' ? 1 : -1)),
   },
   {
-    id: 'presets',
-    group: 'Modes',
-    help: 'Presets',
-    display: ['M'],
-    matches: keyIn('m'),
-    run: () => {
-      if (ui.liveMode === 'edit') openOverlay('scenes');
-    },
-  },
-  {
-    id: 'presetNext',
-    group: 'Modes',
-    help: 'Next preset in folder',
-    display: ['Space'],
-    matches: keyIn(' '),
-    run: nextPreset,
-  },
-  {
     id: 'palette',
-    group: 'Looks',
+    group: 'Style',
     help: 'Next palette (Shift+C previous)',
     display: ['C'],
+    modes: LOOK_EDITING,
     matches: keyIn('c'),
     run: (event) => setPalette(settings.palette + (event.shiftKey ? -1 : 1)),
   },
   {
     id: 'psy',
-    group: 'Looks',
+    group: 'Style',
     help: 'Cycle psychedelic effect',
     display: ['P'],
+    modes: LOOK_EDITING,
     matches: keyIn('p'),
     run: cyclePsy,
   },
   {
     id: 'mirror',
-    group: 'Looks',
+    group: 'Style',
     help: 'Cycle mirror',
     display: ['K'],
+    modes: LOOK_EDITING,
     matches: keyIn('k'),
     run: cycleMirror,
   },
@@ -106,6 +149,7 @@ export const KEYMAP: KeyEntry[] = [
     group: 'Effects',
     help: 'Lasers',
     display: ['L'],
+    modes: LOOK_EDITING,
     matches: keyIn('l'),
     run: () => toggleSetting('lasers'),
   },
@@ -114,6 +158,7 @@ export const KEYMAP: KeyEntry[] = [
     group: 'Effects',
     help: 'Glitch',
     display: ['X'],
+    modes: LOOK_EDITING,
     matches: keyIn('x'),
     run: () => toggleSetting('glitch'),
   },
@@ -122,6 +167,7 @@ export const KEYMAP: KeyEntry[] = [
     group: 'Effects',
     help: 'Strobe',
     display: ['S'],
+    modes: LOOK_EDITING,
     matches: keyIn('s'),
     run: () => toggleSetting('strobe'),
   },
@@ -130,6 +176,7 @@ export const KEYMAP: KeyEntry[] = [
     group: 'Effects',
     help: 'Trails',
     display: ['E'],
+    modes: LOOK_EDITING,
     matches: keyIn('e'),
     run: () => toggleSetting('trails'),
   },
@@ -138,6 +185,7 @@ export const KEYMAP: KeyEntry[] = [
     group: 'Effects',
     help: 'Auto-switch on drops and every 32-beat phrase',
     display: ['A'],
+    modes: ['explore'],
     matches: keyIn('a'),
     run: () => toggleSetting('auto'),
   },
@@ -146,6 +194,7 @@ export const KEYMAP: KeyEntry[] = [
     group: 'Effects',
     help: 'Fire a drop',
     display: ['Enter'],
+    modes: LOOK_EDITING,
     matches: keyIn('enter'),
     run: triggerDrop,
   },
@@ -154,6 +203,7 @@ export const KEYMAP: KeyEntry[] = [
     group: 'Audio',
     help: 'Tune levels and effect strength',
     display: ['T'],
+    modes: LOOK_EDITING,
     matches: keyIn('t'),
     run: () => openOverlay('tuning'),
   },
@@ -210,8 +260,18 @@ export const KEYMAP: KeyEntry[] = [
     group: 'View',
     help: 'Back to main menu',
     display: ['Q'],
+    modes: ['explore'],
     matches: keyIn('q'),
     run: () => openOverlay('exit'),
+  },
+  {
+    id: 'menu',
+    group: 'View',
+    help: 'Back to presets menu',
+    display: ['Q'],
+    modes: PRESET_MODES,
+    matches: keyIn('q'),
+    run: openPresets,
   },
   {
     id: 'help',
@@ -223,9 +283,11 @@ export const KEYMAP: KeyEntry[] = [
   },
 ];
 
-export const KEY_GROUPS: KeyGroup[] = ['Modes', 'Looks', 'Effects', 'Audio', 'View'];
+export const KEY_GROUPS: KeyGroup[] = ['Scenes', 'Modes', 'Style', 'Effects', 'Audio', 'View'];
 
-export const resolveKey = (event: KeyLike) => KEYMAP.find((entry) => entry.matches(event));
+export const keysFor = (mode: LiveMode) => KEYMAP.filter((entry) => !entry.modes || entry.modes.includes(mode));
+
+export const resolveKey = (event: KeyLike, mode: LiveMode) => keysFor(mode).find((entry) => entry.matches(event));
 
 export const shortcutFor = (id: string) => KEYMAP.find((entry) => entry.id === id)?.display.join(', ') ?? '';
 
@@ -241,7 +303,7 @@ function handleKey(event: KeyboardEvent) {
   if (ui.screen !== 'live' || event.metaKey || event.ctrlKey || event.altKey) return;
   const target = event.target as Element;
   if (isTyping(target) || isInMenu(target)) return;
-  const entry = resolveKey(event);
+  const entry = resolveKey(event, ui.liveMode);
   if (!entry) return;
   event.preventDefault();
   blurToolbarFocus();

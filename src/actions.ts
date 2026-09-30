@@ -4,8 +4,8 @@ import { clamp, wrap } from './math';
 import { allowStrobe, revokeStrobe, strobeActive } from './motion';
 import { audio, disconnectAudio } from './audio/input';
 import { flushAutosave } from './presets/autosave';
-import { addScene, createFolder, playlist, selectFolder } from './presets/library';
-import { loadPreset, startPlaybackAt } from './presets/playlist';
+import { addScene, createFolder, duplicateScene, playlist, selectFolder } from './presets/library';
+import { loadPreset, nextPreset, previousPreset, startPlaybackAt } from './presets/playlist';
 import { settings, TUNING_DEFAULTS } from './state';
 import { notify, ui, type LiveMode, type Overlay, type Screen } from './store';
 import { MIRROR_NAMES, PSY_NAMES } from './effects/options';
@@ -157,6 +157,33 @@ export function switchToEdit() {
   playlist.playing = false;
   ui.overlay = 'scenes';
   notify();
+}
+
+export function editScene(index: number) {
+  flushAutosave();
+  loadPreset(index);
+}
+
+export function captureScene() {
+  flushAutosave();
+  return addScene();
+}
+
+export function duplicateAndEditScene(index: number) {
+  flushAutosave();
+  const copy = duplicateScene(index);
+  if (copy >= 0) loadPreset(copy);
+  return copy;
+}
+
+export function nextScene() {
+  flushAutosave();
+  nextPreset();
+}
+
+export function previousScene() {
+  flushAutosave();
+  previousPreset();
 }
 
 export const openOverlay = (name: Overlay) => {

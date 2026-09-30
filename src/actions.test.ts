@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  captureScene,
+  duplicateAndEditScene,
+  editScene,
   enterEdit,
   enterPlay,
   explore,
   goLive,
   leaveSetup,
   newPreset,
+  nextScene,
   openPresets,
+  previousScene,
   switchToEdit,
   switchToPlay,
 } from './actions';
@@ -116,5 +121,41 @@ describe('navigation actions', () => {
   it('explore goes live in explore mode', () => {
     explore();
     expect(ui).toMatchObject({ screen: 'live', liveMode: 'explore' });
+  });
+});
+
+describe('scene editing actions', () => {
+  const scenes = () => library.folders[0].presets;
+
+  beforeEach(() => {
+    enterEdit(0);
+    settings.mode = 7;
+  });
+
+  it('saves pending edits before selecting another scene', () => {
+    editScene(1);
+    expect(scenes()[0].mode).toBe(7);
+    expect(playlist.selected).toBe(1);
+  });
+
+  it('captures the current look as a new selected scene after saving edits', () => {
+    expect(captureScene()).toBe(2);
+    expect(scenes().map((scene) => scene.mode)).toEqual([7, 2, 7]);
+    expect(playlist.selected).toBe(2);
+  });
+
+  it('duplicates a scene and loads the copy for editing', () => {
+    expect(duplicateAndEditScene(0)).toBe(1);
+    expect(scenes().map((scene) => scene.name)).toEqual(['One', 'One copy', 'Two']);
+    expect(scenes()[1].mode).toBe(7);
+    expect(playlist.index).toBe(1);
+  });
+
+  it('steps through scenes while playing', () => {
+    switchToPlay();
+    nextScene();
+    expect(playlist.index).toBe(1);
+    previousScene();
+    expect(playlist.index).toBe(0);
   });
 });

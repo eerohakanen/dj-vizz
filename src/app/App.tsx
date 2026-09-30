@@ -9,8 +9,8 @@ import { ExitDialog } from './ExitDialog';
 import { HelpDialog } from './HelpDialog';
 import { Landing } from './Landing';
 import { PresetsMenu } from './PresetsMenu';
-import { PresetsSheet } from './PresetsSheet';
 import { RevealButton } from './RevealButton';
+import { SceneEditor } from './SceneEditor';
 import { Setup } from './Setup';
 import { StatusPills } from './StatusPills';
 import { Toolbar } from './Toolbar';
@@ -39,7 +39,7 @@ export function App() {
           <Toolbar />
           <RevealButton />
           <StatusPills />
-          <PresetsSheet />
+          <SceneEditor />
           <TuningSheet />
           <HelpDialog />
           <ExitDialog onExit={leaveVisualizer} />

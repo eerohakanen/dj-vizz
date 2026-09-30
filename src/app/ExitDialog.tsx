@@ -18,7 +18,7 @@ export function ExitDialog({ onExit }: { onExit: () => void }) {
       <AlertDialogContent size="sm">
         <AlertDialogHeader>
           <AlertDialogTitle>Back to main menu?</AlertDialogTitle>
-          <AlertDialogDescription>The audio source disconnects and a playing folder stops.</AlertDialogDescription>
+          <AlertDialogDescription>The audio source disconnects.</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Stay</AlertDialogCancel>

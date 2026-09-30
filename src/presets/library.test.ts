@@ -16,6 +16,7 @@ import {
   playlist,
   type Preset,
   renameFolder,
+  renameScene,
   restorePreset,
   snapshot,
 } from './library';
@@ -299,6 +300,13 @@ describe('scenes', () => {
 
   it('ignores a missing scene', () => {
     expect(duplicateScene(9)).toBe(-1);
+  });
+
+  it('renames a scene, keeping the old name when the new one is blank', () => {
+    renameScene(1, '  Intro  ');
+    renameScene(0, '   ');
+    renameScene(9, 'missing');
+    expect(currentFolder()!.presets.map((preset) => preset.name)).toEqual(['a', 'Intro']);
   });
 });
 

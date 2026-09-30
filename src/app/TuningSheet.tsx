@@ -12,7 +12,8 @@ import { settings, signal } from '@/state';
 import { useEngine } from '@/store';
 import { GAIN_CONTROL, TUNING_SECTIONS, type TuningControl } from '@/tuning';
 import { TUNING_GROUP_NOTES } from './labels';
-import { MeterBar, SourcePicker, useOverlay, useTicker } from './shared';
+import { cn } from '@/lib/utils';
+import { GLASS_PANEL, MeterBar, SourcePicker, useOverlay, useTicker } from './shared';
 
 const LIVE_INTERVAL = 150;
 
@@ -92,7 +93,7 @@ export function TuningSheet() {
       <SheetContent
         overlay={false}
         onInteractOutside={(event) => event.preventDefault()}
-        className="flex w-full flex-col gap-0 sm:max-w-md"
+        className={cn(GLASS_PANEL, 'flex w-full flex-col gap-0 sm:max-w-md')}
       >
         <SheetHeader>
           <SheetTitle>Tune</SheetTitle>

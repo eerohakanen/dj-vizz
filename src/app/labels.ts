@@ -34,5 +34,5 @@ export const sourceLabel = (kind: AudioSourceKind | null) => SOURCES.find((sourc
 
 export const TUNING_GROUP_NOTES: Record<TuningGroup, string> = {
   calibration: 'Remembered on this device.',
-  look: 'Saved with presets.',
+  look: 'Saved with each scene.',
 };

@@ -41,24 +41,6 @@ export function previousPreset() {
   loadPreset((Math.max(playlist.index, 0) - 1 + count) % count);
 }
 
-export function togglePlayback() {
-  const folder = currentFolder();
-  if (playlist.playing) {
-    playlist.playing = false;
-    showMessage(`Stopped playing ${folder?.name ?? 'preset'}`);
-  } else {
-    if (!folder?.presets.length) {
-      showMessage('This preset is empty. Add a scene first.');
-      return;
-    }
-    playlist.playing = true;
-    settings.auto = false;
-    playlist.index = -1;
-    nextPreset();
-  }
-  notify();
-}
-
 export function startPlaybackAt(index: number) {
   const folder = currentFolder();
   if (!folder?.presets.length) {
