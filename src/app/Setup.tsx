@@ -4,12 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { audio } from '@/audio/input';
-import { showWarning } from '@/dom';
 import { library } from '@/presets/library';
 import { playFolder } from '@/presets/playlist';
 import { cn } from '@/lib/utils';
 import { SOURCES, sourceLabel } from './labels';
-import { FolderSelect, IconTile, PlaybackOptions } from './shared';
+import { FolderSelect, IconTile, PlaybackOptions, useSourceCapture } from './shared';
 
 function Steps({ step }: { step: number }) {
   return (
@@ -36,15 +35,7 @@ function Steps({ step }: { step: number }) {
 type Source = (typeof SOURCES)[number];
 
 function SourceStep({ onConnected }: { onConnected: () => void }) {
-  const [pending, setPending] = useState<Source['kind'] | null>(null);
-
-  const connect = async (source: Source) => {
-    setPending(source.kind);
-    const result = await source.capture();
-    setPending(null);
-    if (result.ok) onConnected();
-    else showWarning(result.error);
-  };
+  const { pending, connect } = useSourceCapture(onConnected);
 
   return (
     <>

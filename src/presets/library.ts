@@ -281,10 +281,21 @@ export function overwritePreset(index: number) {
 }
 
 export function deletePreset(index: number) {
-  currentFolder().presets.splice(index, 1);
+  const [removed] = currentFolder().presets.splice(index, 1);
   if (playlist.selected === index) playlist.selected = -1;
   else if (playlist.selected > index) playlist.selected--;
   playlist.index = playlist.selected;
+  saveLibrary();
+  return removed;
+}
+
+export function restorePreset(preset: Preset, index: number, folder: Folder) {
+  const at = Math.min(Math.max(index, 0), folder.presets.length);
+  folder.presets.splice(at, 0, preset);
+  if (folder === currentFolder()) {
+    if (playlist.selected >= at) playlist.selected++;
+    playlist.index = playlist.selected;
+  }
   saveLibrary();
 }
 

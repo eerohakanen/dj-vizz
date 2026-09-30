@@ -8,6 +8,7 @@ import { drawParticles, drawShockwaves } from './effects/particles';
 import { drawTransition } from './effects/transition';
 import { clamp01, frameAlpha, frameScale, signedRandom } from './math';
 import { currentMode } from './mode';
+import { flashLevel } from './motion';
 import { clock, fx, settings, signal, view } from './state';
 
 const LIQUID_STRIPS = 40;
@@ -145,9 +146,9 @@ function fillWith(o: CanvasRenderingContext2D, operation: GlobalCompositeOperati
 
 function drawFlashes(o: CanvasRenderingContext2D) {
   const calm = calmScale();
-  if (fx.tripMix > 0.02 && fx.beat > 0.3) fillWith(o, 'difference', color(0, fx.beat * 0.55 * fx.tripMix * settings.flashes * calm, 60));
+  if (fx.tripMix > 0.02 && fx.beat > 0.3) fillWith(o, 'difference', color(0, fx.beat * 0.55 * fx.tripMix * flashLevel() * calm, 60));
   if (fx.strobeFlash > 0.02) fillWith(o, 'lighter', color(0, fx.strobeFlash * 0.45 * calm, 70));
-  if (fx.snare > 0.05) fillWith(o, 'lighter', color(0.5, fx.snare * 0.18 * Math.min(1, settings.reactivity) * settings.flashes * calm, 75));
+  if (fx.snare > 0.05) fillWith(o, 'lighter', color(0.5, fx.snare * 0.18 * Math.min(1, settings.reactivity) * flashLevel() * calm, 75));
   if (fx.invert > 0.02) {
     o.globalAlpha = clamp01(fx.invert);
     fillWith(o, 'difference', '#fff');

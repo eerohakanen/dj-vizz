@@ -6,6 +6,7 @@ import { adaptQuality, resize } from './canvas';
 import { advancePaletteFade, buildLut } from './color';
 import { bindControls } from './controls';
 import { psyIndex, type PsyName } from './effects/options';
+import { bindReducedMotion } from './motion';
 import { advanceTimedPlaylist } from './presets/playlist';
 import { approach } from './math';
 import { presentFrame, renderScene } from './render';
@@ -49,6 +50,7 @@ function frame(timestamp: number) {
 }
 
 restoreSession();
+bindReducedMotion();
 addEventListener('pagehide', saveSession);
 addEventListener('resize', () => {
   resize();

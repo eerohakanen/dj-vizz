@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { leaveVisualizer } from '@/actions';
+import { holdWakeLock } from '@/wake-lock';
 import { notify, ui, useEngine, type Screen } from '@/store';
 import { AnalysisHud } from './AnalysisHud';
 import { ExitDialog } from './ExitDialog';
@@ -10,6 +11,7 @@ import { Landing } from './Landing';
 import { PresetsSheet } from './PresetsSheet';
 import { RevealButton } from './RevealButton';
 import { Setup } from './Setup';
+import { StatusPills } from './StatusPills';
 import { Toolbar } from './Toolbar';
 import { TuningSheet } from './TuningSheet';
 
@@ -22,6 +24,10 @@ export function App() {
     document.body.classList.toggle('cursor-none', cursorHidden);
   }, [cursorHidden]);
 
+  useEffect(() => {
+    if (screen === 'live') return holdWakeLock();
+  }, [screen]);
+
   const goTo = (next: Screen) => {
     ui.screen = next;
     notify();
@@ -29,12 +35,13 @@ export function App() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      {screen === 'landing' && <Landing onStart={() => goTo('setup')} />}
+      {screen === 'landing' && <Landing onStart={() => goTo('setup')} onResume={() => goTo('live')} />}
       {screen === 'setup' && <Setup onBack={() => goTo('landing')} onDone={() => goTo('live')} />}
       {screen === 'live' && (
         <>
           <Toolbar />
           <RevealButton />
+          <StatusPills />
           <PresetsSheet />
           <TuningSheet />
           <HelpDialog />

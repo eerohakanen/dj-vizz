@@ -2,6 +2,8 @@ import { useEffect, useId, useState, type ComponentProps, type ReactNode } from 
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import type { AudioSourceKind } from '@/audio/sources';
+import { showWarning } from '@/dom';
 import { closeOverlay } from '@/actions';
 import { library, playlist } from '@/presets/library';
 import { setChangeOn, setShuffle } from '@/presets/playlist';
@@ -9,6 +11,7 @@ import { clamp01 } from '@/math';
 import { ui, type Overlay } from '@/store';
 import { cn, pluralize } from '@/lib/utils';
 import { CHANGE_OPTIONS, findChangeOption } from '@/presets/change';
+import type { SourceOption } from './labels';
 
 export const GLASS_PANEL = 'bg-card/80 shadow-2xl backdrop-blur-xl';
 
@@ -36,6 +39,18 @@ export function useTicker(active = true, interval = 0) {
     });
     return () => cancelAnimationFrame(id);
   }, [active, interval]);
+}
+
+export function useSourceCapture(onConnected?: () => void) {
+  const [pending, setPending] = useState<AudioSourceKind | null>(null);
+  const connect = async (source: SourceOption) => {
+    setPending(source.kind);
+    const result = await source.capture();
+    setPending(null);
+    if (result.ok) onConnected?.();
+    else showWarning(result.error);
+  };
+  return { pending, connect };
 }
 
 export function IconTile({ children }: { children: ReactNode }) {

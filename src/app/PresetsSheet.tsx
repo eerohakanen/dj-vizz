@@ -59,6 +59,7 @@ import {
   overwritePreset,
   playlist,
   renameFolder,
+  restorePreset,
   savePreset,
   selectFolder,
   type Preset,
@@ -204,6 +205,13 @@ function SaveLook() {
   );
 }
 
+function removePreset(index: number) {
+  const folder = currentFolder();
+  const removed = deletePreset(index);
+  if (!removed) return;
+  showMessage(`Deleted "${removed.name}"`, { label: 'Undo', onClick: () => restorePreset(removed, index, folder) });
+}
+
 function PresetRow({ preset, index, count }: { preset: Preset; index: number; count: number }) {
   const current = index === playlist.selected;
   return (
@@ -247,7 +255,7 @@ function PresetRow({ preset, index, count }: { preset: Preset; index: number; co
             Move down
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onSelect={() => deletePreset(index)}>
+          <DropdownMenuItem variant="destructive" onSelect={() => removePreset(index)}>
             <Trash2 />
             Delete
           </DropdownMenuItem>

@@ -3,7 +3,7 @@ import { WINDOW_UNSUPPORTED, canCaptureWindow, captureMicrophone, captureWindow 
 import type { AudioSourceKind } from '@/audio/sources';
 import type { TuningGroup } from '@/tuning';
 
-interface SourceOption {
+export interface SourceOption {
   kind: AudioSourceKind;
   label: string;
   icon: LucideIcon;

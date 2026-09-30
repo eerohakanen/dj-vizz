@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { settings, TUNING_DEFAULTS } from '../state';
-import { applyPreset, createPreset, importFolders, library, migrateLibrary, snapshot } from './library';
+import { applyPreset, createPreset, deletePreset, importFolders, library, playlist, migrateLibrary, restorePreset, snapshot } from './library';
 
 vi.mock('../modes/index', () => ({ MODES: Array.from({ length: 12 }, (_, index) => ({ name: `Mode ${index}` })) }));
 vi.mock('../mode', async () => {
@@ -155,5 +155,36 @@ describe('stored library', () => {
     expect(fresh.library.folders[0].presets[0].palette).toBe(4);
     expect(fresh.library.folders[0].presets[0]).not.toHaveProperty('gain');
     vi.unstubAllGlobals();
+  });
+});
+
+describe('restorePreset', () => {
+  const names = () => library.folders[library.cur].presets.map((preset) => preset.name);
+
+  beforeEach(() => {
+    library.cur = 0;
+    library.folders[0].presets = ['a', 'b', 'c', 'd'].map((name) => ({ ...snapshot(name) }));
+  });
+
+  it('puts a deleted preset back at its old index', () => {
+    const removed = deletePreset(1);
+    expect(names()).toEqual(['a', 'c', 'd']);
+    restorePreset(removed, 1, library.folders[0]);
+    expect(names()).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('clamps an index past the end', () => {
+    const removed = deletePreset(3);
+    deletePreset(2);
+    restorePreset(removed, 3, library.folders[0]);
+    expect(names()).toEqual(['a', 'b', 'd']);
+  });
+
+  it('keeps the selected preset selected', () => {
+    playlist.selected = 2;
+    const removed = deletePreset(0);
+    expect(playlist.selected).toBe(1);
+    restorePreset(removed, 0, library.folders[0]);
+    expect(playlist.selected).toBe(2);
   });
 });

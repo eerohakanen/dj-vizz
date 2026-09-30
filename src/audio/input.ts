@@ -26,6 +26,7 @@ export const audio = {
   sampleRate: 48000,
   live: false,
   source: null as AudioSourceKind | null,
+  lost: null as AudioSourceKind | null,
 };
 
 declare global {
@@ -76,6 +77,7 @@ function stopInput() {
   stream = null;
   audio.live = false;
   audio.source = null;
+  audio.lost = null;
 }
 
 function useStream(mediaStream: MediaStream, kind: AudioSourceKind) {
@@ -91,6 +93,7 @@ function useStream(mediaStream: MediaStream, kind: AudioSourceKind) {
     track.onended = () => {
       audio.live = false;
       audio.source = null;
+      audio.lost = kind;
       showMessage('Audio source ended.');
       notify();
     };

@@ -2,12 +2,14 @@ import { BEATS_PER_BAR } from '../audio/tempo';
 import { output, transitionCtx, transitionFrame as frame } from '../canvas';
 import { color } from '../color';
 import { clamp, smoothstep, TAU } from '../math';
+import { comfort } from '../motion';
 import { clock, signal, view } from '../state';
 
 const DEFAULT_DURATION = 1.1;
 const MIN_DURATION = 0.6;
 const MAX_DURATION = 2.4;
 const STYLE_COUNT = 4;
+const CROSSFADE = STYLE_COUNT;
 const STRIPS = 24;
 
 let startedAt = -9;
@@ -17,12 +19,15 @@ let style = 0;
 export const transitionDuration = (bpm: number) =>
   bpm > 0 ? clamp((BEATS_PER_BAR * 60) / bpm, MIN_DURATION, MAX_DURATION) : DEFAULT_DURATION;
 
+export const transitionStyle = (reducedMotion: boolean, random: number) =>
+  reducedMotion ? CROSSFADE : Math.min(STYLE_COUNT - 1, (random * STYLE_COUNT) | 0);
+
 export function startTransition() {
   if (clock.time < 0.5) return;
   transitionCtx.drawImage(output, 0, 0);
   startedAt = clock.time;
   duration = transitionDuration(signal.bpm);
-  style = (Math.random() * STYLE_COUNT) | 0;
+  style = transitionStyle(comfort.reduced, Math.random());
 }
 
 function zoomOut(o: CanvasRenderingContext2D, eased: number) {
@@ -32,6 +37,11 @@ function zoomOut(o: CanvasRenderingContext2D, eased: number) {
   o.translate(width / 2, height / 2);
   o.scale(scale, scale);
   o.translate(-width / 2, -height / 2);
+  o.drawImage(frame, 0, 0);
+}
+
+function crossfade(o: CanvasRenderingContext2D, eased: number) {
+  o.globalAlpha = 1 - eased;
   o.drawImage(frame, 0, 0);
 }
 
@@ -76,7 +86,7 @@ function dropStrips(o: CanvasRenderingContext2D, eased: number, progress: number
   }
 }
 
-const STYLES = [zoomOut, spinAway, irisOpen, dropStrips];
+const STYLES = [zoomOut, spinAway, irisOpen, dropStrips, crossfade];
 
 export function drawTransition(o: CanvasRenderingContext2D) {
   const progress = (clock.time - startedAt) / duration;

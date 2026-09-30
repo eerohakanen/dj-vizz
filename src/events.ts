@@ -4,6 +4,7 @@ import { KEY_CONFIDENCE_FLOOR, keyHue, keyPalette, setPalette } from './color';
 import { addShockwave, burst, sparkle } from './effects/particles';
 import { currentMode, setMode } from './mode';
 import { MODES } from './modes/index';
+import { flashLevel, shakeLevel, strobeActive } from './motion';
 import { PALETTES } from './palettes';
 import { changeOption } from './presets/change';
 import { playlist } from './presets/library';
@@ -31,15 +32,15 @@ export function triggerDrop() {
   releaseTension();
   signal.energyPeak = signal.energy;
   fx.drop = 1;
-  fx.flash = settings.flashes;
-  fx.shake = 1.4 * settings.punch;
+  fx.flash = flashLevel();
+  fx.shake = 1.4 * shakeLevel();
   fx.hue += 120 * settings.colorSpeed;
   fx.vortexDirection = -fx.vortexDirection;
   addShockwave(0);
   addShockwave(70 * view.pixelRatio);
   addShockwave(140 * view.pixelRatio);
   burst(300, 4, 28, 1.8);
-  if (settings.strobe) fx.invert = settings.flashes;
+  if (strobeActive()) fx.invert = flashLevel();
   if (settings.glitch) fx.glitchAmount = 1.2;
   if (playlist.playing && playlist.changeOn === 'drop') nextPreset();
   else if (settings.auto) {
@@ -58,8 +59,8 @@ export function onBeat() {
     setMode(settings.mode + 1);
   }
   currentMode().onBeat();
-  fx.shake = Math.max(fx.shake, 0.22 * fx.beat * settings.reactivity * settings.punch);
-  if (settings.strobe) fx.strobeFlash = settings.flashes;
+  fx.shake = Math.max(fx.shake, 0.22 * fx.beat * settings.reactivity * shakeLevel());
+  if (strobeActive()) fx.strobeFlash = flashLevel();
   if (settings.glitch && fx.beat > 0.6) fx.glitchAmount = Math.max(fx.glitchAmount, fx.beat);
   if (signal.downbeat) {
     addShockwave(0);
