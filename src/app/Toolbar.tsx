@@ -6,6 +6,8 @@ import {
   FolderOpen,
   LogOut,
   Maximize,
+  Minimize,
+  MoreHorizontal,
   Pause,
   Play,
   SlidersHorizontal,
@@ -19,6 +21,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -33,7 +36,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { openOverlay, setMirror, setPsy, setHideLocked, setSetting, toggleFullscreen, togglePaused } from '@/actions';
+import { fullscreenSupported, openOverlay, setMirror, setPsy, setHideLocked, setSetting, toggleFullscreen, togglePaused } from '@/actions';
 import { audio } from '@/audio/input';
 import { setPalette } from '@/color';
 import { shortcutFor } from '@/controls';
@@ -102,7 +105,7 @@ function swatchStyle(palette: Palette) {
 
 function PaletteSelect() {
   return (
-    <Select value={String(settings.palette)} onValueChange={(value) => setPalette(+value)}>
+    <Select value={String(settings.palette)} onValueChange={(value) => setPalette(+value, true)}>
       <Hint label="Colour palette" shortcut={shortcutFor('palette')}>
         <SelectTrigger size="sm" className="w-40">
           <SelectValue />
@@ -253,11 +256,94 @@ function PlaylistStatus() {
   );
 }
 
+
+const FULLSCREEN_UNSUPPORTED = 'Fullscreen is not supported on this device';
+
+function FullscreenButton() {
+  const supported = fullscreenSupported();
+  const label = ui.fullscreen ? 'Exit fullscreen' : 'Fullscreen';
+  const button = (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="max-sm:hidden"
+      onClick={toggleFullscreen}
+      disabled={!supported}
+      aria-label={label}
+    >
+      {ui.fullscreen ? <Minimize /> : <Maximize />}
+    </Button>
+  );
+  if (supported) return <Hint label={label} shortcut={shortcutFor('fullscreen')}>{button}</Hint>;
+  return (
+    <Hint label={FULLSCREEN_UNSUPPORTED}>
+      <span tabIndex={0} className="max-sm:hidden">
+        {button}
+      </span>
+    </Hint>
+  );
+}
+
+function MoreMenu() {
+  const supported = fullscreenSupported();
+  return (
+    <DropdownMenu>
+      <Hint label="More">
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon-sm" className="sm:hidden" aria-label="More">
+            <MoreHorizontal />
+          </Button>
+        </DropdownMenuTrigger>
+      </Hint>
+      <DropdownMenuContent side="top" align="end" className="w-56">
+        <DropdownMenuItem onSelect={() => openOverlay('tuning')}>
+          <SlidersHorizontal />
+          Tune
+          <DropdownMenuShortcut>{shortcutFor('tune')}</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={triggerDrop}>
+          <Zap />
+          Drop
+          <DropdownMenuShortcut>{shortcutFor('drop')}</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={togglePaused}>
+          {ui.paused ? <Play /> : <Pause />}
+          {ui.paused ? 'Resume' : 'Pause'}
+          <DropdownMenuShortcut>{shortcutFor('pause')}</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={toggleFullscreen} disabled={!supported}>
+          {ui.fullscreen ? <Minimize /> : <Maximize />}
+          {supported ? (ui.fullscreen ? 'Exit fullscreen' : 'Fullscreen') : 'Fullscreen unsupported'}
+          <DropdownMenuShortcut>{shortcutFor('fullscreen')}</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => openOverlay('help')}>
+          <CircleHelp />
+          Keyboard shortcuts
+          <DropdownMenuShortcut>{shortcutFor('help')}</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => setHideLocked(true)}>
+          <EyeOff />
+          Hide controls
+          <DropdownMenuShortcut>{shortcutFor('hide')}</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => openOverlay('exit')}>
+          <LogOut />
+          Exit
+          <DropdownMenuShortcut>{shortcutFor('exit')}</DropdownMenuShortcut>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function Toolbar() {
   useEngine();
   return (
     <div
       data-toolbar
+      inert={ui.controlsHidden}
+      aria-hidden={ui.controlsHidden}
       className={cn(
         'fixed inset-x-0 bottom-0 flex justify-center px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] transition-opacity duration-500',
         ui.controlsHidden && 'pointer-events-none opacity-0',
@@ -270,13 +356,13 @@ export function Toolbar() {
         <PaletteSelect />
         <EffectsMenu />
         <Hint label="Tune levels and effect strength" shortcut={shortcutFor('tune')}>
-          <Button variant="outline" size="sm" onClick={() => openOverlay('tuning')}>
+          <Button variant="outline" size="sm" className="max-sm:hidden" onClick={() => openOverlay('tuning')}>
             <SlidersHorizontal />
             Tune
           </Button>
         </Hint>
         <Hint label="Fire a drop" shortcut={shortcutFor('drop')}>
-          <Button variant="outline" size="sm" onClick={triggerDrop}>
+          <Button variant="outline" size="sm" className="max-sm:hidden" onClick={triggerDrop}>
             <Zap />
             Drop
           </Button>
@@ -285,6 +371,7 @@ export function Toolbar() {
           <Button
             variant={ui.paused ? 'default' : 'outline'}
             size="sm"
+            className="max-sm:hidden"
             onClick={togglePaused}
             aria-pressed={ui.paused}
           >
@@ -300,24 +387,21 @@ export function Toolbar() {
             Presets
           </Button>
         </Hint>
-        <Hint label="Fullscreen" shortcut={shortcutFor('fullscreen')}>
-          <Button variant="ghost" size="icon-sm" onClick={toggleFullscreen} aria-label="Fullscreen">
-            <Maximize />
-          </Button>
-        </Hint>
+        <MoreMenu />
+        <FullscreenButton />
         <Hint label="Keyboard shortcuts" shortcut={shortcutFor('help')}>
-          <Button variant="ghost" size="icon-sm" onClick={() => openOverlay('help')} aria-label="Keyboard shortcuts">
+          <Button variant="ghost" size="icon-sm" className="max-sm:hidden" onClick={() => openOverlay('help')} aria-label="Keyboard shortcuts">
             <CircleHelp />
           </Button>
         </Hint>
         <Hint label="Hide controls" shortcut={shortcutFor('hide')}>
-          <Button variant="ghost" size="icon-sm" onClick={() => setHideLocked(true)} aria-label="Hide controls">
+          <Button variant="ghost" size="icon-sm" className="max-sm:hidden" onClick={() => setHideLocked(true)} aria-label="Hide controls">
             <EyeOff />
           </Button>
         </Hint>
         <Separator orientation="vertical" className="h-6! max-sm:hidden" />
         <Hint label="Back to main menu" shortcut={shortcutFor('exit')}>
-          <Button variant="ghost" size="icon-sm" onClick={() => openOverlay('exit')} aria-label="Back to main menu">
+          <Button variant="ghost" size="icon-sm" className="max-sm:hidden" onClick={() => openOverlay('exit')} aria-label="Back to main menu">
             <LogOut />
           </Button>
         </Hint>
