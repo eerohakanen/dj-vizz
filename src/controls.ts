@@ -1,67 +1,253 @@
-import { cycleMirror, cyclePsy, nudgeGain, openOverlay, setControlsHidden, setHideLocked, setPeek, toggleDebug, toggleFullscreen, toggleSetting } from './actions';
+import { cycleMirror, cyclePsy, nudgeGain, openOverlay, setControlsHidden, setHideLocked, setPeek, toggleDebug, toggleFullscreen, togglePaused, toggleSetting } from './actions';
 import { audio } from './audio/input';
 import { setPalette } from './color';
 import { triggerDrop } from './events';
 import { setMode } from './mode';
-import { MODES } from './modes/index';
 import { nextPreset } from './presets/playlist';
 import { settings } from './state';
 import { ui } from './store';
 
 const IDLE_HIDE_MS = 4000;
 
-const preventingDefault = (action: () => void) => (event: KeyboardEvent) => {
-  event.preventDefault();
-  action();
-};
+export type KeyGroup = 'Modes' | 'Looks' | 'Effects' | 'Audio' | 'View';
 
-const gainUp = preventingDefault(() => nudgeGain(5));
-const gainDown = preventingDefault(() => nudgeGain(-5));
+export type KeyLike = Pick<KeyboardEvent, 'key' | 'code' | 'shiftKey'>;
 
-const KEY_ACTIONS: Record<string, (event: KeyboardEvent) => void> = {
-  arrowright: () => setMode(settings.mode + 1),
-  arrowleft: () => setMode(settings.mode - 1),
-  arrowup: gainUp,
-  '+': gainUp,
-  arrowdown: gainDown,
-  '-': gainDown,
-  ' ': preventingDefault(nextPreset),
-  enter: preventingDefault(triggerDrop),
-  k: cycleMirror,
-  e: () => toggleSetting('trails'),
-  a: () => toggleSetting('auto'),
-  c: (event: KeyboardEvent) => setPalette(settings.palette + (event.shiftKey ? -1 : 1)),
-  d: toggleDebug,
-  f: toggleFullscreen,
-  h: () => setHideLocked(!ui.hideLocked),
-  l: () => toggleSetting('lasers'),
-  x: () => toggleSetting('glitch'),
-  s: () => toggleSetting('strobe'),
-  g: () => toggleSetting('autoGain'),
-  p: cyclePsy,
-  t: () => openOverlay('tuning'),
-  q: () => openOverlay('exit'),
-  m: () => openOverlay('presets'),
-  '?': () => openOverlay('help'),
-  '/': () => openOverlay('help'),
-};
+export interface KeyEntry {
+  id: string;
+  group: KeyGroup;
+  help: string;
+  display: string[];
+  matches: (event: KeyLike) => boolean;
+  run: (event: KeyboardEvent) => void;
+  overlay?: boolean;
+}
+
+const SHIFT_MODE_CODES = ['Digit1', 'Digit2'];
+const FIRST_SHIFT_MODE = 10;
+
+export function modeIndexFor({ key, code, shiftKey }: KeyLike) {
+  if (shiftKey) {
+    const index = SHIFT_MODE_CODES.indexOf(code);
+    return index < 0 ? undefined : FIRST_SHIFT_MODE + index;
+  }
+  return /^[0-9]$/.test(key) ? (+key + 9) % 10 : undefined;
+}
+
+const keyIn =
+  (...keys: string[]) =>
+  ({ key }: KeyLike) =>
+    keys.includes(key.toLowerCase());
+
+const gainUp = () => nudgeGain(5);
+const gainDown = () => nudgeGain(-5);
+
+export const KEYMAP: KeyEntry[] = [
+  {
+    id: 'mode',
+    group: 'Modes',
+    help: 'Pick a mode',
+    display: ['1–0', '⇧1–⇧2'],
+    matches: (event) => modeIndexFor(event) !== undefined,
+    run: (event) => setMode(modeIndexFor(event) ?? settings.mode),
+  },
+  {
+    id: 'modeStep',
+    group: 'Modes',
+    help: 'Previous / next mode',
+    display: ['←', '→'],
+    matches: keyIn('arrowleft', 'arrowright'),
+    run: (event) => setMode(settings.mode + (event.key === 'ArrowRight' ? 1 : -1)),
+  },
+  {
+    id: 'presets',
+    group: 'Modes',
+    help: 'Presets',
+    display: ['M'],
+    matches: keyIn('m'),
+    run: () => openOverlay('presets'),
+    overlay: true,
+  },
+  {
+    id: 'presetNext',
+    group: 'Modes',
+    help: 'Next preset in folder',
+    display: ['Space'],
+    matches: keyIn(' '),
+    run: nextPreset,
+  },
+  {
+    id: 'palette',
+    group: 'Looks',
+    help: 'Next palette (Shift+C previous)',
+    display: ['C'],
+    matches: keyIn('c'),
+    run: (event) => setPalette(settings.palette + (event.shiftKey ? -1 : 1)),
+  },
+  {
+    id: 'psy',
+    group: 'Looks',
+    help: 'Cycle psychedelic effect',
+    display: ['P'],
+    matches: keyIn('p'),
+    run: cyclePsy,
+  },
+  {
+    id: 'mirror',
+    group: 'Looks',
+    help: 'Cycle mirror',
+    display: ['K'],
+    matches: keyIn('k'),
+    run: cycleMirror,
+  },
+  {
+    id: 'lasers',
+    group: 'Effects',
+    help: 'Lasers',
+    display: ['L'],
+    matches: keyIn('l'),
+    run: () => toggleSetting('lasers'),
+  },
+  {
+    id: 'glitch',
+    group: 'Effects',
+    help: 'Glitch',
+    display: ['X'],
+    matches: keyIn('x'),
+    run: () => toggleSetting('glitch'),
+  },
+  {
+    id: 'strobe',
+    group: 'Effects',
+    help: 'Strobe',
+    display: ['S'],
+    matches: keyIn('s'),
+    run: () => toggleSetting('strobe'),
+  },
+  {
+    id: 'trails',
+    group: 'Effects',
+    help: 'Trails',
+    display: ['E'],
+    matches: keyIn('e'),
+    run: () => toggleSetting('trails'),
+  },
+  {
+    id: 'auto',
+    group: 'Effects',
+    help: 'Auto-switch on drops and every 32-beat phrase',
+    display: ['A'],
+    matches: keyIn('a'),
+    run: () => toggleSetting('auto'),
+  },
+  {
+    id: 'drop',
+    group: 'Effects',
+    help: 'Fire a drop',
+    display: ['Enter'],
+    matches: keyIn('enter'),
+    run: triggerDrop,
+  },
+  {
+    id: 'tune',
+    group: 'Audio',
+    help: 'Tune levels and effect strength',
+    display: ['T'],
+    matches: keyIn('t'),
+    run: () => openOverlay('tuning'),
+    overlay: true,
+  },
+  {
+    id: 'gain',
+    group: 'Audio',
+    help: 'Gain up / down',
+    display: ['↑', '↓'],
+    matches: keyIn('arrowup', 'arrowdown', '+', '-'),
+    run: (event) => (event.key === 'ArrowUp' || event.key === '+' ? gainUp() : gainDown()),
+  },
+  {
+    id: 'autoGain',
+    group: 'Audio',
+    help: 'Automatic gain',
+    display: ['G'],
+    matches: keyIn('g'),
+    run: () => toggleSetting('autoGain'),
+  },
+  {
+    id: 'debug',
+    group: 'Audio',
+    help: 'Audio analysis overlay',
+    display: ['D'],
+    matches: keyIn('d'),
+    run: toggleDebug,
+  },
+  {
+    id: 'pause',
+    group: 'View',
+    help: 'Pause / resume visuals',
+    display: ['B'],
+    matches: keyIn('b'),
+    run: togglePaused,
+  },
+  {
+    id: 'fullscreen',
+    group: 'View',
+    help: 'Fullscreen',
+    display: ['F'],
+    matches: keyIn('f'),
+    run: toggleFullscreen,
+  },
+  {
+    id: 'hide',
+    group: 'View',
+    help: 'Hide / show controls',
+    display: ['H'],
+    matches: keyIn('h'),
+    run: () => setHideLocked(!ui.hideLocked),
+  },
+  {
+    id: 'exit',
+    group: 'View',
+    help: 'Back to main menu',
+    display: ['Q'],
+    matches: keyIn('q'),
+    run: () => openOverlay('exit'),
+    overlay: true,
+  },
+  {
+    id: 'help',
+    group: 'View',
+    help: 'This help',
+    display: ['?'],
+    matches: keyIn('?', '/'),
+    run: () => openOverlay('help'),
+    overlay: true,
+  },
+];
+
+export const KEY_GROUPS: KeyGroup[] = ['Modes', 'Looks', 'Effects', 'Audio', 'View'];
+
+export const resolveKey = (event: KeyLike) => KEYMAP.find((entry) => entry.matches(event));
+
+export const shortcutFor = (id: string) => KEYMAP.find((entry) => entry.id === id)?.display.join(', ') ?? '';
 
 const isTyping = (target: Element) => target.matches('input, textarea, select, [contenteditable="true"]');
 const isInMenu = (target: Element) => !!target.closest('[role="menu"], [role="listbox"], [role="slider"], [role="dialog"]');
+
+function blurToolbarFocus() {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active.closest('[data-toolbar]')) active.blur();
+}
 
 function handleKey(event: KeyboardEvent) {
   if (!ui.live || event.metaKey || event.ctrlKey || event.altKey) return;
   const target = event.target as Element;
   if (isTyping(target) || isInMenu(target)) return;
-  const key = event.key.toLowerCase();
-  if (/^[0-9]$/.test(key)) {
-    setMode(key === '0' ? MODES.length - 1 : +key - 1);
-    return;
-  }
-  if (Object.hasOwn(KEY_ACTIONS, key)) {
-    if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) document.activeElement.blur();
-    KEY_ACTIONS[key](event);
-  }
+  const entry = resolveKey(event);
+  if (!entry) return;
+  event.preventDefault();
+  if (entry.overlay) blurToolbarFocus();
+  entry.run(event);
 }
 
 let idleTimer: ReturnType<typeof setTimeout> | undefined;

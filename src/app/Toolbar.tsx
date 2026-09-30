@@ -36,6 +36,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { openOverlay, setMirror, setPsy, setHideLocked, setSetting, toggleFullscreen, togglePaused } from '@/actions';
 import { audio } from '@/audio/input';
 import { setPalette } from '@/color';
+import { shortcutFor } from '@/controls';
 import { triggerDrop } from '@/events';
 import { setMode } from '@/mode';
 import { MODES } from '@/modes/index';
@@ -54,10 +55,10 @@ const NO_INPUT_LABEL = 'No input';
 const AUDIO_LABELS = [...Object.values(SOURCE_LABELS), NO_INPUT_LABEL];
 
 const TOGGLES = [
-  { key: 'trails', label: 'Trails', shortcut: 'E' },
-  { key: 'lasers', label: 'Lasers', shortcut: 'L' },
-  { key: 'glitch', label: 'Glitch', shortcut: 'X' },
-  { key: 'strobe', label: 'Strobe', shortcut: 'S' },
+  { key: 'trails', label: 'Trails' },
+  { key: 'lasers', label: 'Lasers' },
+  { key: 'glitch', label: 'Glitch' },
+  { key: 'strobe', label: 'Strobe' },
 ] as const;
 
 function Hint({ label, shortcut, children }: { label: string; shortcut?: string; children: ReactNode }) {
@@ -75,7 +76,7 @@ function Hint({ label, shortcut, children }: { label: string; shortcut?: string;
 function ModeSelect() {
   return (
     <Select value={String(settings.mode)} onValueChange={(value) => setMode(+value)}>
-      <Hint label="Visual mode" shortcut="1–0, ← →">
+      <Hint label="Visual mode" shortcut={`${shortcutFor('mode')}, ${shortcutFor('modeStep')}`}>
         <SelectTrigger size="sm" className="w-36">
           <span className="text-muted-foreground">Mode</span>
           <SelectValue />
@@ -101,7 +102,7 @@ function swatchStyle(palette: Palette) {
 function PaletteSelect() {
   return (
     <Select value={String(settings.palette)} onValueChange={(value) => setPalette(+value, true)}>
-      <Hint label="Colour palette" shortcut="C">
+      <Hint label="Colour palette" shortcut={shortcutFor('palette')}>
         <SelectTrigger size="sm" className="w-40">
           <SelectValue />
         </SelectTrigger>
@@ -146,6 +147,7 @@ function EffectsMenu() {
           <DropdownMenuSubTrigger>
             Psychedelic
             <span className="ml-auto text-xs text-muted-foreground">{PSY_NAMES[settings.psy]}</span>
+            <DropdownMenuShortcut className="ml-2">{shortcutFor('psy')}</DropdownMenuShortcut>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuRadioGroup value={String(settings.psy)} onValueChange={(value) => setPsy(+value)}>
@@ -161,6 +163,7 @@ function EffectsMenu() {
           <DropdownMenuSubTrigger>
             Mirror
             <span className="ml-auto text-xs text-muted-foreground">{MIRROR_NAMES[settings.mirror]}</span>
+            <DropdownMenuShortcut className="ml-2">{shortcutFor('mirror')}</DropdownMenuShortcut>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuRadioGroup value={String(settings.mirror)} onValueChange={(value) => setMirror(+value)}>
@@ -174,7 +177,7 @@ function EffectsMenu() {
         </DropdownMenuSub>
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-xs text-muted-foreground">Layers</DropdownMenuLabel>
-        {TOGGLES.map(({ key, label, shortcut }) => (
+        {TOGGLES.map(({ key, label }) => (
           <DropdownMenuCheckboxItem
             key={key}
             checked={settings[key]}
@@ -182,7 +185,7 @@ function EffectsMenu() {
             onSelect={(event) => event.preventDefault()}
           >
             {label}
-            <DropdownMenuShortcut>{shortcut}</DropdownMenuShortcut>
+            <DropdownMenuShortcut>{shortcutFor(key)}</DropdownMenuShortcut>
           </DropdownMenuCheckboxItem>
         ))}
         <DropdownMenuSeparator />
@@ -193,7 +196,7 @@ function EffectsMenu() {
           onSelect={(event) => event.preventDefault()}
         >
           Auto-switch on drops
-          <DropdownMenuShortcut>A</DropdownMenuShortcut>
+          <DropdownMenuShortcut>{shortcutFor('auto')}</DropdownMenuShortcut>
         </DropdownMenuCheckboxItem>
         {settings.strobe && (
           <p className="px-2 pt-1 pb-1.5 text-xs text-muted-foreground">Strobe flashes on beats. Avoid if sensitive to flashing light.</p>
@@ -254,6 +257,7 @@ export function Toolbar() {
   useEngine();
   return (
     <div
+      data-toolbar
       className={cn(
         'fixed inset-x-0 bottom-0 flex justify-center px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] transition-opacity duration-500',
         ui.controlsHidden && 'pointer-events-none opacity-0',
@@ -265,19 +269,19 @@ export function Toolbar() {
         <ModeSelect />
         <PaletteSelect />
         <EffectsMenu />
-        <Hint label="Tune levels and effect strength" shortcut="T">
+        <Hint label="Tune levels and effect strength" shortcut={shortcutFor('tune')}>
           <Button variant="outline" size="sm" onClick={() => openOverlay('tuning')}>
             <SlidersHorizontal />
             Tune
           </Button>
         </Hint>
-        <Hint label="Fire a drop" shortcut="Enter">
+        <Hint label="Fire a drop" shortcut={shortcutFor('drop')}>
           <Button variant="outline" size="sm" onClick={triggerDrop}>
             <Zap />
             Drop
           </Button>
         </Hint>
-        <Hint label={ui.paused ? 'Resume visuals' : 'Pause visuals'}>
+        <Hint label={ui.paused ? 'Resume visuals' : 'Pause visuals'} shortcut={shortcutFor('pause')}>
           <Button
             variant={ui.paused ? 'default' : 'outline'}
             size="sm"
@@ -290,29 +294,29 @@ export function Toolbar() {
         </Hint>
         <Separator orientation="vertical" className="h-6! max-sm:hidden" />
         <PlaylistStatus />
-        <Hint label="Presets" shortcut="M">
+        <Hint label="Presets" shortcut={shortcutFor('presets')}>
           <Button size="sm" onClick={() => openOverlay('presets')}>
             <FolderOpen />
             Presets
           </Button>
         </Hint>
-        <Hint label="Fullscreen" shortcut="F">
+        <Hint label="Fullscreen" shortcut={shortcutFor('fullscreen')}>
           <Button variant="ghost" size="icon-sm" onClick={toggleFullscreen} aria-label="Fullscreen">
             <Maximize />
           </Button>
         </Hint>
-        <Hint label="Keyboard shortcuts" shortcut="?">
+        <Hint label="Keyboard shortcuts" shortcut={shortcutFor('help')}>
           <Button variant="ghost" size="icon-sm" onClick={() => openOverlay('help')} aria-label="Keyboard shortcuts">
             <CircleHelp />
           </Button>
         </Hint>
-        <Hint label="Hide controls" shortcut="H">
+        <Hint label="Hide controls" shortcut={shortcutFor('hide')}>
           <Button variant="ghost" size="icon-sm" onClick={() => setHideLocked(true)} aria-label="Hide controls">
             <EyeOff />
           </Button>
         </Hint>
         <Separator orientation="vertical" className="h-6! max-sm:hidden" />
-        <Hint label="Back to main menu" shortcut="Q">
+        <Hint label="Back to main menu" shortcut={shortcutFor('exit')}>
           <Button variant="ghost" size="icon-sm" onClick={() => openOverlay('exit')} aria-label="Back to main menu">
             <LogOut />
           </Button>

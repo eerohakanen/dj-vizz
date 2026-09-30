@@ -1,32 +1,9 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { closeOverlay } from '@/actions';
+import { KEYMAP, KEY_GROUPS } from '@/controls';
 import { view } from '@/state';
 import { ui, useEngine } from '@/store';
-
-const SHORTCUTS: [string[], string][] = [
-  [['1', '–', '0'], 'Pick a mode'],
-  [['←', '→'], 'Previous / next mode'],
-  [['C'], 'Next palette (Shift+C previous)'],
-  [['P'], 'Cycle psychedelic effect'],
-  [['K'], 'Cycle mirror'],
-  [['L'], 'Lasers'],
-  [['X'], 'Glitch'],
-  [['S'], 'Strobe'],
-  [['E'], 'Trails'],
-  [['A'], 'Auto-switch on drops and every 32-beat phrase'],
-  [['Enter'], 'Fire a drop'],
-  [['T'], 'Tune levels and effect strength'],
-  [['M'], 'Presets'],
-  [['Space'], 'Next preset in folder'],
-  [['↑', '↓'], 'Gain up / down'],
-  [['G'], 'Automatic gain'],
-  [['D'], 'Audio analysis overlay'],
-  [['F'], 'Fullscreen'],
-  [['H'], 'Hide / show controls'],
-  [['Q'], 'Back to main menu'],
-  [['?'], 'This help'],
-];
 
 export function HelpDialog() {
   useEngine();
@@ -44,18 +21,27 @@ export function HelpDialog() {
             Render quality adapts automatically to stay smooth. Current: {Math.round(view.quality * 100)}%
           </DialogDescription>
         </DialogHeader>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-          {SHORTCUTS.map(([keys, label]) => (
-            <div key={label} className="contents">
-              <dt>
-                <KbdGroup>
-                  {keys.map((key) => (key === '–' ? <span key={key}>–</span> : <Kbd key={key}>{key}</Kbd>))}
-                </KbdGroup>
-              </dt>
-              <dd className="text-muted-foreground">{label}</dd>
-            </div>
+        <div className="max-h-[60vh] space-y-4 overflow-y-auto">
+          {KEY_GROUPS.map((group) => (
+            <section key={group}>
+              <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{group}</h3>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+                {KEYMAP.filter((entry) => entry.group === group).map((entry) => (
+                  <div key={entry.id} className="contents">
+                    <dt>
+                      <KbdGroup>
+                        {entry.display.map((key) => (
+                          <Kbd key={key}>{key}</Kbd>
+                        ))}
+                      </KbdGroup>
+                    </dt>
+                    <dd className="text-muted-foreground">{entry.help}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
           ))}
-        </dl>
+        </div>
       </DialogContent>
     </Dialog>
   );
