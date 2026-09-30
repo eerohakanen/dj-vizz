@@ -4,7 +4,7 @@ import { Kbd } from '@/components/ui/kbd';
 import { setHideLocked } from '@/actions';
 import { ui, useEngine } from '@/store';
 import { cn } from '@/lib/utils';
-import { GLASS_PANEL } from './shared';
+import { FLOATING_PANEL } from './shared';
 
 export function RevealButton() {
   useEngine();
@@ -23,7 +23,7 @@ export function RevealButton() {
         size="sm"
         tabIndex={visible ? 0 : -1}
         onClick={() => setHideLocked(false)}
-        className={GLASS_PANEL}
+        className={FLOATING_PANEL}
       >
         <Eye />
         Show controls

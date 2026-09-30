@@ -18,15 +18,46 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import type { Palette } from '@/palettes';
+import grainUrl from '@/assets/grain.png';
 import { MENU_SCREEN_LABELS, SOURCES, type SourceOption } from './labels';
 
-export const GLASS_PANEL = 'bg-card/80 shadow-2xl backdrop-blur-xl';
+export const FLOATING_PANEL = 'bg-card shadow-lg shadow-black/40';
 
 export const SIDE_PANEL_WIDTH = 'sm:max-w-(--side-panel-width)';
 
+const WAVE_WIDTH = 1200;
+const WAVE_HEIGHT = 120;
+const WAVE_POINTS = 480;
+
+function waveformPath(width: number, height: number, points: number) {
+  const mid = height / 2;
+  const coords = Array.from({ length: points + 1 }, (_, index) => {
+    const x = (index / points) * width;
+    const envelope = 0.25 + 0.75 * Math.abs(Math.sin((x / width) * Math.PI * 2.6 + 0.4)) ** 1.6;
+    const signal = Math.sin(x * 0.09) + 0.5 * Math.sin(x * 0.23 + 1) + 0.3 * Math.sin(x * 0.57 + 2);
+    const y = mid - (signal / 1.8) * envelope * mid * 0.85;
+    return `${x.toFixed(1)} ${y.toFixed(1)}`;
+  });
+  return `M${coords.join('L')}`;
+}
+
+const WAVEFORM = waveformPath(WAVE_WIDTH, WAVE_HEIGHT, WAVE_POINTS);
+
 export function MenuBackdrop() {
   return (
-    <div className="pointer-events-none fixed inset-0 bg-background bg-[radial-gradient(ellipse_at_30%_20%,oklch(0.55_0.25_320/0.35),transparent_55%),radial-gradient(ellipse_at_75%_80%,oklch(0.6_0.2_200/0.3),transparent_55%)]" />
+    <div className="pointer-events-none fixed inset-0 bg-background" aria-hidden>
+      <svg
+        viewBox={`0 0 ${WAVE_WIDTH} ${WAVE_HEIGHT}`}
+        preserveAspectRatio="none"
+        className="absolute inset-x-0 bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] h-16 w-full text-muted-foreground opacity-15 sm:h-24"
+      >
+        <path d={WAVEFORM} fill="none" stroke="currentColor" strokeWidth={1.25} vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div
+        className="absolute inset-0 opacity-[0.045] [image-rendering:pixelated]"
+        style={{ backgroundImage: `url(${grainUrl})`, backgroundSize: '144px 144px' }}
+      />
+    </div>
   );
 }
 
@@ -106,7 +137,7 @@ export function swatchStyle(palette: Palette) {
 
 export function IconTile({ children }: { children: ReactNode }) {
   return (
-    <div className="mb-2 flex size-11 items-center justify-center rounded-lg bg-primary/15 text-primary">{children}</div>
+    <div className="mb-2 flex size-11 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary">{children}</div>
   );
 }
 
@@ -119,7 +150,7 @@ interface MeterBarProps {
 
 export function MeterBar({ value, hot, className, fillClassName }: MeterBarProps) {
   return (
-    <div className={cn('h-1.5 overflow-hidden rounded-full bg-muted', className)} aria-hidden>
+    <div className={cn('h-1.5 overflow-hidden rounded-xs bg-muted', className)} aria-hidden>
       <div className={cn('h-full', fillClassName)} data-hot={hot} style={{ width: `${clamp01(value) * 100}%` }} />
     </div>
   );
@@ -253,7 +284,7 @@ export function MenuNav({ screen, width, actions }: MenuNavProps) {
   useMenuBackKey(parent);
 
   return (
-    <header className="sticky top-0 z-20 shrink-0 border-b border-border/60 bg-background/70 pt-[env(safe-area-inset-top,0px)] backdrop-blur-xl">
+    <header className="sticky top-0 z-20 shrink-0 border-b border-border bg-background pt-[env(safe-area-inset-top,0px)]">
       <div className={cn('mx-auto flex h-14 items-center gap-3 px-4 sm:px-6', width)}>
         <Button
           variant="ghost"

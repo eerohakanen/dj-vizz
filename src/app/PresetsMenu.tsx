@@ -55,7 +55,7 @@ function SceneSwatches({ folder }: { folder: Folder }) {
           <span
             key={index}
             title={scene.name}
-            className="size-5 rounded-full border border-border/60 shadow-sm"
+            className="size-5 rounded-xs border border-border"
             style={palette && swatchStyle(palette)}
           />
         );
@@ -75,7 +75,7 @@ interface PresetCardProps {
 function PresetCard({ folder, index, onRename, onDelete }: PresetCardProps) {
   const empty = !folder.presets.length;
   return (
-    <Card className="w-full gap-4 bg-card/80 backdrop-blur transition-colors hover:border-primary/40">
+    <Card className="w-full gap-4">
       <CardHeader>
         <CardTitle className="min-w-0 truncate text-lg">{folder.name}</CardTitle>
         <CardDescription>{pluralize(folder.presets.length, 'scene')}</CardDescription>
@@ -129,7 +129,7 @@ function PresetCard({ folder, index, onRename, onDelete }: PresetCardProps) {
 
 function EmptyState() {
   return (
-    <Card className="items-center bg-card/80 px-6 py-12 text-center backdrop-blur">
+    <Card className="items-center px-6 py-12 text-center">
       <IconTile>
         <ListMusic className="size-5" />
       </IconTile>

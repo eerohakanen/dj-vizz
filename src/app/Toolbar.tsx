@@ -71,7 +71,7 @@ import { ui, useEngine } from '@/store';
 import { MIRROR_NAMES, PSY_NAMES } from '@/effects/options';
 import { cn } from '@/lib/utils';
 import { SOURCES, sourceLabel } from './labels';
-import { GLASS_PANEL, SourcePicker, swatchStyle } from './shared';
+import { FLOATING_PANEL, SourcePicker, swatchStyle } from './shared';
 import { StableLabel } from './StableLabel';
 
 const NO_INPUT_LABEL = 'No input';
@@ -127,7 +127,7 @@ function PaletteSelect() {
       <SelectContent position="popper" side="top" align="start">
         {PALETTES.map((palette, index) => (
           <SelectItem key={palette.name} value={String(index)}>
-            <span className="size-3.5 shrink-0 rounded-full" style={swatchStyle(palette)} />
+            <span className="size-3.5 shrink-0 rounded-xs" style={swatchStyle(palette)} />
             {palette.name}
           </SelectItem>
         ))}
@@ -180,7 +180,7 @@ function EffectsMenu() {
             Effects
             <Badge
               variant="secondary"
-              className={cn('h-5 min-w-5 rounded-full px-1.5 tabular-nums', count === 0 && 'invisible')}
+              className={cn('h-5 min-w-5 rounded-sm px-1.5 font-mono tabular-nums', count === 0 && 'invisible')}
               aria-hidden={count === 0}
             >
               {count}
@@ -431,7 +431,7 @@ function EditActions() {
         <Button variant={open ? 'secondary' : 'outline'} size="sm" onClick={() => openOverlay('scenes')} aria-pressed={open}>
           <Layers />
           Scenes
-          <Badge variant="secondary" className="h-5 min-w-5 rounded-full px-1.5 tabular-nums">
+          <Badge variant="secondary" className="h-5 min-w-5 rounded-sm px-1.5 font-mono tabular-nums">
             {count}
           </Badge>
         </Button>
@@ -488,7 +488,7 @@ function NowPlaying() {
       <span className="truncate text-xs text-muted-foreground">
         {scene ? (
           <>
-            <span className="tabular-nums">
+            <span className="font-mono tabular-nums">
               {playlist.index + 1}/{count}
             </span>{' '}
             · {scene.name}
@@ -548,7 +548,7 @@ export function Toolbar() {
         ui.controlsHidden && 'pointer-events-none opacity-0',
       )}
     >
-      <div className={cn('flex max-w-full flex-wrap items-center justify-center gap-2 rounded-2xl border p-2', GLASS_PANEL)}>
+      <div className={cn('flex max-w-full flex-wrap items-center justify-center gap-2 rounded-lg border p-2', FLOATING_PANEL)}>
         {ui.liveMode === 'play' ? <PlayControls /> : <StudioControls />}
       </div>
     </div>

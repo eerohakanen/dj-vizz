@@ -13,7 +13,7 @@ import { ui, useEngine } from '@/store';
 import { GAIN_CONTROL, tuningSectionsFor, type TuningControl } from '@/tuning';
 import { tuningGroupNote } from './labels';
 import { cn } from '@/lib/utils';
-import { blurAfterPointerClick, GLASS_PANEL, SIDE_PANEL_WIDTH, MeterBar, SourcePicker, useOverlay, useTicker } from './shared';
+import { blurAfterPointerClick, FLOATING_PANEL, SIDE_PANEL_WIDTH, MeterBar, SourcePicker, useOverlay, useTicker } from './shared';
 
 const LIVE_INTERVAL = 150;
 
@@ -30,7 +30,7 @@ function SliderRow({ control, display, onValueChange, children, ...props }: Slid
     <div className="space-y-2.5">
       <div className="flex items-center justify-between">
         <Label htmlFor={id}>{label}</Label>
-        <span className="text-xs tabular-nums text-muted-foreground">{display ?? format(settings[key])}</span>
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">{display ?? format(settings[key])}</span>
       </div>
       <Slider
         id={id}
@@ -52,7 +52,7 @@ function LevelMeter() {
     <MeterBar
       value={signal.energy}
       hot={signal.energy > 0.85}
-      fillClassName="rounded-full bg-emerald-400 transition-[width] duration-150 data-[hot=true]:bg-amber-400"
+      fillClassName="rounded-xs bg-emerald-400 transition-[width] duration-150 data-[hot=true]:bg-amber-400"
     />
   );
 }
@@ -96,7 +96,7 @@ export function TuningSheet() {
         overlay={false}
         onClick={blurAfterPointerClick}
         onInteractOutside={(event) => event.preventDefault()}
-        className={cn(GLASS_PANEL, 'flex w-full flex-col gap-0', SIDE_PANEL_WIDTH)}
+        className={cn(FLOATING_PANEL, 'flex w-full flex-col gap-0', SIDE_PANEL_WIDTH)}
       >
         <SheetHeader>
           <SheetTitle>Tune</SheetTitle>

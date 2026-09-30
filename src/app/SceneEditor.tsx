@@ -32,7 +32,7 @@ import {
 import { useEngine } from '@/store';
 import { cn } from '@/lib/utils';
 import { NameDialog, type NameRequest } from './NameDialog';
-import { blurAfterPointerClick, GLASS_PANEL, SIDE_PANEL_WIDTH, PlaybackOptions, swatchStyle, useOverlay } from './shared';
+import { blurAfterPointerClick, FLOATING_PANEL, SIDE_PANEL_WIDTH, PlaybackOptions, swatchStyle, useOverlay } from './shared';
 
 const SECTION_HEADING = 'text-xs font-medium uppercase tracking-wide text-muted-foreground';
 
@@ -104,9 +104,9 @@ function SceneRow({ scene, index, count, onRename }: SceneRowProps) {
         onClick={() => editScene(index)}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
       >
-        <span className="w-4 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{index + 1}</span>
+        <span className="w-4 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground">{index + 1}</span>
         <span
-          className="size-4 shrink-0 rounded-full border border-border/60 shadow-sm"
+          className="size-4 shrink-0 rounded-xs border border-border"
           style={palette && swatchStyle(palette)}
           aria-hidden
         />
@@ -175,7 +175,7 @@ export function SceneEditor() {
           onClick={blurAfterPointerClick}
           onOpenAutoFocus={(event) => event.preventDefault()}
           onInteractOutside={(event) => event.preventDefault()}
-          className={cn(GLASS_PANEL, 'flex w-full flex-col gap-0', SIDE_PANEL_WIDTH)}
+          className={cn(FLOATING_PANEL, 'flex w-full flex-col gap-0', SIDE_PANEL_WIDTH)}
         >
           <SheetHeader className="gap-3">
             <SheetTitle className={SECTION_HEADING}>Edit preset</SheetTitle>

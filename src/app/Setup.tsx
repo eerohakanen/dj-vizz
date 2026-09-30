@@ -27,9 +27,9 @@ function SourceStep({ onConnected }: { onConnected: () => void }) {
             type="button"
             disabled={!!pending || !!source.unsupported}
             onClick={() => connect(source)}
-            className="group rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+            className="group rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
           >
-            <Card className="h-full transition-colors group-hover:border-primary/60 group-hover:bg-accent/60">
+            <Card className="h-full transition-colors group-hover:border-primary/60 group-hover:bg-accent">
               <CardHeader>
                 <IconTile>
                   {pending === source.kind ? <Loader2 className="size-5 animate-spin" /> : <source.icon className="size-5" />}
