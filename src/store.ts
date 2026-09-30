@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react';
 
-export type Screen = 'landing' | 'setup' | 'live';
-export type Overlay = 'exit' | 'help' | 'presets' | 'tuning';
+export type Screen = 'landing' | 'presets' | 'setup' | 'live';
+export type LiveMode = 'explore' | 'play' | 'edit';
+export type Overlay = 'exit' | 'help' | 'scenes' | 'tuning';
 
 const listeners = new Set<() => void>();
 let version = 0;
@@ -14,6 +15,7 @@ export const ui = {
   paused: false,
   fullscreen: false,
   screen: 'landing' as Screen,
+  liveMode: 'explore' as LiveMode,
   debug: false,
 };
 

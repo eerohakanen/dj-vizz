@@ -65,7 +65,9 @@ export const KEYMAP: KeyEntry[] = [
     help: 'Presets',
     display: ['M'],
     matches: keyIn('m'),
-    run: () => openOverlay('presets'),
+    run: () => {
+      if (ui.liveMode === 'edit') openOverlay('scenes');
+    },
   },
   {
     id: 'presetNext',

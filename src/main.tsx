@@ -8,6 +8,7 @@ import { bindControls } from './controls';
 import { psyIndex, type PsyName } from './effects/options';
 import { bindReducedMotion } from './motion';
 import { advanceTimedPlaylist, shiftPlaylistClock } from './presets/playlist';
+import { startAutosave } from './presets/autosave';
 import { approach } from './math';
 import { presentFrame, renderScene } from './render';
 import { restoreSession, saveSession } from './session';
@@ -55,6 +56,7 @@ function frame(timestamp: number) {
 }
 
 restoreSession();
+startAutosave();
 bindReducedMotion();
 addEventListener('pagehide', saveSession);
 addEventListener('resize', () => {

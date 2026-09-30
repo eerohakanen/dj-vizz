@@ -303,7 +303,7 @@ export function PresetsSheet() {
 
   return (
     <>
-      <Sheet {...useOverlay('presets')}>
+      <Sheet {...useOverlay('scenes')}>
         <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md">
           <SheetHeader>
             <SheetTitle>Presets</SheetTitle>

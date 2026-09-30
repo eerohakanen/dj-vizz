@@ -1,11 +1,13 @@
-import { disconnectAudio } from './audio/input';
 import { showMessage } from './dom';
 import { startTransition } from './effects/transition';
 import { clamp, wrap } from './math';
 import { allowStrobe, revokeStrobe, strobeActive } from './motion';
-import { playlist } from './presets/library';
+import { audio, disconnectAudio } from './audio/input';
+import { flushAutosave } from './presets/autosave';
+import { addScene, createFolder, playlist, selectFolder } from './presets/library';
+import { loadPreset, startPlaybackAt } from './presets/playlist';
 import { settings, TUNING_DEFAULTS } from './state';
-import { notify, ui, type Overlay } from './store';
+import { notify, ui, type LiveMode, type Overlay, type Screen } from './store';
 import { MIRROR_NAMES, PSY_NAMES } from './effects/options';
 
 type Settings = typeof settings;
@@ -86,11 +88,70 @@ export function setPeek(peek: boolean) {
   notify();
 }
 
+function leaveLive(screen: Screen) {
+  flushAutosave();
+  playlist.playing = false;
+  Object.assign(ui, { screen, overlay: null, paused: false, hideLocked: false, peek: false, controlsHidden: false });
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  notify();
+}
+
 export function leaveVisualizer() {
   disconnectAudio();
+  leaveLive('landing');
+}
+
+export const openPresets = () => leaveLive('presets');
+
+export function goLive() {
+  ui.screen = 'live';
+  if (ui.liveMode === 'play') startPlaybackAt(0);
+  if (ui.liveMode === 'edit') loadPreset(Math.max(playlist.selected, 0));
+  notify();
+}
+
+function enter(mode: LiveMode) {
+  flushAutosave();
+  ui.liveMode = mode;
   playlist.playing = false;
-  Object.assign(ui, { screen: 'landing', overlay: null, paused: false, hideLocked: false, peek: false, controlsHidden: false });
-  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  ui.overlay = mode === 'edit' ? 'scenes' : null;
+  if (audio.live) goLive();
+  else {
+    ui.screen = 'setup';
+    notify();
+  }
+}
+
+export const explore = () => enter('explore');
+
+export function enterPlay(index: number) {
+  selectFolder(index);
+  enter('play');
+}
+
+export function enterEdit(index: number) {
+  selectFolder(index);
+  enter('edit');
+}
+
+export function newPreset() {
+  const index = createFolder();
+  enterEdit(index);
+  addScene();
+}
+
+export function switchToPlay() {
+  flushAutosave();
+  ui.liveMode = 'play';
+  ui.overlay = null;
+  startPlaybackAt(playlist.selected);
+  notify();
+}
+
+export function switchToEdit() {
+  ui.liveMode = 'edit';
+  playlist.playing = false;
+  ui.overlay = 'scenes';
   notify();
 }
 

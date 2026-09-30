@@ -59,6 +59,17 @@ export function togglePlayback() {
   notify();
 }
 
+export function startPlaybackAt(index: number) {
+  const folder = currentFolder();
+  if (!folder?.presets.length) {
+    showMessage('This preset is empty. Add a scene first.');
+    return;
+  }
+  playlist.playing = true;
+  settings.auto = false;
+  loadPreset(index < folder.presets.length ? Math.max(index, 0) : 0);
+}
+
 export function advanceTimedPlaylist() {
   if (!playlist.playing) return;
   const { seconds } = changeOption(currentChangeOn());

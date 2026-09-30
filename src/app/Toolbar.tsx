@@ -381,7 +381,7 @@ export function Toolbar() {
         <Separator orientation="vertical" className="h-6! max-sm:hidden" />
         <PlaylistStatus />
         <Hint label="Presets" shortcut={shortcutFor('presets')}>
-          <Button size="sm" onClick={() => openOverlay('presets')}>
+          <Button size="sm" onClick={() => openOverlay('scenes')}>
             <FolderOpen />
             Presets
           </Button>
