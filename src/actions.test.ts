@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { enterEdit, enterPlay, explore, goLive, newPreset, openPresets, switchToEdit, switchToPlay } from './actions';
 import { audio } from './audio/input';
 import { createPreset, library, playlist } from './presets/library';
+import { settings } from './state';
 import { ui } from './store';
 
 vi.mock('./canvas', () => ({ output: {}, transitionCtx: {}, transitionFrame: {} }));
@@ -64,6 +65,16 @@ describe('navigation actions', () => {
     switchToEdit();
     expect(ui).toMatchObject({ liveMode: 'edit', overlay: 'scenes' });
     expect(playlist.playing).toBe(false);
+  });
+
+  it('turns auto-switch off when entering or switching to edit', () => {
+    settings.auto = true;
+    enterEdit(0);
+    expect(settings.auto).toBe(false);
+    switchToPlay();
+    settings.auto = true;
+    switchToEdit();
+    expect(settings.auto).toBe(false);
   });
 
   it('openPresets stops playback and keeps audio connected', () => {

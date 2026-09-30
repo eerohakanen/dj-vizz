@@ -27,4 +27,11 @@ function scheduleAutosave() {
   timer = setTimeout(flushAutosave, AUTOSAVE_DELAY_MS);
 }
 
-export const startAutosave = () => subscribe(scheduleAutosave);
+export function startAutosave() {
+  const unsubscribe = subscribe(scheduleAutosave);
+  return () => {
+    unsubscribe();
+    clearTimeout(timer);
+    timer = undefined;
+  };
+}

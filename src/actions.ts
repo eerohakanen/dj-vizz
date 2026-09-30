@@ -114,6 +114,7 @@ function enter(mode: LiveMode) {
   flushAutosave();
   ui.liveMode = mode;
   playlist.playing = false;
+  if (mode === 'edit') settings.auto = false;
   ui.overlay = mode === 'edit' ? 'scenes' : null;
   if (audio.live) goLive();
   else {
@@ -150,6 +151,7 @@ export function switchToPlay() {
 
 export function switchToEdit() {
   ui.liveMode = 'edit';
+  settings.auto = false;
   playlist.playing = false;
   ui.overlay = 'scenes';
   notify();
