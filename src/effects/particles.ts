@@ -1,7 +1,7 @@
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
-import { signedRandom, TAU } from '../math';
-import { settings, view } from '../state';
+import { decay, frameScale, signedRandom, TAU } from '../math';
+import { clock, settings, view } from '../state';
 
 const MAX_PARTICLES = 1500;
 const COLOR_GROUPS = 4;
@@ -46,11 +46,12 @@ export function addShockwave(radius = 0) {
 
 export function drawShockwaves() {
   const { width, height, diagonal, pixelRatio } = view;
+  const step = frameScale(clock.delta);
   let alive = 0;
   for (const wave of shockwaves) {
     if (wave.radius >= diagonal) continue;
     shockwaves[alive++] = wave;
-    wave.radius += (26 + wave.radius * 0.05) * pixelRatio;
+    wave.radius += (26 + wave.radius * 0.05) * pixelRatio * step;
     const alpha = Math.max(0, 1 - wave.radius / diagonal);
     ctx.strokeStyle = color(wave.radius / 300, alpha, 65);
     ctx.lineWidth = (6 + alpha * 26) * pixelRatio;
@@ -62,13 +63,15 @@ export function drawShockwaves() {
 }
 
 export function drawParticles() {
+  const step = frameScale(clock.delta);
+  const drag = decay(0.985, step);
   let alive = 0;
   for (const particle of particles) {
-    particle.x += particle.vx;
-    particle.y += particle.vy;
-    particle.vx *= 0.985;
-    particle.vy *= 0.985;
-    particle.life -= 0.02;
+    particle.x += particle.vx * step;
+    particle.y += particle.vy * step;
+    particle.vx *= drag;
+    particle.vy *= drag;
+    particle.life -= 0.02 * step;
     if (particle.life > 0) particles[alive++] = particle;
   }
   particles.length = alive;

@@ -1,8 +1,8 @@
 import { bandAt } from '../audio/spectrum';
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
-import { TAU } from '../math';
-import { fx, signal, view } from '../state';
+import { frameScale, TAU } from '../math';
+import { clock, fx, signal, view } from '../state';
 
 const stars = Array.from({ length: 900 }, () => {
   const radius = Math.random();
@@ -21,11 +21,12 @@ export function drawGalaxy() {
   const cx = width / 2;
   const cy = height / 2;
   const maxRadius = minSide * 0.48;
+  const step = frameScale(clock.delta);
   let activeBand = -1;
   for (const star of stars) {
     const level = bandAt(star.radius, 1);
     const orbit = star.depth > 0.5 ? 0.6 : -0.6;
-    star.angle += (0.002 + 0.01 * (1 - star.radius) + punchBass * 0.03) * orbit * gate * (1 + fx.drop * 6);
+    star.angle += (0.002 + 0.01 * (1 - star.radius) + punchBass * 0.03) * orbit * gate * (1 + fx.drop * 6) * step;
     const radius = star.radius * maxRadius * (1 + punchBass * 0.35) + level * maxRadius * 0.22;
     const arm = 1 + Math.sin(star.angle * 2 + star.radius * 8 + fx.spin * 3) * 0.15;
     const angle = star.angle + star.radius * 3;

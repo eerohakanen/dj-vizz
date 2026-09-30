@@ -6,11 +6,15 @@ import { drawLasers } from './effects/lasers';
 import { applyMirror } from './effects/mirror';
 import { drawParticles, drawShockwaves } from './effects/particles';
 import { drawTransition } from './effects/transition';
-import { signedRandom } from './math';
+import { frameAlpha, signedRandom } from './math';
 import { currentMode } from './mode';
 import { clock, fx, settings, signal, view } from './state';
 
 const LIQUID_STRIPS = 40;
+const TRAIL_CALM_SHORTENING = 0.15;
+const CALM_DAMPING = 0.6;
+
+const calmScale = () => 1 - CALM_DAMPING * fx.calm;
 
 function feedPreviousFrame(ctx: CanvasRenderingContext2D) {
   const { width, height } = view;
@@ -26,7 +30,7 @@ function feedPreviousFrame(ctx: CanvasRenderingContext2D) {
     fx.drop * 0.05 +
     fx.vortexMix * (0.012 + punchBass * 0.035);
   ctx.save();
-  ctx.globalAlpha = Math.min(0.95, settings.trailLength + fx.vortexMix * 0.07);
+  ctx.globalAlpha = Math.min(0.95, frameAlpha(settings.trailLength * (1 - TRAIL_CALM_SHORTENING * fx.calm) + fx.vortexMix * 0.07, clock.delta));
   ctx.translate(cx, cy);
   ctx.rotate(rotation);
   ctx.scale(zoom, zoom);
@@ -50,7 +54,7 @@ function drawCenterGlow(ctx: CanvasRenderingContext2D) {
 function applyBeatShake(ctx: CanvasRenderingContext2D) {
   const { width, height, pixelRatio } = view;
   const punch = 1 + (fx.kick * 0.04 + fx.beat * 0.015 + fx.drop * 0.1) * settings.reactivity * settings.punch * signal.gate;
-  const shake = fx.shake + signal.tension * signal.tension * 0.12;
+  const shake = (fx.shake + signal.tension * signal.tension * 0.12) * calmScale();
   const jitter = () => signedRandom(shake * 60 * pixelRatio);
   ctx.translate(width / 2 + jitter(), height / 2 + jitter());
   ctx.scale(punch, punch);
@@ -65,7 +69,7 @@ export function renderScene() {
   ctx.globalAlpha = 1;
   const feedback = (settings.trails && mode.trails) || fx.vortexMix > 0.02;
   if (feedback && signal.gate > 0.01) feedPreviousFrame(ctx);
-  ctx.fillStyle = `rgba(5,5,10,${feedback ? 0.13 : mode.fade})`;
+  ctx.fillStyle = `rgba(5,5,10,${frameAlpha(feedback ? 0.13 : mode.fade, clock.delta)})`;
   ctx.fillRect(0, 0, width, height);
   if (signal.gate > 0.02 && !mode.opaque) drawCenterGlow(ctx);
 
@@ -118,12 +122,13 @@ function fillWith(o: CanvasRenderingContext2D, operation: GlobalCompositeOperati
 }
 
 function drawFlashes(o: CanvasRenderingContext2D) {
-  if (fx.tripMix > 0.02 && fx.beat > 0.3) fillWith(o, 'difference', color(0, fx.beat * 0.55 * fx.tripMix, 60));
-  if (fx.strobeFlash > 0.02) fillWith(o, 'lighter', color(0, fx.strobeFlash * 0.45, 70));
-  if (fx.snare > 0.05) fillWith(o, 'lighter', color(0.5, fx.snare * 0.18 * Math.min(1, settings.reactivity) * settings.flashes, 75));
+  const calm = calmScale();
+  if (fx.tripMix > 0.02 && fx.beat > 0.3) fillWith(o, 'difference', color(0, fx.beat * 0.55 * fx.tripMix * calm, 60));
+  if (fx.strobeFlash > 0.02) fillWith(o, 'lighter', color(0, fx.strobeFlash * 0.45 * calm, 70));
+  if (fx.snare > 0.05) fillWith(o, 'lighter', color(0.5, fx.snare * 0.18 * Math.min(1, settings.reactivity) * settings.flashes * calm, 75));
   if (fx.invert > 0.4) fillWith(o, 'difference', '#fff');
   o.globalCompositeOperation = 'source-over';
-  if (fx.flash > 0.02) fillWith(o, 'source-over', `rgba(255,255,255,${(fx.flash * 0.75).toFixed(3)})`);
+  if (fx.flash > 0.02) fillWith(o, 'source-over', `rgba(255,255,255,${(fx.flash * 0.75 * calm).toFixed(3)})`);
 }
 
 export function presentFrame() {

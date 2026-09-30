@@ -1,7 +1,7 @@
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
-import { TAU } from '../math';
-import { fx, signal, view } from '../state';
+import { frameScale, TAU } from '../math';
+import { clock, fx, signal, view } from '../state';
 
 const SIDE_COUNTS = [4, 5, 6, 8];
 
@@ -21,13 +21,14 @@ export function drawTunnel() {
   const cy = height / 2;
   const maxRadius = diagonal / 2;
   const sides = SIDE_COUNTS[Math.floor(fx.scroll / 8) % SIDE_COUNTS.length];
+  const step = frameScale(clock.delta);
   if (signal.gate < 0.02) resetRings();
-  else if (Math.random() < signal.gate * (0.04 + signal.punchMid * 0.3)) spawnRing();
+  else if (Math.random() < signal.gate * (0.04 + signal.punchMid * 0.3) * step) spawnRing();
   let alive = 0;
   for (const ring of rings) {
     if (ring.alpha <= 0.02) continue;
     rings[alive++] = ring;
-    ring.radius += (1 + signal.punchBass * 20 + fx.drop * 30) * pixelRatio * (1 + (ring.radius / maxRadius) * 2);
+    ring.radius += (1 + signal.punchBass * 20 + fx.drop * 30) * pixelRatio * (1 + (ring.radius / maxRadius) * 2) * step;
     const depth = ring.radius / maxRadius;
     ring.alpha = 1 - depth;
     ctx.strokeStyle = color(depth * 2, ring.alpha);

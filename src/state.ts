@@ -78,6 +78,7 @@ export const fx = {
   hat: 0,
   keyHue: 0,
   drop: 0,
+  calm: 0,
   flash: 0,
   shake: 0,
   spin: 0,

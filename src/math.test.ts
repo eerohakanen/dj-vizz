@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { approach, clamp, clamp01, decay, hueDelta, lerp, randomRange, signedRandom, smoothstep, wrap } from './math';
+import { approach, clamp, clamp01, decay, follow, frameAlpha, hueDelta, lerp, randomRange, signedRandom, smoothstep, wrap } from './math';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -148,5 +148,42 @@ describe('random helpers', () => {
       expect(signed).toBeGreaterThanOrEqual(-1);
       expect(signed).toBeLessThan(1);
     }
+  });
+});
+
+describe('follow', () => {
+  const run = (start: number, target: number, fps: number, seconds: number, attack = 0.03, release = 0.18) => {
+    let value = start;
+    for (let i = 0; i < Math.round(fps * seconds); i++) value = follow(value, target, attack, release, 1 / fps);
+    return value;
+  };
+
+  it('rises with the same result at 60 and 120 Hz', () => {
+    expect(run(0, 1, 60, 0.1)).toBeCloseTo(run(0, 1, 120, 0.1), 6);
+  });
+
+  it('falls with the same result at 60 and 120 Hz', () => {
+    expect(run(1, 0, 60, 0.1)).toBeCloseTo(run(1, 0, 120, 0.1), 6);
+  });
+
+  it('attacks faster than it releases', () => {
+    expect(run(0, 1, 60, 0.05)).toBeGreaterThan(1 - run(1, 0, 60, 0.05));
+  });
+
+  it('never overshoots the target', () => {
+    expect(follow(0, 1, 0.03, 0.18, 10)).toBeLessThanOrEqual(1);
+    expect(follow(1, 0, 0.03, 0.18, 10)).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('frameAlpha', () => {
+  it('matches the reference alpha at 60 Hz', () => {
+    expect(frameAlpha(0.13, 1 / 60)).toBeCloseTo(0.13, 10);
+  });
+
+  it('accumulates the same fade over equal time at 120 Hz', () => {
+    const at60 = Math.pow(1 - frameAlpha(0.13, 1 / 60), 6);
+    const at120 = Math.pow(1 - frameAlpha(0.13, 1 / 120), 12);
+    expect(at120).toBeCloseTo(at60, 10);
   });
 });
