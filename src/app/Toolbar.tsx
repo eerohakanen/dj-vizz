@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   AudioLines,
   CircleHelp,
@@ -8,8 +8,7 @@ import {
   Maximize,
   Pause,
   Play,
-  MicIcon,
-  MonitorSpeaker,
+  SlidersHorizontal,
   Sparkles,
   Square,
   Zap,
@@ -30,29 +29,26 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { openOverlay, setGain, setMirror, setPsy, setHideLocked, setSetting, toggleFullscreen, togglePaused } from '@/actions';
-import { audio, captureMicrophone, captureWindow } from '@/audio/input';
+import { openOverlay, setMirror, setPsy, setHideLocked, setSetting, toggleFullscreen, togglePaused } from '@/actions';
+import { audio } from '@/audio/input';
 import { setPalette } from '@/color';
-import { showMessage } from '@/dom';
 import { triggerDrop } from '@/events';
 import { setMode } from '@/mode';
 import { MODES } from '@/modes/index';
 import { PALETTES, type Palette } from '@/palettes';
 import { currentFolder, playlist } from '@/presets/library';
 import { togglePlayback } from '@/presets/playlist';
-import { settings, signal } from '@/state';
+import { settings } from '@/state';
 import { ui, useEngine } from '@/store';
 import { MIRROR_NAMES, PSY_NAMES } from '@/ui';
 import { cn } from '@/lib/utils';
 import { SOURCE_LABELS } from './labels';
 import { StableLabel } from './StableLabel';
+import { SourcePicker } from './TuningSheet';
 
 const NO_INPUT_LABEL = 'No input';
 const AUDIO_LABELS = [...Object.values(SOURCE_LABELS), NO_INPUT_LABEL];
@@ -207,47 +203,17 @@ function EffectsMenu() {
   );
 }
 
-function useLiveGain(active: boolean) {
-  const [gain, setLiveGain] = useState(signal.gainFactor);
-  useEffect(() => {
-    if (!active) return;
-    const timer = setInterval(() => setLiveGain(signal.gainFactor), 150);
-    return () => clearInterval(timer);
-  }, [active]);
-  return gain;
-}
-
-interface SliderRowProps extends Omit<ComponentProps<typeof Slider>, 'id' | 'value'> {
-  id: string;
-  label: string;
-  value: number;
-  display: string;
-}
-
-function SliderRow({ id, label, value, display, ...props }: SliderRowProps) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <Label htmlFor={id}>{label}</Label>
-        <span className="text-xs tabular-nums text-muted-foreground">{display}</span>
-      </div>
-      <Slider id={id} value={[value]} {...props} />
-    </div>
-  );
-}
-
 function AudioPopover() {
   const [open, setOpen] = useState(false);
-  const liveGain = useLiveGain(open);
 
-  const switchSource = async (capture: typeof captureWindow) => {
-    const result = await capture();
-    if (result.error) showMessage(result.error);
+  const openTuning = () => {
+    setOpen(false);
+    openOverlay('tuning');
   };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Hint label="Audio input and levels">
+      <Hint label="Audio input">
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm">
             <span className={cn('size-2 rounded-full', audio.live ? 'bg-emerald-400' : 'bg-destructive')} />
@@ -256,56 +222,13 @@ function AudioPopover() {
           </Button>
         </PopoverTrigger>
       </Hint>
-      <PopoverContent side="top" align="start" className="w-80 space-y-5">
-        <div className="space-y-2">
-          <Label>Source</Label>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant={audio.source === 'window' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => switchSource(captureWindow)}
-            >
-              <MonitorSpeaker />
-              Window
-            </Button>
-            <Button
-              variant={audio.source === 'mic' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => switchSource(captureMicrophone)}
-            >
-              <MicIcon />
-              Microphone
-            </Button>
-          </div>
-        </div>
+      <PopoverContent side="top" align="start" className="w-80 space-y-4">
+        <SourcePicker />
         <Separator />
-        <SliderRow
-          id="gain"
-          label="Gain"
-          value={settings.gain}
-          display={`×${liveGain.toFixed(liveGain < 1 ? 2 : 1)}`}
-          min={0}
-          max={100}
-          step={1}
-          disabled={settings.autoGain}
-          onValueChange={([value]) => setGain(value)}
-        />
-        <div className="flex items-center justify-between">
-          <Label htmlFor="auto-gain">
-            Automatic gain <span className="text-xs text-muted-foreground">G</span>
-          </Label>
-          <Switch id="auto-gain" checked={settings.autoGain} onCheckedChange={(checked) => setSetting('autoGain', checked)} />
-        </div>
-        <SliderRow
-          id="react"
-          label="Reactivity"
-          value={settings.reactivity}
-          display={settings.reactivity.toFixed(1)}
-          min={0.5}
-          max={3}
-          step={0.1}
-          onValueChange={([value]) => setSetting('reactivity', value)}
-        />
+        <Button variant="ghost" size="sm" className="w-full justify-start" onClick={openTuning}>
+          <SlidersHorizontal />
+          Adjust levels and sensitivity…
+        </Button>
       </PopoverContent>
     </Popover>
   );
@@ -342,6 +265,12 @@ export function Toolbar() {
         <ModeSelect />
         <PaletteSelect />
         <EffectsMenu />
+        <Hint label="Tune levels and effect strength" shortcut="T">
+          <Button variant="outline" size="sm" onClick={() => openOverlay('tuning')}>
+            <SlidersHorizontal />
+            Tune
+          </Button>
+        </Hint>
         <Hint label="Fire a drop" shortcut="Enter">
           <Button variant="outline" size="sm" onClick={triggerDrop}>
             <Zap />

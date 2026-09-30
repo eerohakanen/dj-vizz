@@ -1,7 +1,7 @@
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
 import { TAU } from '../math';
-import { view } from '../state';
+import { settings, view } from '../state';
 
 const MAX_PARTICLES = 1500;
 const COLOR_GROUPS = 4;
@@ -21,7 +21,8 @@ const shockwaves: { radius: number }[] = [];
 
 export function burst(count: number, minSpeed: number, speedRange: number, life: number, scatter = 0, sizeScale = 1) {
   const { width, height, pixelRatio } = view;
-  for (let i = 0; i < count; i++) {
+  const scaled = Math.round(count * settings.particles);
+  for (let i = 0; i < scaled; i++) {
     const angle = Math.random() * TAU;
     const speed = (minSpeed + Math.random() * speedRange) * pixelRatio;
     particles.push({

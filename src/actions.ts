@@ -2,7 +2,7 @@ import { disconnectAudio } from './audio/input';
 import { showMessage } from './dom';
 import { startTransition } from './effects/transition';
 import { playlist } from './presets/library';
-import { settings } from './state';
+import { settings, TUNING_DEFAULTS } from './state';
 import { notify, ui, type Overlay } from './store';
 import { MIRROR_NAMES, PSY_NAMES } from './ui';
 
@@ -31,6 +31,11 @@ export const cyclePsy = () => setPsy(settings.psy + 1);
 export const setGain = (value: number) => setSetting('gain', Math.max(0, Math.min(100, value)));
 
 export const nudgeGain = (step: number) => setGain(settings.gain + step);
+
+export function resetTuning() {
+  Object.assign(settings, TUNING_DEFAULTS);
+  notify();
+}
 
 export const toggleFullscreen = () =>
   document.fullscreenElement

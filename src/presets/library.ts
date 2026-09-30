@@ -2,8 +2,9 @@ import { setPalette } from '../color';
 import { setMode } from '../mode';
 import { MODES } from '../modes/index';
 import { PALETTES } from '../palettes';
-import { settings } from '../state';
+import { settings, TUNING_DEFAULTS } from '../state';
 import { notify } from '../store';
+import { TUNING_CONTROLS, type TuningKey } from '../tuning';
 import { MIRROR_NAMES, PSY_NAMES } from '../ui';
 
 const STORAGE_KEY = 'djviz.presets.v2';
@@ -24,7 +25,10 @@ export interface Preset {
   gain: number;
   agc: boolean;
   react: number;
+  tuning?: Partial<Record<TuningKey, number>>;
 }
+
+const PRESET_TUNING_KEYS = TUNING_CONTROLS.filter(({ key }) => key !== 'gain' && key !== 'reactivity');
 
 export interface Folder {
   name: string;
@@ -135,6 +139,7 @@ export function snapshot(name: string): Preset {
     gain: settings.gain,
     agc: settings.autoGain,
     react: settings.reactivity,
+    tuning: Object.fromEntries(PRESET_TUNING_KEYS.map(({ key }) => [key, settings[key]])),
   };
 }
 
@@ -155,6 +160,10 @@ export function applyPreset(preset: Partial<Preset> | undefined) {
   settings.autoGain = !!preset.agc;
   if (isNumber(preset.gain)) settings.gain = clamp(preset.gain, 0, 100);
   if (isNumber(preset.react)) settings.reactivity = clamp(preset.react, 0.5, 3);
+  for (const { key, min, max } of PRESET_TUNING_KEYS) {
+    const value = preset.tuning?.[key];
+    settings[key] = isNumber(value) ? clamp(value, min, max) : TUNING_DEFAULTS[key];
+  }
   notify();
 }
 

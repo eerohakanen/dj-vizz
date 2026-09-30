@@ -25,7 +25,7 @@ function feedPreviousFrame(ctx: CanvasRenderingContext2D) {
     fx.drop * 0.05 +
     fx.vortexMix * (0.012 + punchBass * 0.035);
   ctx.save();
-  ctx.globalAlpha = Math.min(0.95, 0.86 + fx.vortexMix * 0.07);
+  ctx.globalAlpha = Math.min(0.95, settings.trailLength + fx.vortexMix * 0.07);
   ctx.translate(cx, cy);
   ctx.rotate(rotation);
   ctx.scale(zoom, zoom);
@@ -48,7 +48,7 @@ function drawCenterGlow(ctx: CanvasRenderingContext2D) {
 
 function applyBeatShake(ctx: CanvasRenderingContext2D) {
   const { width, height, pixelRatio } = view;
-  const punch = 1 + (fx.kick * 0.04 + fx.beat * 0.015 + fx.drop * 0.1) * settings.reactivity * signal.gate;
+  const punch = 1 + (fx.kick * 0.04 + fx.beat * 0.015 + fx.drop * 0.1) * settings.reactivity * settings.punch * signal.gate;
   const shake = fx.shake + signal.tension * signal.tension * 0.12;
   const jitter = () => (Math.random() - 0.5) * shake * 60 * pixelRatio;
   ctx.translate(width / 2 + jitter(), height / 2 + jitter());
@@ -125,7 +125,7 @@ function fillWith(o: CanvasRenderingContext2D, operation: GlobalCompositeOperati
 function drawFlashes(o: CanvasRenderingContext2D) {
   if (fx.tripMix > 0.02 && fx.beat > 0.3) fillWith(o, 'difference', color(0, fx.beat * 0.55 * fx.tripMix, 60));
   if (fx.strobeFlash > 0.02) fillWith(o, 'lighter', color(0, fx.strobeFlash * 0.45, 70));
-  if (fx.snare > 0.05) fillWith(o, 'lighter', color(0.5, fx.snare * 0.18 * Math.min(1, settings.reactivity), 75));
+  if (fx.snare > 0.05) fillWith(o, 'lighter', color(0.5, fx.snare * 0.18 * Math.min(1, settings.reactivity) * settings.flashes, 75));
   if (fx.invert > 0.4) fillWith(o, 'difference', '#fff');
   o.globalCompositeOperation = 'source-over';
   if (fx.flash > 0.02) fillWith(o, 'source-over', `rgba(255,255,255,${(fx.flash * 0.75).toFixed(3)})`);

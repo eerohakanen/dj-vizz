@@ -16,6 +16,7 @@ const SHORTCUTS: [string[], string][] = [
   [['E'], 'Trails'],
   [['A'], 'Auto-switch on drops and every 32-beat phrase'],
   [['Enter'], 'Fire a drop'],
+  [['T'], 'Tune levels and effect strength'],
   [['M'], 'Presets'],
   [['Space'], 'Next preset in folder'],
   [['↑', '↓'], 'Gain up / down'],

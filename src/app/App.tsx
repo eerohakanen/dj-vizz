@@ -11,6 +11,7 @@ import { PresetsSheet } from './PresetsSheet';
 import { RevealButton } from './RevealButton';
 import { Setup } from './Setup';
 import { Toolbar } from './Toolbar';
+import { TuningSheet } from './TuningSheet';
 
 export function App() {
   useEngine();
@@ -41,6 +42,7 @@ export function App() {
           <Toolbar />
           <RevealButton />
           <PresetsSheet />
+          <TuningSheet />
           <HelpDialog />
           <ExitDialog onExit={exitToMenu} />
           {ui.debug && <AnalysisHud />}

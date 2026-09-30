@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-export type Overlay = 'exit' | 'help' | 'presets';
+export type Overlay = 'exit' | 'help' | 'presets' | 'tuning';
 
 const listeners = new Set<() => void>();
 let version = 0;

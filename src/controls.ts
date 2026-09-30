@@ -39,6 +39,7 @@ const KEY_ACTIONS: Record<string, (event: KeyboardEvent) => void> = {
   s: () => toggleSetting('strobe'),
   g: () => toggleSetting('autoGain'),
   p: cyclePsy,
+  t: () => openOverlay('tuning'),
   q: () => openOverlay('exit'),
   m: () => openOverlay('presets'),
   '?': () => openOverlay('help'),

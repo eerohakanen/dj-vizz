@@ -1,3 +1,4 @@
+import { settings } from '../state';
 import { audio } from './input';
 
 const HISTORY = 32;
@@ -58,7 +59,7 @@ function detectOnset(detector: OnsetDetector, frequencies: Uint8Array, time: num
   history[detector.cursor] = flux;
   detector.cursor = (detector.cursor + 1) % HISTORY;
 
-  const threshold = mean + detector.sensitivity * deviation + 0.012;
+  const threshold = mean + (detector.sensitivity / settings.beatSensitivity) * deviation + 0.012;
   if (flux < threshold || level < 0.2 || time - detector.lastOnset < detector.refractory) return 0;
   detector.lastOnset = time;
   return Math.min(1, 0.4 + (flux - threshold) / (deviation * 4 + 0.02));

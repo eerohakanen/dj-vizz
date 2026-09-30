@@ -12,6 +12,21 @@ export const clock = {
   delta: 0.016,
 };
 
+export const TUNING_DEFAULTS = {
+  autoGain: true,
+  gain: 55,
+  noiseGate: 0.03,
+  beatSensitivity: 1,
+  dropSensitivity: 1,
+  reactivity: 1.6,
+  motion: 1,
+  punch: 1,
+  flashes: 1,
+  particles: 1,
+  colorSpeed: 1,
+  trailLength: 0.86,
+};
+
 export const settings = {
   mode: 0,
   palette: 1,
@@ -22,9 +37,7 @@ export const settings = {
   glitch: false,
   strobe: false,
   auto: false,
-  autoGain: true,
-  gain: 55,
-  reactivity: 1.6,
+  ...TUNING_DEFAULTS,
 };
 
 export const signal = {

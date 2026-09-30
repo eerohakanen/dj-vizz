@@ -72,6 +72,13 @@ function fillSpectrum(frequencies: Uint8Array, gain: number) {
   }
 }
 
+function isDropReturning(kick: number) {
+  const sensitivity = settings.dropSensitivity;
+  if (sensitivity <= 0) return false;
+  const released = tensionPeak() > 0.45 / sensitivity && signal.energy > signal.energySlow * (1 + 0.2 / sensitivity);
+  return kick > 0.5 && signal.bass > 0.5 && (released || signal.breakdown > 0.7 / sensitivity);
+}
+
 export function analyse() {
   const { delta, time } = clock;
   const frequencies = readInput();
@@ -88,10 +95,11 @@ export function analyse() {
   signal.energy += (energy - signal.energy) * Math.min(1, delta * 8);
   signal.energySlow += (energy - signal.energySlow) * Math.min(1, delta * 0.5);
   signal.energyPeak = Math.max(signal.energy, signal.energyPeak - delta * 0.05);
-  signal.gate = Math.min(1, Math.max(0, (signal.energy - 0.03) / 0.07));
+  signal.gate = Math.min(1, Math.max(0, (signal.energy - settings.noiseGate) / 0.07));
 
   const { gate } = signal;
   const react = settings.reactivity;
+  const motion = react * settings.motion;
   signal.bass = Math.min(1.2, bass * gate);
   signal.mid = Math.min(1.2, mid * gate);
   signal.high = Math.min(1.2, high * gate);
@@ -101,8 +109,8 @@ export function analyse() {
   signal.punchHigh = Math.min(1.8, signal.high * react * 1.2);
 
   decayEffects(delta);
-  fx.spin += delta * gate * (0.1 + signal.energy * 2 + fx.drop * 4) * react;
-  fx.scroll += delta * gate * (0.2 + signal.energy * 3 + fx.drop * 8) * react;
+  fx.spin += delta * gate * (0.1 + signal.energy * 2 + fx.drop * 4) * motion;
+  fx.scroll += delta * gate * (0.2 + signal.energy * 3 + fx.drop * 8) * motion;
   const inBreakdown = signal.energy < 0.4 * signal.energyPeak && signal.energyPeak > 0.15;
   signal.breakdown = inBreakdown ? signal.breakdown + delta : Math.max(0, signal.breakdown - delta * 2);
 
@@ -117,9 +125,7 @@ export function analyse() {
     signal.lastBeat = time;
     onBeat();
   }
-  const released = tensionPeak() > 0.45 && signal.energy > signal.energySlow * 1.2;
-  const returning = hits.kick > 0.5 && signal.bass > 0.5 && (released || signal.breakdown > 0.7);
-  if (time - signal.lastDrop > DROP_COOLDOWN && returning) triggerDrop();
+  if (time - signal.lastDrop > DROP_COOLDOWN && isDropReturning(hits.kick)) triggerDrop();
 
   fillSpectrum(frequencies, gain);
 }
