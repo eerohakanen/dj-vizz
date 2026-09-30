@@ -9,6 +9,8 @@ const SEGMENTS_PER_SIDE = 6;
 const BAND_BULGE = 0.22;
 const MAX_RINGS = 40;
 const MIN_MOTION = 0.02;
+const VOLLEY_RINGS = 4;
+const VOLLEY_SPACING = 60;
 
 const point = { x: 0, y: 0 };
 
@@ -29,8 +31,13 @@ export function resetRings() {
   rings.length = 0;
 }
 
-export function spawnRing() {
-  rings.push({ radius: 0, alpha: 1 });
+export function spawnRing(radius = 0) {
+  rings.push({ radius, alpha: 1 });
+}
+
+export function spawnRingVolley() {
+  const { pixelRatio } = view;
+  for (let k = 0; k < VOLLEY_RINGS; k++) spawnRing(k * VOLLEY_SPACING * pixelRatio);
 }
 
 export function drawTunnel() {
@@ -50,7 +57,7 @@ export function drawTunnel() {
     const depth = ring.radius / maxRadius;
     ring.alpha = 1 - depth;
     ctx.strokeStyle = color(depth * 2, ring.alpha);
-    ctx.lineWidth = (1 + depth * 10 + fx.beat * 4) * pixelRatio;
+    ctx.lineWidth = (1 + depth * 10 + fx.beat * 4 + fx.hat * 3 * (1 - depth)) * pixelRatio;
     ctx.beginPath();
     const vertices = sides * SEGMENTS_PER_SIDE;
     const spin = fx.spin * 2 + depth;

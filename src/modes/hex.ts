@@ -15,6 +15,8 @@ function drawHexagon(x: number, y: number, radius: number) {
   ctx.fill();
 }
 
+const rippleAt = (distance: number, front: number, width: number) => Math.max(0, 1 - Math.abs(distance - front) / width);
+
 export function drawHex() {
   const { width, height, pixelRatio } = view;
   const size = 58 * pixelRatio;
@@ -24,6 +26,7 @@ export function drawHex() {
   const cy = height / 2;
   const reach = Math.hypot(cx, cy);
   const ripple = (clock.time - signal.lastBeat) * reach * 1.6;
+  const dropRipple = (clock.time - signal.lastDrop) * reach * 0.9;
   for (let row = -1; row * rowStep < height + size; row++) {
     const y = row * rowStep;
     for (let column = -1; ; column++) {
@@ -31,7 +34,7 @@ export function drawHex() {
       if (x > width + columnStep) break;
       const distance = Math.hypot(x - cx, y - cy) / reach;
       const level = bandAt(Math.floor(distance * 40), 40);
-      const wave = Math.max(0, 1 - Math.abs(distance * reach - ripple) / (size * 2)) * fx.beat;
+      const wave = rippleAt(distance * reach, ripple, size * 2) * fx.beat + rippleAt(distance * reach, dropRipple, size * 4) * fx.drop;
       const intensity = Math.min(1, level + wave);
       if (intensity < 0.04) continue;
       ctx.fillStyle = color(distance * 2 + intensity, 0.25 + intensity * 0.75);

@@ -26,7 +26,7 @@ export function drawRadial() {
     ctx.beginPath();
     for (let i = from; i < to; i++) {
       const angle = (i / SPOKES) * TAU - QUARTER_TURN + fx.spin;
-      const length = spokeLevel(i) * minSide * 0.42 + 3 * signal.gate;
+      const length = spokeLevel(i) * minSide * (0.42 + fx.drop * 0.3 + fx.hat * 0.08) + 3 * signal.gate;
       if (length < 2) continue;
       const cos = Math.cos(angle);
       const sin = Math.sin(angle);

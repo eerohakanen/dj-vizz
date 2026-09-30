@@ -14,14 +14,14 @@ export function drawBlob() {
   const cy = height / 2;
   ctx.lineJoin = 'round';
   for (let k = LAYERS - 1; k >= 0; k--) {
-    const baseRadius = minSide * (0.08 + k * 0.07) * (1 + punchBass * 0.35);
+    const baseRadius = minSide * (0.08 + k * 0.07) * (1 + punchBass * 0.35 + fx.drop * (0.2 + k * 0.12));
     const direction = k % 2 ? 1 : -1;
     ctx.beginPath();
     for (let i = 0; i <= POINTS; i++) {
       const angle = (i / POINTS) * TAU;
       const level = bandAt(i < POINTS / 2 ? i : POINTS - i, POINTS / 2);
       const ripple = Math.sin(angle * (3 + k) + clock.time * (1 + k * 0.4) * direction + fx.spin * direction);
-      const radius = baseRadius + level * minSide * (0.06 + k * 0.03) + ripple * minSide * 0.012 * (1 + punchMid * 4);
+      const radius = baseRadius + level * minSide * (0.06 + k * 0.03) + ripple * minSide * 0.012 * (1 + punchMid * 4 + fx.hat * 3);
       const rotated = angle + fx.spin * direction * 0.3;
       const x = cx + Math.cos(rotated) * radius;
       const y = cy + Math.sin(rotated) * radius;

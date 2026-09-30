@@ -185,7 +185,6 @@ describe('applyPreset', () => {
       motion: 0.4,
       punch: 1.6,
       flashes: 0.3,
-      particles: 1.8,
       colorSpeed: 0.2,
       trailLength: 0.9,
       pixelSize: 30,

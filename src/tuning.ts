@@ -125,15 +125,6 @@ export const TUNING_SECTIONS = [
         description: 'Brightness of snare flashes, drop flashes and the strobe. Turn it down if flashing light is uncomfortable.',
       },
       {
-        key: 'particles',
-        label: 'Particles',
-        min: 0,
-        max: 2,
-        step: 0.05,
-        format: multiplier,
-        description: 'How many sparks burst out on beats, hi-hats and drops.',
-      },
-      {
         key: 'colorSpeed',
         label: 'Colour speed',
         min: 0,

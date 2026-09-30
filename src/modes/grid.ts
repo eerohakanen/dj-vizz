@@ -9,7 +9,7 @@ const sunGradient = gradientCache(() => ctx.createLinearGradient(0, -1, 0, 1));
 function drawSun(horizon: number) {
   const { width, minSide } = view;
   const { punchBass } = signal;
-  const radius = minSide * (0.24 + 0.05 * Math.min(1, punchBass));
+  const radius = minSide * (0.24 + 0.05 * Math.min(1, punchBass) + 0.06 * fx.drop);
   const centerY = horizon - radius * 0.55;
   ctx.save();
   ctx.fillStyle = sunGradient(color(1.3, 1, 62), color(0, 1, 52));
@@ -42,15 +42,15 @@ function drawMountains(horizon: number) {
   ctx.closePath();
   ctx.fillStyle = 'rgba(8,4,20,.92)';
   ctx.fill();
-  ctx.strokeStyle = color(2, 1);
-  ctx.lineWidth = 2 * pixelRatio;
+  ctx.strokeStyle = color(2, 1, 58 + 25 * fx.hat);
+  ctx.lineWidth = (2 + fx.hat * 2) * pixelRatio;
   ctx.stroke();
 }
 
 function drawFloor(horizon: number) {
   const { width, height, pixelRatio } = view;
-  ctx.strokeStyle = color(2, 0.85);
-  ctx.lineWidth = (1.5 + fx.beat * 2) * pixelRatio;
+  ctx.strokeStyle = color(2, 0.85, 58 + 25 * fx.drop);
+  ctx.lineWidth = (1.5 + fx.beat * 2 + fx.drop * 3) * pixelRatio;
   const offset = fx.scroll % 1;
   ctx.beginPath();
   for (let k = 0; k < 16; k++) {

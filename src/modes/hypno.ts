@@ -16,7 +16,7 @@ function drawArms(cx: number, cy: number, innerRadius: number, logSpan: number) 
   const { time, delta } = clock;
   const { punchBass, punchMid } = signal;
   huePhase += delta * HUE_RATE * settings.colorSpeed;
-  const twist = (2.2 + Math.sin(time * 0.25) * 1.2 + punchMid * 1.5) * 0.35;
+  const twist = (2.2 + Math.sin(time * 0.25) * 1.2 + punchMid * 1.5 + fx.drop * 2) * 0.35;
   const rotation = fx.spin * 2.5;
   for (let k = 0; k < ARMS; k++) {
     const start = (k / ARMS) * TAU + rotation;
@@ -47,8 +47,8 @@ function drawRings(cx: number, cy: number, outerRadius: number) {
   const { punchBass } = signal;
   for (let j = 0; j < RINGS; j++) {
     const f = (j / RINGS + fx.scroll * 0.12) % 1;
-    ctx.strokeStyle = color(j * 0.3 + f, 0.35 * (1 - f) * (0.4 + punchBass * 0.6));
-    ctx.lineWidth = (2 + punchBass * 10) * pixelRatio * (1 + f * 3);
+    ctx.strokeStyle = color(j * 0.3 + f, Math.min(1, 0.35 * (1 - f) * (0.4 + punchBass * 0.6 + fx.hat * 0.8 + fx.drop * 2)));
+    ctx.lineWidth = (2 + punchBass * 10 + fx.drop * 12) * pixelRatio * (1 + f * 3);
     ctx.beginPath();
     ctx.arc(cx, cy, f * f * outerRadius, 0, TAU);
     ctx.stroke();

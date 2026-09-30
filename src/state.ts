@@ -22,7 +22,6 @@ export const TUNING_DEFAULTS = {
   motion: 1,
   punch: 1,
   flashes: 1,
-  particles: 1,
   colorSpeed: 1,
   trailLength: 0.86,
   pixelSize: 12,

@@ -34,8 +34,8 @@ export function drawScope() {
   });
   const slot = width / EDGE_BARS;
   for (let i = 0; i < EDGE_BARS; i++) {
-    const barHeight = bandAt(i, EDGE_BARS) * height * 0.22;
-    ctx.fillStyle = color(i / 12, 0.55);
+    const barHeight = bandAt(i, EDGE_BARS) * height * (0.22 + fx.drop * 0.15);
+    ctx.fillStyle = color(i / 12, Math.min(1, 0.55 + fx.hat * 0.45));
     ctx.fillRect(i * slot + 4, 0, slot - 8, barHeight);
     ctx.fillRect(i * slot + 4, height - barHeight, slot - 8, barHeight);
   }

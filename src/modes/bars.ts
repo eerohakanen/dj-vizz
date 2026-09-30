@@ -8,6 +8,10 @@ const PEAK_FALL = 0.55;
 
 let peaks = new Float32Array(0);
 
+export function dropBars() {
+  peaks.fill(1);
+}
+
 export function drawBars() {
   const { width, height, pixelRatio } = view;
   const count = Math.max(40, Math.floor(width / pixelRatio / 14)) & ~1;
@@ -24,8 +28,8 @@ export function drawBars() {
     const position = (i / count) * 2;
     ctx.fillStyle = color(position, 0.9);
     ctx.fillRect(x, height - barHeight, barWidth, barHeight);
-    ctx.fillStyle = color(position + 0.5, 0.8, 78);
-    ctx.fillRect(x, height - peakHeight - 5 * pixelRatio, barWidth, 3 * pixelRatio);
+    ctx.fillStyle = color(position + 0.5, 0.8 + 0.2 * fx.hat, 78 + 17 * fx.hat);
+    ctx.fillRect(x, height - peakHeight - 5 * pixelRatio, barWidth, (3 + fx.hat * 3) * pixelRatio);
     ctx.fillStyle = color(position, 0.18);
     ctx.fillRect(x, 0, barWidth, barHeight * 0.35);
   }

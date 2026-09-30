@@ -1,10 +1,9 @@
-import { BACKGROUND, fillWith, gradientCache, outputCtx, scene, sceneCtx } from './canvas';
+import { BACKGROUND, fillWith, outputCtx, scene, sceneCtx } from './canvas';
 import { color } from './color';
 import { applyBloom } from './effects/bloom';
 import { applyGlitch } from './effects/glitch';
 import { drawLasers } from './effects/lasers';
 import { applyMirror } from './effects/mirror';
-import { drawParticles, drawShockwaves } from './effects/particles';
 import { applyPixelate } from './effects/pixelate';
 import { drawTransition } from './effects/transition';
 import { clamp01, frameAlpha, frameScale, signedRandom } from './math';
@@ -20,8 +19,6 @@ const CALM_DAMPING = 0.6;
 let washAngle = 0;
 let washHue = NaN;
 let wash: CanvasGradient | undefined;
-
-const centerGlow = gradientCache(() => sceneCtx.createRadialGradient(0, 0, 0, 0, 0, 1));
 
 const calmScale = () => 1 - CALM_DAMPING * fx.calm;
 
@@ -49,20 +46,6 @@ function feedPreviousFrame(ctx: CanvasRenderingContext2D) {
   ctx.restore();
 }
 
-function drawCenterGlow(ctx: CanvasRenderingContext2D) {
-  const { width, height, diagonal } = view;
-  const radius = diagonal * 0.55;
-  const intensity = 0.07 * signal.punchBass + 0.2 * fx.drop + 0.12 * signal.tension + 0.08 * signal.vocal;
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.globalAlpha = clamp01(Math.min(0.35, intensity));
-  ctx.fillStyle = centerGlow(color(0, 1, 40 + signal.vocal * 15), 'rgba(0,0,0,0)');
-  ctx.translate(width / 2, height / 2);
-  ctx.scale(radius, radius);
-  ctx.fillRect(-width / 2 / radius, -height / 2 / radius, width / radius, height / radius);
-  ctx.restore();
-}
-
 function applyBeatShake(ctx: CanvasRenderingContext2D) {
   const { width, height, pixelRatio } = view;
   const punch = 1 + (fx.kick * 0.04 + fx.beat * 0.015 + fx.drop * 0.1) * settings.reactivity * shakeLevel() * signal.gate;
@@ -85,7 +68,6 @@ export function renderScene() {
   ctx.fillStyle = BACKGROUND;
   ctx.fillRect(0, 0, width, height);
   ctx.globalAlpha = 1;
-  if (signal.gate > 0.02 && !mode.opaque) drawCenterGlow(ctx);
 
   ctx.save();
   applyBeatShake(ctx);
@@ -93,9 +75,6 @@ export function renderScene() {
   mode.draw();
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'lighter';
-  drawShockwaves();
-  drawParticles();
-  ctx.globalAlpha = 1;
   drawLasers();
   ctx.restore();
 }

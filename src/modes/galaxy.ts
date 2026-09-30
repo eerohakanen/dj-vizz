@@ -27,7 +27,7 @@ export function drawGalaxy() {
     const level = bandAt(star.radius, 1);
     const orbit = star.depth > 0.5 ? 0.6 : -0.6;
     star.angle += (0.002 + 0.01 * (1 - star.radius) + punchBass * 0.03) * orbit * gate * (1 + fx.drop * 6) * settings.motion * step;
-    const radius = star.radius * maxRadius * (1 + punchBass * 0.35) + level * maxRadius * 0.22;
+    const radius = star.radius * maxRadius * (1 + punchBass * 0.35 + fx.drop * (0.3 + star.depth * 0.6)) + level * maxRadius * 0.22;
     const arm = 1 + Math.sin(star.angle * 2 + star.radius * 8 + fx.spin * 3) * 0.15;
     const angle = star.angle + star.radius * 3;
     if (star.colorBand !== activeBand) {
@@ -35,7 +35,7 @@ export function drawGalaxy() {
       ctx.fillStyle = color(activeBand / 4);
     }
     ctx.globalAlpha = Math.min(1, 0.35 + level * 0.65);
-    const size = (1 + level * 5 + fx.beat * 3) * pixelRatio;
+    const size = (1 + level * 5 + fx.beat * 3 + fx.hat * star.radius * 4) * pixelRatio;
     ctx.fillRect(cx + Math.cos(angle) * radius * arm, cy + Math.sin(angle) * radius * arm, size, size);
   }
   ctx.globalAlpha = 1;

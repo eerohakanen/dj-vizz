@@ -84,7 +84,7 @@ export function drawWarp() {
     const depthIndex = Math.floor(b / LEVEL_BUCKETS);
     const nearness = ((depthIndex % DEPTH_BUCKETS) + 0.5) / DEPTH_BUCKETS;
     const hue = (depthIndex / DEPTH_BUCKETS) | 0;
-    const brightness = Math.min(1, nearness * 1.5 + punchHigh * 0.5) * (loud ? 1 : QUIET_ALPHA);
+    const brightness = Math.min(1, nearness * 1.5 + punchHigh * 0.5 + fx.hat * 0.4 + fx.drop * 0.6) * (loud ? 1 : QUIET_ALPHA);
     ctx.strokeStyle = color(hue / 2 + nearness, brightness);
     ctx.lineWidth = (0.5 + nearness * 4 + punchHigh * 2) * (loud ? 1.4 : 1) * pixelRatio;
     ctx.beginPath();

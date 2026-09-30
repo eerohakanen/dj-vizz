@@ -22,7 +22,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe('tuning groups', () => {
   it('splits Input and Detection from Response', () => {
     expect(CALIBRATION_CONTROLS.map(({ key }) => key)).toEqual(['gain', 'noiseGate', 'beatSensitivity', 'dropSensitivity']);
-    expect(LOOK_CONTROLS.map(({ key }) => key)).toEqual(['reactivity', 'motion', 'punch', 'flashes', 'particles', 'colorSpeed', 'trailLength', 'pixelSize', 'pixelGap']);
+    expect(LOOK_CONTROLS.map(({ key }) => key)).toEqual(['reactivity', 'motion', 'punch', 'flashes', 'colorSpeed', 'trailLength', 'pixelSize', 'pixelGap']);
   });
 });
 
