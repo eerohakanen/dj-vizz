@@ -19,23 +19,25 @@ interface Particle {
 const particles: Particle[] = [];
 const shockwaves: { radius: number }[] = [];
 
-export function burst(count: number, minSpeed: number, speedRange: number, life: number) {
+export function burst(count: number, minSpeed: number, speedRange: number, life: number, scatter = 0, sizeScale = 1) {
   const { width, height, pixelRatio } = view;
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * TAU;
     const speed = (minSpeed + Math.random() * speedRange) * pixelRatio;
     particles.push({
-      x: width / 2,
-      y: height / 2,
+      x: width / 2 + (Math.random() - 0.5) * width * scatter,
+      y: height / 2 + (Math.random() - 0.5) * height * scatter,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       life,
       group: (Math.random() * COLOR_GROUPS) | 0,
-      size: (2 + Math.random() * 6) * pixelRatio,
+      size: (2 + Math.random() * 6) * pixelRatio * sizeScale,
     });
   }
   if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
 }
+
+export const sparkle = (count: number) => burst(count, 0.2, 1.2, 0.5, 0.9, 0.45);
 
 export function addShockwave(radius = 0) {
   shockwaves.push({ radius });

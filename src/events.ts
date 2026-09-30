@@ -1,5 +1,7 @@
+import { releaseTension } from './audio/musical';
+import { anchorPhrase } from './audio/tempo';
 import { setPalette } from './color';
-import { addShockwave, burst } from './effects/particles';
+import { addShockwave, burst, sparkle } from './effects/particles';
 import { currentMode, setMode } from './mode';
 import { MODES } from './modes/index';
 import { PALETTES } from './palettes';
@@ -7,7 +9,6 @@ import { playlist } from './presets/library';
 import { nextPreset } from './presets/playlist';
 import { clock, fx, settings, signal, view } from './state';
 
-const AUTO_MODE_EVERY = 32;
 const BEATS_PER_CHANGE: Partial<Record<string, number>> = { b16: 16, b32: 32 };
 
 function randomOtherMode() {
@@ -20,6 +21,8 @@ function randomOtherMode() {
 export function triggerDrop() {
   signal.lastDrop = clock.time;
   signal.breakdown = 0;
+  anchorPhrase();
+  releaseTension();
   signal.energyPeak = signal.energy;
   fx.drop = 1;
   fx.flash = 1;
@@ -42,10 +45,11 @@ export function triggerDrop() {
 export function onBeat() {
   fx.hue += 12 + fx.beat * 20;
   fx.beatCount++;
+  const every = BEATS_PER_CHANGE[playlist.changeOn];
   if (playlist.playing) {
     playlist.beats++;
-    if (playlist.beats >= (BEATS_PER_CHANGE[playlist.changeOn] ?? Infinity)) nextPreset();
-  } else if (settings.auto && fx.beatCount % AUTO_MODE_EVERY === 0) {
+    if (every && playlist.beats >= every / 2 && signal.phraseBeat % every === 0) nextPreset();
+  } else if (settings.auto && signal.phraseBeat === 0) {
     setMode(settings.mode + 1);
   }
   currentMode().onBeat();
@@ -54,4 +58,17 @@ export function onBeat() {
   if (settings.glitch && fx.beat > 0.6) fx.glitchAmount = Math.max(fx.glitchAmount, fx.beat);
   if (fx.beat > 0.8) addShockwave();
   burst((10 + fx.beat * 25 * settings.reactivity) | 0, 2, 9, 1);
+}
+
+export function onKick(strength: number) {
+  fx.kick = Math.max(fx.kick, strength);
+}
+
+export function onSnare(strength: number) {
+  fx.snare = Math.max(fx.snare, strength);
+}
+
+export function onHat(strength: number) {
+  fx.hat = Math.max(fx.hat, strength);
+  sparkle((2 + strength * 6 * settings.reactivity) | 0);
 }

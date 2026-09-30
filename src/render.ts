@@ -19,7 +19,11 @@ function feedPreviousFrame(ctx: CanvasRenderingContext2D) {
   const rotation =
     ((signal.mid - 0.25) * 0.01 * gate + fx.drop * 0.04) * settings.reactivity +
     fx.vortexMix * (0.015 + punchMid * 0.04) * fx.vortexDirection;
-  const zoom = 1 + gate * (0.006 + punchBass * 0.025) + fx.drop * 0.05 + fx.vortexMix * (0.012 + punchBass * 0.035);
+  const zoom =
+    1 +
+    gate * (0.006 + punchBass * 0.015 + fx.kick * 0.02 + signal.tension * 0.02) +
+    fx.drop * 0.05 +
+    fx.vortexMix * (0.012 + punchBass * 0.035);
   ctx.save();
   ctx.globalAlpha = Math.min(0.95, 0.86 + fx.vortexMix * 0.07);
   ctx.translate(cx, cy);
@@ -33,7 +37,8 @@ function feedPreviousFrame(ctx: CanvasRenderingContext2D) {
 function drawCenterGlow(ctx: CanvasRenderingContext2D) {
   const { width, height, diagonal } = view;
   const glow = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, diagonal * 0.55);
-  glow.addColorStop(0, color(0, Math.min(0.3, 0.07 * signal.punchBass + 0.2 * fx.drop), 40));
+  const intensity = 0.07 * signal.punchBass + 0.2 * fx.drop + 0.12 * signal.tension + 0.08 * signal.vocal;
+  glow.addColorStop(0, color(0, Math.min(0.35, intensity), 40 + signal.vocal * 15));
   glow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.globalCompositeOperation = 'lighter';
   ctx.fillStyle = glow;
@@ -43,8 +48,9 @@ function drawCenterGlow(ctx: CanvasRenderingContext2D) {
 
 function applyBeatShake(ctx: CanvasRenderingContext2D) {
   const { width, height, pixelRatio } = view;
-  const punch = 1 + (fx.beat * 0.045 + fx.drop * 0.1) * settings.reactivity * signal.gate;
-  const jitter = () => (Math.random() - 0.5) * fx.shake * 60 * pixelRatio;
+  const punch = 1 + (fx.kick * 0.04 + fx.beat * 0.015 + fx.drop * 0.1) * settings.reactivity * signal.gate;
+  const shake = fx.shake + signal.tension * signal.tension * 0.12;
+  const jitter = () => (Math.random() - 0.5) * shake * 60 * pixelRatio;
   ctx.translate(width / 2 + jitter(), height / 2 + jitter());
   ctx.scale(punch, punch);
   ctx.translate(-width / 2, -height / 2);
@@ -119,6 +125,7 @@ function fillWith(o: CanvasRenderingContext2D, operation: GlobalCompositeOperati
 function drawFlashes(o: CanvasRenderingContext2D) {
   if (fx.tripMix > 0.02 && fx.beat > 0.3) fillWith(o, 'difference', color(0, fx.beat * 0.55 * fx.tripMix, 60));
   if (fx.strobeFlash > 0.02) fillWith(o, 'lighter', color(0, fx.strobeFlash * 0.45, 70));
+  if (fx.snare > 0.05) fillWith(o, 'lighter', color(0.5, fx.snare * 0.18 * Math.min(1, settings.reactivity), 75));
   if (fx.invert > 0.4) fillWith(o, 'difference', '#fff');
   o.globalCompositeOperation = 'source-over';
   if (fx.flash > 0.02) fillWith(o, 'source-over', `rgba(255,255,255,${(fx.flash * 0.75).toFixed(3)})`);

@@ -12,6 +12,7 @@ export const ui = {
   overlay: null as Overlay | null,
   paused: false,
   live: false,
+  debug: false,
 };
 
 export function notify() {

@@ -17,8 +17,12 @@ type AudioSourceKind = 'window' | 'mic';
 
 export const audio = {
   analyser: null as AnalyserNode | null,
+  detector: null as AnalyserNode | null,
   frequencies: new Uint8Array(1024),
+  sharpFrequencies: new Uint8Array(1024),
   waveform: new Uint8Array(2048),
+  samples: new Float32Array(2048),
+  sampleRate: 48000,
   live: false,
   source: null as AudioSourceKind | null,
 };
@@ -39,9 +43,16 @@ function ensureContext() {
     const analyser = context.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0.7;
+    const detector = context.createAnalyser();
+    detector.fftSize = analyser.fftSize;
+    detector.smoothingTimeConstant = 0.15;
     audio.analyser = analyser;
+    audio.detector = detector;
+    audio.sampleRate = context.sampleRate;
     audio.frequencies = new Uint8Array(analyser.frequencyBinCount);
+    audio.sharpFrequencies = new Uint8Array(detector.frequencyBinCount);
     audio.waveform = new Uint8Array(analyser.fftSize);
+    audio.samples = new Float32Array(detector.fftSize);
   }
   if (context.state === 'suspended') context.resume();
   return context;
@@ -72,6 +83,7 @@ function useStream(mediaStream: MediaStream, kind: AudioSourceKind) {
   stream = mediaStream;
   source = audioContext.createMediaStreamSource(mediaStream);
   source.connect(audio.analyser!);
+  source.connect(audio.detector!);
   audio.live = true;
   audio.source = kind;
   mediaStream.getTracks().forEach((track) => {

@@ -3,6 +3,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { leaveVisualizer } from '@/actions';
 import { notify, ui, useEngine } from '@/store';
+import { AnalysisHud } from './AnalysisHud';
 import { ExitDialog } from './ExitDialog';
 import { HelpDialog } from './HelpDialog';
 import { Landing } from './Landing';
@@ -42,6 +43,7 @@ export function App() {
           <PresetsSheet />
           <HelpDialog />
           <ExitDialog onExit={exitToMenu} />
+          {ui.debug && <AnalysisHud />}
         </>
       )}
       <Toaster position="top-center" />

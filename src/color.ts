@@ -1,9 +1,10 @@
 import { showMessage } from './dom';
 import { PALETTES } from './palettes';
-import { fx, settings } from './state';
+import { fx, settings, signal } from './state';
 import { notify } from './store';
 
 const LUT_SIZE = 64;
+const MINOR_DIMMING = 4;
 const lut = new Float32Array(LUT_SIZE * 3);
 const styleCache = new Map();
 const currentHsl = new Float32Array(3);
@@ -56,10 +57,11 @@ export function advancePaletteFade(delta: number) {
 }
 
 export function color(position: number, alpha = 1, lightness?: number) {
-  let x = (position * 0.5 + fx.hue / 360) % 1;
+  let x = (position * 0.5 + (fx.hue + fx.keyHue) / 360) % 1;
   if (x < 0) x += 1;
   const k = ((x * LUT_SIZE) | 0) * 3;
-  let light = lut[k + 2] + (lightness == null ? 0 : lightness - 58) + fx.beat * 8;
+  const mood = (signal.brightness - 0.5) * 14 - (signal.key >= 12 ? MINOR_DIMMING : 0);
+  let light = lut[k + 2] + (lightness == null ? 0 : lightness - 58) + fx.beat * 8 + mood;
   light = light < 5 ? 5 : light > 95 ? 95 : light;
   const alphaSteps = alpha < 0 ? 0 : alpha > 1 ? 1000 : Math.round(alpha * 1000);
   const key = (k * 96 + (light | 0)) * 1001 + alphaSteps;

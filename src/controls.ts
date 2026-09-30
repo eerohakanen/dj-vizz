@@ -1,4 +1,4 @@
-import { cycleMirror, cyclePsy, nudgeGain, openOverlay, setControlsHidden, setHideLocked, setPeek, toggleFullscreen, toggleSetting } from './actions';
+import { cycleMirror, cyclePsy, nudgeGain, openOverlay, setControlsHidden, setHideLocked, setPeek, toggleDebug, toggleFullscreen, toggleSetting } from './actions';
 import { audio } from './audio/input';
 import { setPalette } from './color';
 import { triggerDrop } from './events';
@@ -31,6 +31,7 @@ const KEY_ACTIONS: Record<string, (event: KeyboardEvent) => void> = {
   e: () => toggleSetting('trails'),
   a: () => toggleSetting('auto'),
   c: (event: KeyboardEvent) => setPalette(settings.palette + (event.shiftKey ? -1 : 1)),
+  d: toggleDebug,
   f: toggleFullscreen,
   h: () => setHideLocked(!ui.hideLocked),
   l: () => toggleSetting('lasers'),

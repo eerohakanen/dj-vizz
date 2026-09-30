@@ -1,7 +1,12 @@
-import { onBeat, triggerDrop } from '../events';
+import { onBeat, onHat, onKick, onSnare, triggerDrop } from '../events';
 import { clock, fx, settings, signal } from '../state';
+import { detectDrums } from './drums';
 import { audio } from './input';
+import { analyseMusic, tensionPeak } from './musical';
 import { BAND_COUNT, spectrum } from './spectrum';
+import { advanceTempo, beatStrength } from './tempo';
+
+const DROP_COOLDOWN = 8;
 
 const bandStart = new Int16Array(BAND_COUNT);
 const bandEnd = new Int16Array(BAND_COUNT);
@@ -12,7 +17,6 @@ for (let i = 0; i < BAND_COUNT; i++) {
 
 let rawPeak = 0.1;
 let autoGainFactor = 1;
-let previousBass = 0;
 
 function averageBins(frequencies: Uint8Array, from: number, to: number) {
   let sum = 0;
@@ -23,13 +27,17 @@ function averageBins(frequencies: Uint8Array, from: number, to: number) {
 const removeNoiseFloor = (level: number) => Math.max(0, (level - 0.06) * 1.15);
 
 function readInput() {
-  const { analyser, frequencies, waveform } = audio;
-  if (audio.live && analyser) {
+  const { analyser, detector, frequencies, sharpFrequencies, waveform, samples } = audio;
+  if (audio.live && analyser && detector) {
     analyser.getByteFrequencyData(frequencies);
     analyser.getByteTimeDomainData(waveform);
+    detector.getByteFrequencyData(sharpFrequencies);
+    detector.getFloatTimeDomainData(samples);
   } else {
     frequencies.fill(0);
+    sharpFrequencies.fill(0);
     waveform.fill(128);
+    samples.fill(0);
   }
   return frequencies;
 }
@@ -49,6 +57,9 @@ function decayEffects(delta: number) {
   fx.strobeFlash *= Math.pow(0.00005, delta);
   fx.invert *= Math.pow(0.0001, delta);
   fx.glitchAmount *= Math.pow(0.01, delta);
+  fx.kick *= Math.pow(0.004, delta);
+  fx.snare *= Math.pow(0.002, delta);
+  fx.hat *= Math.pow(0.0005, delta);
 }
 
 function fillSpectrum(frequencies: Uint8Array, gain: number) {
@@ -84,8 +95,6 @@ export function analyse() {
   signal.bass = Math.min(1.2, bass * gate);
   signal.mid = Math.min(1.2, mid * gate);
   signal.high = Math.min(1.2, high * gate);
-  const flux = signal.bass - previousBass;
-  previousBass = signal.bass;
   signal.bassAverage = signal.bassAverage * 0.94 + signal.bass * 0.06;
   signal.punchBass = Math.min(1.8, (signal.bass + Math.max(0, signal.bass - signal.bassAverage) * 2.5) * react);
   signal.punchMid = Math.min(1.8, signal.mid * react);
@@ -97,14 +106,20 @@ export function analyse() {
   const inBreakdown = signal.energy < 0.4 * signal.energyPeak && signal.energyPeak > 0.15;
   signal.breakdown = inBreakdown ? signal.breakdown + delta : Math.max(0, signal.breakdown - delta * 2);
 
-  const isBeat = signal.bass > signal.bassAverage * 1.2 + 0.06 && flux > 0.012 && time - signal.lastBeat > 0.2 && gate > 0.3;
-  if (isBeat) {
-    fx.beat = Math.min(1, 0.55 + (signal.bass - signal.bassAverage) * 2);
+  const hits = detectDrums(time, gate);
+  if (hits.kick) onKick(hits.kick);
+  if (hits.snare) onSnare(hits.snare);
+  if (hits.hat) onHat(hits.hat);
+  analyseMusic(time, delta, hits.snareTimes.length / 2);
+
+  if (advanceTempo(time, delta, hits.kick, hits.snare) && gate > 0.3) {
+    fx.beat = Math.min(1, beatStrength(time));
     signal.lastBeat = time;
     onBeat();
   }
-  const surge = signal.bass > signal.bassAverage * 2.2 && signal.energy > signal.energySlow * 1.7 && signal.energy > 0.35;
-  if (time - signal.lastDrop > 3 && signal.bass > 0.5 && (signal.breakdown > 0.7 || surge)) triggerDrop();
+  const released = tensionPeak() > 0.45 && signal.energy > signal.energySlow * 1.2;
+  const returning = hits.kick > 0.5 && signal.bass > 0.5 && (released || signal.breakdown > 0.7);
+  if (time - signal.lastDrop > DROP_COOLDOWN && returning) triggerDrop();
 
   fillSpectrum(frequencies, gain);
 }

@@ -56,6 +56,11 @@ export function setHideLocked(locked: boolean) {
   notify();
 }
 
+export function toggleDebug() {
+  ui.debug = !ui.debug;
+  notify();
+}
+
 export function setPeek(peek: boolean) {
   if (ui.peek === peek) return;
   ui.peek = peek;
