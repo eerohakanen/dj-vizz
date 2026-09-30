@@ -1,3 +1,4 @@
+import { effectEnabled } from '../motion';
 import { setPalette } from '../color';
 import { DEFAULT_CHANGE_ON, type ChangeOn } from './change';
 import { setMode } from '../mode';
@@ -191,7 +192,7 @@ export function snapshot(name: string): Preset {
     palette: settings.palette,
     mirror: settings.mirror,
     psy: settings.psy,
-    effects: effectFlags((key) => settings[key]),
+    effects: effectFlags(effectEnabled),
     tuning: lookTuning(settings),
   };
 }
