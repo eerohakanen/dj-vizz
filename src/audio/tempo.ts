@@ -9,7 +9,7 @@ const LEAD = 0.04;
 const PHASE_PULL = 0.25;
 const PEAK_WIDTH = 3;
 const MIN_FREE_BEAT_GAP = 0.25;
-const BEATS_PER_BAR = 4;
+export const BEATS_PER_BAR = 4;
 const BEATS_PER_PHRASE = 32;
 
 const histogram = new Float32Array(HISTOGRAM_SIZE);

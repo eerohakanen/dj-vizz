@@ -449,7 +449,7 @@ function moveCamera(stage: DeepSpaceStage) {
   advanceSway();
   camera.position.set(sway(0.31, 2) * 4 + jitter(), sway(0.23, 1, Math.PI / 2) * 3 + jitter(), 0);
   camera.rotation.set(
-    pitch + sway(0.17, 3) * 0.05,
+    pitch + sway(0.17, 2) * 0.05,
     yaw + sway(0.13, 2, 1) * 0.06,
     bank + roll + fx.spin * 0.15 + sway(0.09, 1) * 0.2,
   );

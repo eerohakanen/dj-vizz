@@ -1,3 +1,4 @@
+import { BEATS_PER_BAR } from '../audio/tempo';
 import { output, transitionCtx, transitionFrame as frame } from '../canvas';
 import { color } from '../color';
 import { clamp, smoothstep, TAU } from '../math';
@@ -6,7 +7,6 @@ import { clock, signal, view } from '../state';
 const DEFAULT_DURATION = 1.1;
 const MIN_DURATION = 0.6;
 const MAX_DURATION = 2.4;
-const BEATS_PER_BAR = 4;
 const STYLE_COUNT = 4;
 const STRIPS = 24;
 
