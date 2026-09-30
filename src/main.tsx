@@ -8,6 +8,7 @@ import { bindControls } from './controls';
 import { advanceTimedPlaylist } from './presets/playlist';
 import { approach } from './math';
 import { presentFrame, renderScene } from './render';
+import { restoreSession, saveSession } from './session';
 import { clock, fx, settings } from './state';
 import { ui } from './store';
 import { PSY_NAMES } from './ui';
@@ -47,6 +48,8 @@ function frame(timestamp: number) {
   requestAnimationFrame(frame);
 }
 
+restoreSession();
+addEventListener('pagehide', saveSession);
 addEventListener('resize', () => {
   resize();
   if (ui.paused) presentFrame();

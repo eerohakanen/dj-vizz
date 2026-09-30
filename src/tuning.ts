@@ -12,8 +12,11 @@ export interface TuningControl {
   description: string;
 }
 
+export type TuningGroup = 'calibration' | 'look';
+
 export interface TuningSection {
   title: string;
+  group: TuningGroup;
   description: string;
   controls: TuningControl[];
 }
@@ -32,9 +35,10 @@ export const GAIN_CONTROL: TuningControl = {
     'How loud the music sounds to the visualizer. Raise it if the visuals barely move, lower it if everything looks maxed out. Auto level adjusts this for you.',
 };
 
-export const TUNING_SECTIONS: TuningSection[] = [
+export const TUNING_SECTIONS = [
   {
     title: 'Input',
+    group: 'calibration',
     description: 'What the visualizer hears.',
     controls: [
       GAIN_CONTROL,
@@ -52,6 +56,7 @@ export const TUNING_SECTIONS: TuningSection[] = [
   },
   {
     title: 'Detection',
+    group: 'calibration',
     description: 'What counts as a hit or a drop.',
     controls: [
       {
@@ -78,6 +83,7 @@ export const TUNING_SECTIONS: TuningSection[] = [
   },
   {
     title: 'Response',
+    group: 'look',
     description: 'How strongly the visuals react to what is heard.',
     controls: [
       {
@@ -145,6 +151,21 @@ export const TUNING_SECTIONS: TuningSection[] = [
       },
     ],
   },
-];
+] satisfies TuningSection[];
 
-export const TUNING_CONTROLS = TUNING_SECTIONS.flatMap((section) => section.controls);
+type SectionIn<G extends TuningGroup> = Extract<(typeof TUNING_SECTIONS)[number], { group: G }>;
+
+export type LookTuningKey = SectionIn<'look'>['controls'][number]['key'];
+export type CalibrationTuningKey = Exclude<TuningKey, LookTuningKey>;
+export type CalibrationKey = CalibrationTuningKey | 'autoGain';
+
+interface GroupControl<K extends TuningKey> extends TuningControl {
+  key: K;
+}
+
+const controlsIn = <K extends TuningKey>(group: TuningGroup) =>
+  TUNING_SECTIONS.filter((section) => section.group === group).flatMap((section) => section.controls) as GroupControl<K>[];
+
+export const TUNING_CONTROLS: TuningControl[] = TUNING_SECTIONS.flatMap((section) => section.controls);
+export const LOOK_CONTROLS = controlsIn<LookTuningKey>('look');
+export const CALIBRATION_CONTROLS = controlsIn<CalibrationTuningKey>('calibration');

@@ -13,7 +13,7 @@ const DISPLAY_CAPTURE = {
   monitorTypeSurfaces: 'include',
 };
 
-type AudioSourceKind = 'window' | 'mic';
+export type AudioSourceKind = 'window' | 'mic';
 
 export const audio = {
   analyser: null as AnalyserNode | null,

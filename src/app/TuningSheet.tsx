@@ -12,6 +12,7 @@ import { showWarning } from '@/dom';
 import { settings, signal } from '@/state';
 import { ui, useEngine } from '@/store';
 import { GAIN_CONTROL, TUNING_SECTIONS, type TuningControl } from '@/tuning';
+import { TUNING_GROUP_NOTES } from './labels';
 
 function useLiveValue(read: () => number, active: boolean) {
   const [value, setValue] = useState(read);
@@ -138,7 +139,7 @@ export function TuningSheet() {
       <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md">
         <SheetHeader>
           <SheetTitle>Tune</SheetTitle>
-          <SheetDescription>Adjust what the visualizer hears and how strongly it reacts. Saved with presets.</SheetDescription>
+          <SheetDescription>Adjust what the visualizer hears and how strongly it reacts.</SheetDescription>
         </SheetHeader>
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 pb-4">
           {TUNING_SECTIONS.map((section, index) => (
@@ -146,7 +147,9 @@ export function TuningSheet() {
               {index > 0 && <Separator />}
               <div>
                 <h3 className="text-sm font-semibold">{section.title}</h3>
-                <p className="text-xs text-muted-foreground">{section.description}</p>
+                <p className="text-xs text-muted-foreground">
+                  {section.description} {TUNING_GROUP_NOTES[section.group]}
+                </p>
               </div>
               {index === 0 && <SourcePicker />}
               {section.controls.map((control) =>

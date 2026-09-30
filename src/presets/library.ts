@@ -1,35 +1,38 @@
 import { setPalette } from '../color';
 import { setMode } from '../mode';
+import { isNumber, isRecord } from '../lib/utils';
 import { clamp, wrap } from '../math';
 import { MODES } from '../modes/index';
 import { PALETTES } from '../palettes';
 import { settings, TUNING_DEFAULTS } from '../state';
 import { notify } from '../store';
-import { TUNING_CONTROLS, type TuningKey } from '../tuning';
+import { LOOK_CONTROLS, type LookTuningKey } from '../tuning';
 import { MIRROR_NAMES, PSY_NAMES } from '../ui';
 
-const STORAGE_KEY = 'djviz.presets.v2';
-const LEGACY_STORAGE_KEY = 'djviz.presets.v1';
-const LIBRARY_VERSION = 2;
+const STORAGE_KEY = 'djviz.presets.v3';
+const LEGACY_STORAGE_KEYS = ['djviz.presets.v2', 'djviz.presets.v1'];
+const LIBRARY_VERSION = 3;
+const PALETTE_SHIFT_VERSION = 2;
 export const NAME_LIMIT = 40;
+
+export interface PresetEffects {
+  trails: boolean;
+  lasers: boolean;
+  glitch: boolean;
+  strobe: boolean;
+}
+
+export type LookTuning = Partial<Record<LookTuningKey, number>>;
 
 export interface Preset {
   name: string;
   mode: number;
-  pal: number;
+  palette: number;
+  mirror: number;
   psy: number;
-  kal: number;
-  fb: boolean;
-  las: boolean;
-  gl: boolean;
-  stb: boolean;
-  gain: number;
-  agc: boolean;
-  react: number;
-  tuning?: Partial<Record<TuningKey, number>>;
+  effects: PresetEffects;
+  tuning: LookTuning;
 }
-
-const PRESET_TUNING_KEYS = TUNING_CONTROLS.filter(({ key }) => key !== 'gain' && key !== 'reactivity');
 
 export interface Folder {
   name: string;
@@ -42,20 +45,29 @@ export interface Library {
   folders: Folder[];
 }
 
-export const createPreset = (name: string, mode: number, palette: number, overrides?: Partial<Preset>): Preset => ({
+const EFFECT_KEYS = ['trails', 'lasers', 'glitch', 'strobe'] as const;
+
+const LEGACY_EFFECT_KEYS: Record<keyof PresetEffects, string> = { trails: 'fb', lasers: 'las', glitch: 'gl', strobe: 'stb' };
+
+const DEFAULT_EFFECTS: PresetEffects = { trails: true, lasers: false, glitch: false, strobe: false };
+
+const lookTuning = (source: Partial<Record<LookTuningKey, number>>): LookTuning =>
+  Object.fromEntries(LOOK_CONTROLS.map(({ key }) => [key, source[key]]));
+
+export const createPreset = (
+  name: string,
+  mode: number,
+  palette: number,
+  overrides?: Partial<Omit<Preset, 'effects'>> & { effects?: Partial<PresetEffects> },
+): Preset => ({
   name,
   mode,
-  pal: palette,
+  palette,
+  mirror: 0,
   psy: 0,
-  kal: 0,
-  fb: true,
-  las: false,
-  gl: false,
-  stb: false,
-  gain: 27,
-  agc: true,
-  react: 0.6,
+  tuning: lookTuning(TUNING_DEFAULTS),
   ...overrides,
+  effects: { ...DEFAULT_EFFECTS, ...overrides?.effects },
 });
 
 const starterLibrary = (): Library => ({
@@ -67,10 +79,10 @@ const starterLibrary = (): Library => ({
       presets: [
         createPreset('Warp · Fire', 6, 5),
         createPreset('Hypno vortex', 9, 7, { psy: 1 }),
-        createPreset('Kaleido galaxy', 4, 1, { kal: 3 }),
-        createPreset('Laser tunnel', 2, 11, { las: true }),
+        createPreset('Kaleido galaxy', 4, 1, { mirror: 3 }),
+        createPreset('Laser tunnel', 2, 11, { effects: { lasers: true } }),
         createPreset('Liquid bars', 0, 2, { psy: 2 }),
-        createPreset('Rainbow hex', 8, 0, { psy: 3, gl: true }),
+        createPreset('Rainbow hex', 8, 0, { psy: 3, effects: { glitch: true } }),
       ],
     },
   ],
@@ -78,31 +90,71 @@ const starterLibrary = (): Library => ({
 
 const REMOVED_PALETTE = 1;
 
-function migrateLegacyPalettes(data: Library) {
-  if (data.version === LIBRARY_VERSION) return data;
-  for (const folder of data.folders) {
-    for (const preset of folder?.presets ?? []) {
-      if (preset && typeof preset.pal === 'number' && preset.pal > REMOVED_PALETTE) preset.pal--;
-    }
-  }
-  data.version = LIBRARY_VERSION;
-  return data;
+const numberOr = (value: unknown, fallback: number) => (isNumber(value) ? value : fallback);
+
+function migratePreset(raw: Record<string, unknown>, version: number): Preset {
+  const legacy = version < LIBRARY_VERSION;
+  let palette = numberOr(legacy ? raw.pal : raw.palette, 1);
+  if (version < PALETTE_SHIFT_VERSION && palette > REMOVED_PALETTE) palette--;
+  const effectSource = legacy ? raw : isRecord(raw.effects) ? raw.effects : {};
+  const tuningSource: Record<string, unknown> = isRecord(raw.tuning) ? { ...raw.tuning } : {};
+  if (legacy && isNumber(raw.react)) tuningSource.reactivity = raw.react;
+  const effect = (key: keyof PresetEffects) => {
+    const value = effectSource[legacy ? LEGACY_EFFECT_KEYS[key] : key];
+    return typeof value === 'boolean' ? value : DEFAULT_EFFECTS[key];
+  };
+  return {
+    name: String(raw.name || 'Preset').slice(0, NAME_LIMIT),
+    mode: numberOr(raw.mode, 0),
+    palette,
+    mirror: numberOr(legacy ? raw.kal : raw.mirror, 0),
+    psy: numberOr(raw.psy, 0),
+    effects: { trails: effect('trails'), lasers: effect('lasers'), glitch: effect('glitch'), strobe: effect('strobe') },
+    tuning: Object.fromEntries(
+      LOOK_CONTROLS.flatMap(({ key }) => (isNumber(tuningSource[key]) ? [[key, tuningSource[key]]] : [])),
+    ),
+  };
 }
 
-function readStored(key: string): Library | null {
+export const readPreset = (raw: Record<string, unknown>) => migratePreset(raw, LIBRARY_VERSION);
+
+function migrateFolders(data: Record<string, unknown>): Folder[] {
+  if (!Array.isArray(data.folders)) throw new Error('Not a preset library');
+  const version = numberOr(data.version, 1);
+  return data.folders
+    .filter((folder): folder is { name?: unknown; presets: unknown[] } => isRecord(folder) && Array.isArray(folder.presets))
+    .map((folder) => ({
+      name: String(folder.name || 'Imported').slice(0, NAME_LIMIT),
+      presets: folder.presets.filter(isRecord).map((preset) => migratePreset(preset, version)),
+    }));
+}
+
+export function migrateLibrary(data: unknown): Library | null {
+  if (!isRecord(data)) return null;
   try {
-    const stored = JSON.parse(localStorage.getItem(key) ?? 'null');
-    return stored && Array.isArray(stored.folders) && stored.folders.length ? stored : null;
+    const folders = migrateFolders(data);
+    if (!folders.length) return null;
+    const cur = clamp(numberOr(data.cur, 0) | 0, 0, folders.length - 1);
+    return { version: LIBRARY_VERSION, cur, folders };
+  } catch {
+    return null;
+  }
+}
+
+function readStored(key: string) {
+  try {
+    return migrateLibrary(JSON.parse(localStorage.getItem(key) ?? 'null'));
   } catch {
     return null;
   }
 }
 
 function loadLibrary() {
-  const stored = readStored(STORAGE_KEY) ?? readStored(LEGACY_STORAGE_KEY);
-  const loaded = stored ? migrateLegacyPalettes(stored) : starterLibrary();
-  loaded.cur = Math.min(Math.max(0, loaded.cur | 0), loaded.folders.length - 1);
-  return loaded;
+  for (const key of [STORAGE_KEY, ...LEGACY_STORAGE_KEYS]) {
+    const stored = readStored(key);
+    if (stored) return stored;
+  }
+  return starterLibrary();
 }
 
 export const library = loadLibrary();
@@ -130,60 +182,44 @@ export function snapshot(name: string): Preset {
   return {
     name,
     mode: settings.mode,
-    pal: settings.palette,
+    palette: settings.palette,
+    mirror: settings.mirror,
     psy: settings.psy,
-    kal: settings.mirror,
-    fb: settings.trails,
-    las: settings.lasers,
-    gl: settings.glitch,
-    stb: settings.strobe,
-    gain: settings.gain,
-    agc: settings.autoGain,
-    react: settings.reactivity,
-    tuning: Object.fromEntries(PRESET_TUNING_KEYS.map(({ key }) => [key, settings[key]])),
+    effects: { trails: settings.trails, lasers: settings.lasers, glitch: settings.glitch, strobe: settings.strobe },
+    tuning: lookTuning(settings),
   };
 }
 
-const isNumber = (value: unknown): value is number => typeof value === 'number' && isFinite(value);
+export function resolveLook(preset: Preset) {
+  return {
+    mode: wrap(numberOr(preset.mode, settings.mode), MODES.length),
+    palette: wrap(numberOr(preset.palette, settings.palette), PALETTES.length),
+    psy: wrap(numberOr(preset.psy, 0), PSY_NAMES.length),
+    mirror: wrap(numberOr(preset.mirror, 0), MIRROR_NAMES.length),
+    ...Object.fromEntries(EFFECT_KEYS.map((key) => [key, !!preset.effects?.[key]])),
+    ...Object.fromEntries(
+      LOOK_CONTROLS.map(({ key, min, max }) => {
+        const value = preset.tuning?.[key];
+        return [key, isNumber(value) ? clamp(value, min, max) : TUNING_DEFAULTS[key]];
+      }),
+    ),
+  } as Pick<typeof settings, 'mode' | 'palette' | 'psy' | 'mirror' | keyof PresetEffects | LookTuningKey>;
+}
 
-export function applyPreset(preset: Partial<Preset> | undefined) {
+export function applyPreset(preset: Preset | undefined) {
   if (!preset) return;
-  setMode(isNumber(preset.mode) ? preset.mode : settings.mode);
-  if (isNumber(preset.pal) && preset.pal !== settings.palette) setPalette(preset.pal, true);
-  settings.psy = isNumber(preset.psy) ? wrap(preset.psy, PSY_NAMES.length) : 0;
-  settings.mirror = isNumber(preset.kal) ? wrap(preset.kal, MIRROR_NAMES.length) : 0;
-  settings.trails = !!preset.fb;
-  settings.lasers = !!preset.las;
-  settings.glitch = !!preset.gl;
-  settings.strobe = !!preset.stb;
-  settings.autoGain = !!preset.agc;
-  if (isNumber(preset.gain)) settings.gain = clamp(preset.gain, 0, 100);
-  if (isNumber(preset.react)) settings.reactivity = clamp(preset.react, 0.5, 3);
-  for (const { key, min, max } of PRESET_TUNING_KEYS) {
-    const value = preset.tuning?.[key];
-    settings[key] = isNumber(value) ? clamp(value, min, max) : TUNING_DEFAULTS[key];
-  }
+  const { mode, palette, ...look } = resolveLook(preset);
+  setMode(mode);
+  if (palette !== settings.palette) setPalette(palette, true);
+  Object.assign(settings, look);
   notify();
 }
 
-function importPreset(preset: Partial<Preset>): Preset {
-  const name = String(preset.name || 'Preset').slice(0, NAME_LIMIT);
-  return { ...createPreset(name, 0, 1), ...preset, name };
-}
-
-export function importFolders(data: Library) {
-  if (!Array.isArray(data.folders)) throw new Error('Not a preset library');
-  migrateLegacyPalettes(data);
-  let count = 0;
-  for (const folder of data.folders) {
-    if (!folder || !Array.isArray(folder.presets)) continue;
-    library.folders.push({
-      name: String(folder.name || 'Imported').slice(0, NAME_LIMIT),
-      presets: folder.presets.filter((preset) => preset && typeof preset === 'object').map(importPreset),
-    });
-    count++;
-  }
-  return count;
+export function importFolders(data: unknown) {
+  if (!isRecord(data)) throw new Error('Not a preset library');
+  const folders = migrateFolders(data);
+  library.folders.push(...folders);
+  return folders.length;
 }
 
 const cleanName = (name: string | null | undefined, fallback: string) => (String(name ?? '').trim() || fallback).slice(0, NAME_LIMIT);
@@ -261,8 +297,8 @@ export async function importLibraryFile(file: File) {
 }
 
 export function describePreset(preset: Preset) {
-  const parts = [MODES[preset.mode]?.name || '?', PALETTES[preset.pal]?.name || '?'];
+  const parts = [MODES[preset.mode]?.name || '?', PALETTES[preset.palette]?.name || '?'];
   if (preset.psy) parts.push(PSY_NAMES[preset.psy]);
-  if (preset.kal) parts.push(MIRROR_NAMES[preset.kal]);
+  if (preset.mirror) parts.push(MIRROR_NAMES[preset.mirror]);
   return parts.join(' · ');
 }
