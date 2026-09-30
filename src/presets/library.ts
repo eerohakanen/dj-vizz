@@ -1,6 +1,7 @@
 import { effectEnabled } from '../motion';
 import { setPalette } from '../color';
-import { DEFAULT_CHANGE_ON, type ChangeOn } from './change';
+import { DEFAULT_CHANGE_ON, findChangeOption, type ChangeOn } from './change';
+import { DEFAULT_TRANSITION, findTransition, type TransitionKind } from '../effects/transition';
 import { setMode } from '../mode';
 import { isNumber, isRecord } from '../lib/utils';
 import { clamp, wrap } from '../math';
@@ -11,9 +12,10 @@ import { notify } from '../store';
 import { LOOK_CONTROLS, type LookTuningKey } from '../tuning';
 import { MIRROR_NAMES, PSY_NAMES } from '../effects/options';
 
-const STORAGE_KEY = 'djviz.presets.v3';
-const LEGACY_STORAGE_KEYS = ['djviz.presets.v2', 'djviz.presets.v1'];
-const LIBRARY_VERSION = 3;
+const STORAGE_KEY = 'djviz.presets.v4';
+const LEGACY_STORAGE_KEYS = ['djviz.presets.v3', 'djviz.presets.v2', 'djviz.presets.v1'];
+const LIBRARY_VERSION = 4;
+const SCENE_SHAPE_VERSION = 3;
 const PALETTE_SHIFT_VERSION = 2;
 export const NAME_LIMIT = 40;
 
@@ -39,6 +41,9 @@ export interface Preset {
 export interface Folder {
   name: string;
   presets: Preset[];
+  transition: TransitionKind;
+  changeOn: ChangeOn;
+  shuffle: boolean;
 }
 
 interface Library {
@@ -82,7 +87,10 @@ const starterLibrary = (): Library => ({
   cur: 0,
   folders: [
     {
-      name: 'Starter',
+      name: 'Default',
+      transition: DEFAULT_TRANSITION,
+      changeOn: DEFAULT_CHANGE_ON,
+      shuffle: false,
       presets: [
         createPreset('Warp · Fire', 6, 5),
         createPreset('Hypno vortex', 9, 7, { psy: 1 }),
@@ -100,7 +108,7 @@ const REMOVED_PALETTE = 1;
 const numberOr = (value: unknown, fallback: number) => (isNumber(value) ? value : fallback);
 
 function migratePreset(raw: Record<string, unknown>, version: number): Preset {
-  const legacy = version < LIBRARY_VERSION;
+  const legacy = version < SCENE_SHAPE_VERSION;
   let palette = numberOr(legacy ? raw.pal : raw.palette, 1);
   if (version < PALETTE_SHIFT_VERSION && palette > REMOVED_PALETTE) palette--;
   const effectSource = legacy ? raw : isRecord(raw.effects) ? raw.effects : {};
@@ -129,10 +137,13 @@ function migrateFolders(data: Record<string, unknown>): Folder[] {
   if (!Array.isArray(data.folders)) throw new Error('Not a preset library');
   const version = numberOr(data.version, 1);
   return data.folders
-    .filter((folder): folder is { name?: unknown; presets: unknown[] } => isRecord(folder) && Array.isArray(folder.presets))
+    .filter((folder): folder is Record<string, unknown> & { presets: unknown[] } => isRecord(folder) && Array.isArray(folder.presets))
     .map((folder) => ({
       name: String(folder.name || 'Imported').slice(0, NAME_LIMIT),
       presets: folder.presets.filter(isRecord).map((preset) => migratePreset(preset, version)),
+      transition: findTransition(folder.transition)?.value ?? DEFAULT_TRANSITION,
+      changeOn: findChangeOption(folder.changeOn)?.value ?? DEFAULT_CHANGE_ON,
+      shuffle: folder.shuffle === true,
     }));
 }
 
@@ -140,8 +151,7 @@ export function migrateLibrary(data: unknown): Library | null {
   if (!isRecord(data)) return null;
   try {
     const folders = migrateFolders(data);
-    if (!folders.length) return null;
-    const cur = clamp(numberOr(data.cur, 0) | 0, 0, folders.length - 1);
+    const cur = clamp(numberOr(data.cur, 0) | 0, 0, Math.max(0, folders.length - 1));
     return { version: LIBRARY_VERSION, cur, folders };
   } catch {
     return null;
@@ -168,22 +178,20 @@ export const library = loadLibrary();
 
 export const playlist = {
   playing: false,
-  changeOn: DEFAULT_CHANGE_ON as ChangeOn,
-  shuffle: false,
   index: -1,
   selected: -1,
   beats: 0,
   startedAt: 0,
 };
 
-function saveLibrary() {
+export function saveLibrary() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(library));
   } catch {}
   notify();
 }
 
-export const currentFolder = () => library.folders[library.cur];
+export const currentFolder = (): Folder | undefined => library.folders[library.cur];
 
 export function snapshot(name: string): Preset {
   return {
@@ -213,10 +221,10 @@ export function resolveLook(preset: Preset) {
   } as Pick<typeof settings, 'mode' | 'palette' | 'psy' | 'mirror' | keyof PresetEffects | LookTuningKey>;
 }
 
-export function applyPreset(preset: Preset | undefined) {
+export function applyPreset(preset: Preset | undefined, transition?: TransitionKind) {
   if (!preset) return;
   const { mode, palette, ...look } = resolveLook(preset);
-  setMode(mode);
+  setMode(mode, transition);
   if (palette !== settings.palette) setPalette(palette, true);
   Object.assign(settings, look);
   notify();
@@ -232,32 +240,43 @@ export function importFolders(data: unknown) {
 const cleanName = (name: string | null | undefined, fallback: string) => (String(name ?? '').trim() || fallback).slice(0, NAME_LIMIT);
 
 export function selectFolder(index: number) {
-  library.cur = Math.min(Math.max(0, index), library.folders.length - 1);
+  library.cur = clamp(index, 0, Math.max(0, library.folders.length - 1));
   playlist.selected = playlist.index = -1;
   saveLibrary();
 }
 
 export function createFolder(name?: string) {
-  library.folders.push({ name: cleanName(name, `Folder ${library.folders.length + 1}`), presets: [] });
-  selectFolder(library.folders.length - 1);
+  library.folders.push({
+    name: cleanName(name, `Preset ${library.folders.length + 1}`),
+    presets: [],
+    transition: DEFAULT_TRANSITION,
+    changeOn: DEFAULT_CHANGE_ON,
+    shuffle: false,
+  });
+  const index = library.folders.length - 1;
+  selectFolder(index);
+  return index;
 }
 
-export function renameFolder(name?: string) {
-  currentFolder().name = cleanName(name, currentFolder().name);
+export function renameFolder(name?: string, index = library.cur) {
+  const folder = library.folders[index];
+  if (!folder) return;
+  folder.name = cleanName(name, folder.name);
   saveLibrary();
 }
 
-export function deleteFolder() {
-  library.folders.splice(library.cur, 1);
-  if (!library.folders.length) library.folders.push({ name: 'My set', presets: [] });
+export function deleteFolder(index = library.cur) {
+  const [removed] = library.folders.splice(index, 1);
+  if (!removed) return undefined;
   playlist.playing = false;
-  selectFolder(0);
+  selectFolder(index < library.cur ? library.cur - 1 : library.cur);
+  return removed;
 }
 
 export const defaultPresetName = () => `${MODES[settings.mode].name} · ${PALETTES[settings.palette].name}`;
 
 export function savePreset(name?: string) {
-  const folder = currentFolder();
+  const folder = currentFolder() ?? library.folders[createFolder()];
   const preset = snapshot(cleanName(name, defaultPresetName()));
   folder.presets.push(preset);
   playlist.selected = folder.presets.length - 1;
@@ -265,10 +284,26 @@ export function savePreset(name?: string) {
   return preset;
 }
 
+export function addScene() {
+  savePreset();
+  return playlist.selected;
+}
+
+export function duplicateScene(index: number) {
+  const folder = currentFolder();
+  const source = folder?.presets[index];
+  if (!folder || !source) return -1;
+  const copy = structuredClone({ ...source, name: cleanName(`${source.name} copy`, source.name) });
+  folder.presets.splice(index + 1, 0, copy);
+  playlist.selected = index + 1;
+  saveLibrary();
+  return index + 1;
+}
+
 export function movePreset(index: number, step: number) {
-  const { presets } = currentFolder();
+  const presets = currentFolder()?.presets;
   const target = index + step;
-  if (target < 0 || target >= presets.length) return;
+  if (!presets || target < 0 || target >= presets.length) return;
   [presets[index], presets[target]] = [presets[target], presets[index]];
   if (playlist.selected === index) playlist.selected = target;
   else if (playlist.selected === target) playlist.selected = index;
@@ -276,13 +311,14 @@ export function movePreset(index: number, step: number) {
 }
 
 export function overwritePreset(index: number) {
-  const { presets } = currentFolder();
+  const presets = currentFolder()?.presets;
+  if (!presets?.[index]) return;
   presets[index] = snapshot(presets[index].name);
   saveLibrary();
 }
 
 export function deletePreset(index: number) {
-  const [removed] = currentFolder().presets.splice(index, 1);
+  const [removed] = currentFolder()?.presets.splice(index, 1) ?? [];
   if (playlist.selected === index) playlist.selected = -1;
   else if (playlist.selected > index) playlist.selected--;
   playlist.index = playlist.selected;

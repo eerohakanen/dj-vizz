@@ -1,7 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { settings, TUNING_DEFAULTS } from '../state';
-import { applyPreset, createPreset, deletePreset, importFolders, library, playlist, migrateLibrary, restorePreset, snapshot } from './library';
+import {
+  addScene,
+  applyPreset,
+  createFolder,
+  createPreset,
+  currentFolder,
+  deleteFolder,
+  deletePreset,
+  duplicateScene,
+  importFolders,
+  library,
+  migrateLibrary,
+  NAME_LIMIT,
+  playlist,
+  type Preset,
+  renameFolder,
+  restorePreset,
+  snapshot,
+} from './library';
 
+vi.mock('../canvas', () => ({ output: {}, transitionCtx: {}, transitionFrame: {} }));
 vi.mock('../modes/index', () => ({ MODES: Array.from({ length: 12 }, (_, index) => ({ name: `Mode ${index}` })) }));
 vi.mock('../mode', async () => {
   const { settings } = await import('../state');
@@ -41,7 +60,7 @@ beforeEach(() => {
 describe('migrateLibrary', () => {
   it('maps v2 short keys into the v3 shape and drops calibration', () => {
     const migrated = migrateLibrary(legacyLibrary(2));
-    expect(migrated?.version).toBe(3);
+    expect(migrated?.version).toBe(4);
     expect(migrated?.folders[0].presets[0]).toEqual({
       name: 'Old look',
       mode: 3,
@@ -57,15 +76,30 @@ describe('migrateLibrary', () => {
     expect(migrateLibrary(legacyLibrary(1))?.folders[0].presets[0].palette).toBe(3);
   });
 
-  it('keeps v3 presets as they are', () => {
+  it('keeps v3 presets as they are and gives folders playback defaults', () => {
     const preset = createPreset('Kept', 2, 5, { mirror: 1, effects: { glitch: true } });
     const migrated = migrateLibrary({ version: 3, cur: 0, folders: [{ name: 'Mine', presets: [preset] }] });
     expect(migrated?.folders[0].presets[0]).toEqual(preset);
+    expect(migrated?.folders[0]).toMatchObject({ transition: 'random', changeOn: 'b32', shuffle: false });
   });
 
-  it('rejects data without folders', () => {
+  it('keeps valid folder playback fields and replaces invalid ones', () => {
+    const migrated = migrateLibrary({
+      version: 4,
+      cur: 0,
+      folders: [
+        { name: 'Good', presets: [], transition: 'cut', changeOn: 's15', shuffle: true },
+        { name: 'Bad', presets: [], transition: 'wipe', changeOn: 'b7', shuffle: 'yes' },
+      ],
+    });
+    expect(migrated?.folders[0]).toMatchObject({ transition: 'cut', changeOn: 's15', shuffle: true });
+    expect(migrated?.folders[1]).toMatchObject({ transition: 'random', changeOn: 'b32', shuffle: false });
+  });
+
+  it('accepts an empty library but rejects non-arrays', () => {
+    expect(migrateLibrary({ version: 4, cur: 3, folders: [] })).toEqual({ version: 4, cur: 0, folders: [] });
     expect(migrateLibrary({ version: 2 })).toBeNull();
-    expect(migrateLibrary({ version: 2, folders: [] })).toBeNull();
+    expect(migrateLibrary({ version: 2, folders: 'x' })).toBeNull();
     expect(migrateLibrary('nope')).toBeNull();
   });
 });
@@ -147,7 +181,7 @@ describe('applyPreset', () => {
 });
 
 describe('stored library', () => {
-  it('loads a v2 library from the old key when v3 is missing', async () => {
+  it('loads a v2 library from the old key when v4 is missing', async () => {
     const stored = new Map([['djviz.presets.v2', JSON.stringify(legacyLibrary(2))]]);
     vi.stubGlobal('localStorage', { getItem: (key: string) => stored.get(key) ?? null, setItem: vi.fn() });
     vi.resetModules();
@@ -158,13 +192,120 @@ describe('stored library', () => {
   });
 });
 
+describe('stored v3 and v4 libraries', () => {
+  const load = async (entries: [string, unknown][]) => {
+    const stored = new Map(entries.map(([key, value]) => [key, JSON.stringify(value)]));
+    vi.stubGlobal('localStorage', { getItem: (key: string) => stored.get(key) ?? null, setItem: vi.fn() });
+    vi.resetModules();
+    const fresh = await import('./library');
+    vi.unstubAllGlobals();
+    return fresh;
+  };
+
+  it('loads a v3 library when v4 is missing', async () => {
+    const preset = createPreset('Kept', 2, 5);
+    const fresh = await load([['djviz.presets.v3', { version: 3, cur: 0, folders: [{ name: 'Mine', presets: [preset] }] }]]);
+    expect(fresh.library.folders[0]).toMatchObject({ name: 'Mine', transition: 'random', shuffle: false });
+    expect(fresh.library.folders[0].presets[0]).toEqual(preset);
+  });
+
+  it('keeps a deleted Default deleted after reload', async () => {
+    const fresh = await load([['djviz.presets.v4', { version: 4, cur: 0, folders: [] }]]);
+    expect(fresh.library.folders).toEqual([]);
+    expect(fresh.currentFolder()).toBeUndefined();
+  });
+
+  it('starts with a Default preset when nothing is stored', async () => {
+    const fresh = await load([]);
+    expect(fresh.library.folders.map((folder) => folder.name)).toEqual(['Default']);
+  });
+});
+
+const resetFolders = (presets: Preset[] = []) => {
+  library.cur = 0;
+  library.folders.splice(0, library.folders.length, {
+    name: 'Default',
+    presets,
+    transition: 'random',
+    changeOn: 'b32',
+    shuffle: false,
+  });
+};
+
+describe('folder management', () => {
+  beforeEach(() => {
+    resetFolders();
+    playlist.playing = false;
+  });
+
+  it('creates folders with a default name and returns the index', () => {
+    const index = createFolder();
+    expect(index).toBe(1);
+    expect(library.cur).toBe(1);
+    expect(currentFolder()).toMatchObject({ name: 'Preset 2', transition: 'random', changeOn: 'b32', shuffle: false });
+  });
+
+  it('renames a given folder', () => {
+    createFolder('Two');
+    renameFolder('Renamed', 0);
+    expect(library.folders.map((folder) => folder.name)).toEqual(['Renamed', 'Two']);
+  });
+
+  it('deletes without recreating anything and stops playback', () => {
+    playlist.playing = true;
+    const removed = deleteFolder(0);
+    expect(removed?.name).toBe('Default');
+    expect(library.folders).toEqual([]);
+    expect(library.cur).toBe(0);
+    expect(currentFolder()).toBeUndefined();
+    expect(playlist.playing).toBe(false);
+    expect(deleteFolder()).toBeUndefined();
+  });
+
+  it('keeps the same folder current when an earlier one is deleted', () => {
+    createFolder('Two');
+    createFolder('Three');
+    deleteFolder(0);
+    expect(currentFolder()?.name).toBe('Three');
+  });
+});
+
+describe('scenes', () => {
+  beforeEach(() => resetFolders(['a', 'b'].map((name) => snapshot(name))));
+
+  it('adds a snapshot of the current settings and selects it', () => {
+    settings.mode = 5;
+    const index = addScene();
+    expect(index).toBe(2);
+    expect(playlist.selected).toBe(2);
+    expect(currentFolder()?.presets[2]).toMatchObject({ mode: 5 });
+    expect(currentFolder()?.presets[2].name).toMatch(/^Mode 5 · /);
+  });
+
+  it('duplicates a scene right after the original', () => {
+    const index = duplicateScene(0);
+    const names = currentFolder()!.presets.map((preset) => preset.name);
+    expect(index).toBe(1);
+    expect(names).toEqual(['a', 'a copy', 'b']);
+    expect(playlist.selected).toBe(1);
+    expect(currentFolder()!.presets[1]).not.toBe(currentFolder()!.presets[0]);
+  });
+
+  it('truncates long duplicate names to the limit', () => {
+    currentFolder()!.presets[0].name = 'x'.repeat(NAME_LIMIT);
+    duplicateScene(0);
+    expect(currentFolder()!.presets[1].name).toHaveLength(NAME_LIMIT);
+  });
+
+  it('ignores a missing scene', () => {
+    expect(duplicateScene(9)).toBe(-1);
+  });
+});
+
 describe('restorePreset', () => {
   const names = () => library.folders[library.cur].presets.map((preset) => preset.name);
 
-  beforeEach(() => {
-    library.cur = 0;
-    library.folders[0].presets = ['a', 'b', 'c', 'd'].map((name) => ({ ...snapshot(name) }));
-  });
+  beforeEach(() => resetFolders(['a', 'b', 'c', 'd'].map((name) => snapshot(name))));
 
   it('puts a deleted preset back at its old index', () => {
     const removed = deletePreset(1);

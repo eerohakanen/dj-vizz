@@ -241,8 +241,8 @@ function AudioPopover() {
 }
 
 function PlaylistStatus() {
-  if (!playlist.playing) return null;
   const folder = currentFolder();
+  if (!playlist.playing || !folder) return null;
   return (
     <Hint label="Stop playing folder">
       <Button variant="secondary" size="sm" onClick={togglePlayback}>

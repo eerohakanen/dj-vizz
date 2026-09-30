@@ -1,26 +1,32 @@
 import { showMessage } from '../dom';
 import { clock, settings } from '../state';
 import { notify } from '../store';
-import { changeOption, type ChangeOn } from './change';
-import { applyPreset, currentFolder, playlist, selectFolder } from './library';
+import type { TransitionKind } from '../effects/transition';
+import { changeOption, DEFAULT_CHANGE_ON, type ChangeOn } from './change';
+import { applyPreset, currentFolder, playlist, saveLibrary, selectFolder } from './library';
+
+export const currentChangeOn = () => currentFolder()?.changeOn ?? DEFAULT_CHANGE_ON;
+
+export const currentShuffle = () => currentFolder()?.shuffle ?? false;
 
 export function loadPreset(index: number) {
-  const { presets } = currentFolder();
-  const preset = presets[index];
-  if (!preset) return;
+  const folder = currentFolder();
+  const preset = folder?.presets[index];
+  if (!folder || !preset) return;
+  const { presets } = folder;
   playlist.selected = playlist.index = index;
   playlist.beats = 0;
   playlist.startedAt = clock.time;
-  applyPreset(preset);
+  applyPreset(preset, folder.transition);
   if (!playlist.playing) showMessage(`▶ ${preset.name}  (${index + 1}/${presets.length})`);
   notify();
 }
 
 export function nextPreset() {
-  const count = currentFolder().presets.length;
+  const count = currentFolder()?.presets.length ?? 0;
   if (!count) return;
   let index: number;
-  if (playlist.shuffle && count > 1) {
+  if (currentShuffle() && count > 1) {
     do index = (Math.random() * count) | 0;
     while (index === playlist.index);
   } else {
@@ -29,13 +35,20 @@ export function nextPreset() {
   loadPreset(index);
 }
 
+export function previousPreset() {
+  const count = currentFolder()?.presets.length ?? 0;
+  if (!count) return;
+  loadPreset((Math.max(playlist.index, 0) - 1 + count) % count);
+}
+
 export function togglePlayback() {
+  const folder = currentFolder();
   if (playlist.playing) {
     playlist.playing = false;
-    showMessage(`Stopped playing ${currentFolder().name}`);
+    showMessage(`Stopped playing ${folder?.name ?? 'preset'}`);
   } else {
-    if (!currentFolder().presets.length) {
-      showMessage('This folder is empty. Save a look first.');
+    if (!folder?.presets.length) {
+      showMessage('This preset is empty. Add a scene first.');
       return;
     }
     playlist.playing = true;
@@ -48,7 +61,7 @@ export function togglePlayback() {
 
 export function advanceTimedPlaylist() {
   if (!playlist.playing) return;
-  const { seconds } = changeOption(playlist.changeOn);
+  const { seconds } = changeOption(currentChangeOn());
   if (seconds && clock.time - playlist.startedAt >= seconds) nextPreset();
 }
 
@@ -57,15 +70,26 @@ export function shiftPlaylistClock(gap: number) {
 }
 
 export function setChangeOn(changeOn: ChangeOn) {
-  playlist.changeOn = changeOn;
+  const folder = currentFolder();
+  if (!folder) return;
+  folder.changeOn = changeOn;
   playlist.beats = 0;
   playlist.startedAt = clock.time;
-  notify();
+  saveLibrary();
 }
 
 export function setShuffle(shuffle: boolean) {
-  playlist.shuffle = shuffle;
-  notify();
+  const folder = currentFolder();
+  if (!folder) return;
+  folder.shuffle = shuffle;
+  saveLibrary();
+}
+
+export function setTransition(transition: TransitionKind) {
+  const folder = currentFolder();
+  if (!folder) return;
+  folder.transition = transition;
+  saveLibrary();
 }
 
 export function playFolder(index: number) {

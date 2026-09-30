@@ -11,6 +11,25 @@ const MAX_DURATION = 2.4;
 const STYLE_COUNT = 4;
 const CROSSFADE = STYLE_COUNT;
 const STRIPS = 24;
+const CUT = -1;
+
+export const TRANSITIONS = [
+  { value: 'random', label: 'Random' },
+  { value: 'zoom', label: 'Zoom out' },
+  { value: 'spin', label: 'Spin away' },
+  { value: 'iris', label: 'Iris' },
+  { value: 'strips', label: 'Drop strips' },
+  { value: 'fade', label: 'Crossfade' },
+  { value: 'cut', label: 'Hard cut' },
+] as const;
+
+export type TransitionKind = (typeof TRANSITIONS)[number]['value'];
+
+export const DEFAULT_TRANSITION: TransitionKind = 'random';
+
+export const findTransition = (value: unknown) => TRANSITIONS.find((option) => option.value === value);
+
+const STYLE_INDEX: Record<Exclude<TransitionKind, 'random' | 'cut'>, number> = { zoom: 0, spin: 1, iris: 2, strips: 3, fade: CROSSFADE };
 
 let startedAt = -9;
 let duration = DEFAULT_DURATION;
@@ -19,15 +38,21 @@ let style = 0;
 export const transitionDuration = (bpm: number) =>
   bpm > 0 ? clamp((BEATS_PER_BAR * 60) / bpm, MIN_DURATION, MAX_DURATION) : DEFAULT_DURATION;
 
-export const transitionStyle = (reducedMotion: boolean, random: number) =>
-  reducedMotion ? CROSSFADE : Math.min(STYLE_COUNT - 1, (random * STYLE_COUNT) | 0);
+export function transitionStyle(reducedMotion: boolean, random: number, kind: TransitionKind = DEFAULT_TRANSITION) {
+  if (kind === 'cut') return CUT;
+  if (reducedMotion) return CROSSFADE;
+  if (kind === 'random') return Math.min(STYLE_COUNT - 1, (random * STYLE_COUNT) | 0);
+  return STYLE_INDEX[kind];
+}
 
-export function startTransition() {
+export function startTransition(kind: TransitionKind = DEFAULT_TRANSITION) {
   if (clock.time < 0.5) return;
+  const next = transitionStyle(comfort.reduced, Math.random(), kind);
+  if (next === CUT) return;
   transitionCtx.drawImage(output, 0, 0);
   startedAt = clock.time;
   duration = transitionDuration(signal.bpm);
-  style = transitionStyle(comfort.reduced, Math.random());
+  style = next;
 }
 
 function zoomOut(o: CanvasRenderingContext2D, eased: number) {

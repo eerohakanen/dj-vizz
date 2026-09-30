@@ -5,12 +5,13 @@ import { Switch } from '@/components/ui/switch';
 import type { AudioSourceKind } from '@/audio/sources';
 import { showWarning } from '@/dom';
 import { closeOverlay } from '@/actions';
-import { library, playlist } from '@/presets/library';
-import { setChangeOn, setShuffle } from '@/presets/playlist';
+import { currentFolder, library } from '@/presets/library';
+import { currentChangeOn, currentShuffle, setChangeOn, setShuffle, setTransition } from '@/presets/playlist';
 import { clamp01 } from '@/math';
 import { ui, type Overlay } from '@/store';
 import { cn, pluralize } from '@/lib/utils';
 import { CHANGE_OPTIONS, findChangeOption } from '@/presets/change';
+import { DEFAULT_TRANSITION, findTransition, TRANSITIONS } from '@/effects/transition';
 import { audio } from '@/audio/input';
 import { Button } from '@/components/ui/button';
 import { SOURCES, type SourceOption } from './labels';
@@ -127,7 +128,7 @@ export function FolderSelect({ value, onChange, className, verbose }: FolderSele
 function ChangeOnSelect({ triggerProps }: { triggerProps: ComponentProps<typeof SelectTrigger> }) {
   return (
     <Select
-      value={playlist.changeOn}
+      value={currentChangeOn()}
       onValueChange={(value) => {
         const option = findChangeOption(value);
         if (option) setChangeOn(option.value);
@@ -147,15 +148,40 @@ function ChangeOnSelect({ triggerProps }: { triggerProps: ComponentProps<typeof 
   );
 }
 
+function TransitionSelect({ triggerProps }: { triggerProps: ComponentProps<typeof SelectTrigger> }) {
+  return (
+    <Select
+      value={currentFolder()?.transition ?? DEFAULT_TRANSITION}
+      onValueChange={(value) => {
+        const option = findTransition(value);
+        if (option) setTransition(option.value);
+      }}
+    >
+      <SelectTrigger {...triggerProps}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {TRANSITIONS.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 export function PlaybackOptions({ compact }: { compact?: boolean }) {
   const shuffleId = useId();
-  const shuffle = <Switch id={shuffleId} checked={playlist.shuffle} onCheckedChange={setShuffle} />;
+  const shuffle = <Switch id={shuffleId} checked={currentShuffle()} onCheckedChange={setShuffle} />;
 
   if (compact) {
     return (
       <div className="flex items-center gap-3">
-        <Label className="shrink-0">Change look</Label>
+        <Label className="shrink-0">Change scene</Label>
         <ChangeOnSelect triggerProps={{ size: 'sm', className: 'flex-1' }} />
+        <Label className="shrink-0">Transition</Label>
+        <TransitionSelect triggerProps={{ size: 'sm', className: 'flex-1' }} />
         <Label htmlFor={shuffleId} className="shrink-0">
           Shuffle
         </Label>
@@ -167,8 +193,12 @@ export function PlaybackOptions({ compact }: { compact?: boolean }) {
   return (
     <>
       <div className="space-y-2">
-        <Label>Change look</Label>
+        <Label>Change scene</Label>
         <ChangeOnSelect triggerProps={{ className: 'w-full' }} />
+      </div>
+      <div className="space-y-2">
+        <Label>Transition</Label>
+        <TransitionSelect triggerProps={{ className: 'w-full' }} />
       </div>
       <div className="flex items-center justify-between">
         <Label htmlFor={shuffleId}>Shuffle</Label>

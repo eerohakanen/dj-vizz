@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CALIBRATION_CONTROLS, LOOK_CONTROLS } from './tuning';
 
+vi.mock('./canvas', () => ({ output: {}, transitionCtx: {}, transitionFrame: {} }));
 vi.mock('./modes/index', () => ({ MODES: Array.from({ length: 12 }, (_, index) => ({ name: `Mode ${index}` })) }));
 vi.mock('./mode', () => ({ setMode: vi.fn() }));
 vi.mock('./color', () => ({ setPalette: vi.fn() }));
@@ -41,34 +42,32 @@ describe('session persistence', () => {
     );
     const { restoreSession, lastAudioSource } = await import('./session');
     const { settings } = await import('./state');
-    const { playlist } = await import('./presets/library');
     restoreSession();
     expect(settings).toMatchObject({ autoGain: false, gain: 100, noiseGate: 0.05, beatSensitivity: 1.4, dropSensitivity: 1 });
     expect(settings).toMatchObject({ mode: 5, palette: 3, mirror: 2, psy: 1, lasers: true, trails: true, motion: 1.7, reactivity: 3, auto: true });
-    expect(playlist).toMatchObject({ changeOn: 's30', shuffle: true });
     expect(lastAudioSource()).toBe('mic');
   });
 
-  it('ignores an unknown change option and a bad source', async () => {
+  it('ignores legacy playback keys and a bad source', async () => {
     stored.set('djviz.session.v1', JSON.stringify({ changeOn: 'b7', source: 'radio' }));
     const { restoreSession, lastAudioSource } = await import('./session');
-    const { playlist } = await import('./presets/library');
+    const { currentFolder } = await import('./presets/library');
     restoreSession();
-    expect(playlist.changeOn).toBe('b32');
+    expect(currentFolder()?.changeOn).toBe('b32');
     expect(lastAudioSource()).toBeNull();
   });
 
   it('saves calibration and session under separate keys', async () => {
     const { saveSession } = await import('./session');
     const { settings } = await import('./state');
-    const { playlist } = await import('./presets/library');
     Object.assign(settings, { gain: 33, autoGain: false, mode: 4, reactivity: 2 });
-    playlist.changeOn = 'drop';
     saveSession();
     const calibration = JSON.parse(stored.get('djviz.calibration.v1')!);
     const session = JSON.parse(stored.get('djviz.session.v1')!);
     expect(calibration).toEqual({ autoGain: false, gain: 33, noiseGate: 0.03, beatSensitivity: 1, dropSensitivity: 1 });
-    expect(session).toMatchObject({ look: { mode: 4, tuning: { reactivity: 2 } }, changeOn: 'drop', shuffle: false, source: null });
+    expect(session).toMatchObject({ look: { mode: 4, tuning: { reactivity: 2 } }, source: null });
+    expect(session).not.toHaveProperty('changeOn');
+    expect(session).not.toHaveProperty('shuffle');
     expect(session.look.tuning).not.toHaveProperty('gain');
   });
 

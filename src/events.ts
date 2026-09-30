@@ -8,7 +8,7 @@ import { flashLevel, shakeLevel, strobeActive } from './motion';
 import { PALETTES } from './palettes';
 import { changeOption } from './presets/change';
 import { playlist } from './presets/library';
-import { nextPreset } from './presets/playlist';
+import { currentChangeOn, nextPreset } from './presets/playlist';
 import { clock, fx, settings, signal, view } from './state';
 
 const DOWNBEAT_HUE_BOOST = 1.6;
@@ -42,7 +42,7 @@ export function triggerDrop() {
   burst(300, 4, 28, 1.8);
   if (strobeActive()) fx.invert = flashLevel();
   if (settings.glitch) fx.glitchAmount = 1.2;
-  if (playlist.playing && playlist.changeOn === 'drop') nextPreset();
+  if (playlist.playing && currentChangeOn() === 'drop') nextPreset();
   else if (settings.auto) {
     setMode(randomOtherMode());
     setPalette(dropPalette(), true);
@@ -51,7 +51,7 @@ export function triggerDrop() {
 
 export function onBeat() {
   fx.hue += (12 + fx.beat * 20) * settings.colorSpeed * (signal.downbeat ? DOWNBEAT_HUE_BOOST : 1);
-  const every = changeOption(playlist.changeOn).beats;
+  const every = changeOption(currentChangeOn()).beats;
   if (playlist.playing) {
     playlist.beats++;
     if (every && playlist.beats >= every / 2 && signal.phraseBeat % every === 0) nextPreset();

@@ -148,10 +148,10 @@ function FolderBar({ onRequestName, onRequestDelete, onImport }: FolderBarProps)
             onSelect={() =>
               onRequestName({
                 title: 'Rename folder',
-                description: `Rename "${currentFolder().name}".`,
+                description: `Rename "${currentFolder()?.name}".`,
                 action: 'Rename',
-                initial: currentFolder().name,
-                onSubmit: renameFolder,
+                initial: currentFolder()?.name ?? '',
+                onSubmit: (name) => renameFolder(name),
               })
             }
           >
@@ -185,7 +185,7 @@ function SaveLook() {
     event.preventDefault();
     const preset = savePreset(name);
     setName('');
-    showMessage(`Saved "${preset.name}" to ${currentFolder().name}`);
+    showMessage(`Saved "${preset.name}" to ${currentFolder()?.name}`);
   };
 
   return (
@@ -208,7 +208,7 @@ function SaveLook() {
 function removePreset(index: number) {
   const folder = currentFolder();
   const removed = deletePreset(index);
-  if (!removed) return;
+  if (!folder || !removed) return;
   const undo = () => {
     if (library.folders.includes(folder)) restorePreset(removed, index, folder);
     else showWarning(`Could not restore "${removed.name}" because its folder was deleted.`);
@@ -287,6 +287,7 @@ export function PresetsSheet() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const folder = currentFolder();
+  const presets = folder?.presets ?? [];
 
   const importFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -318,9 +319,9 @@ export function PresetsSheet() {
           </div>
           <Separator className="mt-4" />
           <ol className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
-            {folder.presets.length ? (
-              folder.presets.map((preset, index) => (
-                <PresetRow key={index} preset={preset} index={index} count={folder.presets.length} />
+            {presets.length ? (
+              presets.map((preset, index) => (
+                <PresetRow key={index} preset={preset} index={index} count={presets.length} />
               ))
             ) : (
               <li className="px-3 py-10 text-center text-sm text-muted-foreground">
@@ -339,15 +340,15 @@ export function PresetsSheet() {
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete "{folder.name}"?</AlertDialogTitle>
+            <AlertDialogTitle>Delete "{folder?.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the folder and its {pluralize(folder.presets.length, 'preset')}. Export
+              This removes the folder and its {pluralize(presets.length, 'preset')}. Export
               first if you want a backup.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={deleteFolder}>
+            <AlertDialogAction className="bg-destructive text-white hover:bg-destructive/90" onClick={() => deleteFolder()}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

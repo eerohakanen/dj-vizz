@@ -2,8 +2,7 @@ import { audio } from './audio/input';
 import { isAudioSourceKind, type AudioSourceKind } from './audio/sources';
 import { isNumber, isRecord } from './lib/utils';
 import { clamp } from './math';
-import { findChangeOption } from './presets/change';
-import { playlist, readPreset, resolveLook, snapshot } from './presets/library';
+import { readPreset, resolveLook, snapshot } from './presets/library';
 import { settings } from './state';
 import { subscribe } from './store';
 import { CALIBRATION_CONTROLS } from './tuning';
@@ -44,8 +43,6 @@ const calibrationSnapshot = () => ({
 const sessionSnapshot = () => ({
   look: snapshot(''),
   auto: settings.auto,
-  changeOn: playlist.changeOn,
-  shuffle: playlist.shuffle,
   source: lastSource,
 });
 
@@ -72,9 +69,6 @@ function restoreCalibration(stored: Record<string, unknown>) {
 function restoreLook(stored: Record<string, unknown>) {
   if (isRecord(stored.look)) Object.assign(settings, resolveLook(readPreset(stored.look)));
   if (typeof stored.auto === 'boolean') settings.auto = stored.auto;
-  const changeOn = findChangeOption(stored.changeOn);
-  if (changeOn) playlist.changeOn = changeOn.value;
-  if (typeof stored.shuffle === 'boolean') playlist.shuffle = stored.shuffle;
   if (isAudioSourceKind(stored.source)) lastSource = stored.source;
 }
 
