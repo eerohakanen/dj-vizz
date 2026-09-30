@@ -1,10 +1,13 @@
 import { useEffect, useId, useState, type ComponentProps, type MouseEvent, type ReactNode } from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import type { AudioSourceKind } from '@/audio/sources';
 import { showWarning } from '@/dom';
-import { closeOverlay, menuParent, menuTrail, openMenuScreen, type MenuScreen } from '@/actions';
+import { settings } from '@/state';
+import type { TuningControl } from '@/tuning';
+import { closeOverlay, menuParent, menuTrail, openMenuScreen, setSetting, type MenuScreen } from '@/actions';
 import { hasOpenLayer, isMenuBackKey } from '@/controls';
 import { currentFolder } from '@/presets/library';
 import { currentChangeOn, currentShuffle, setChangeOn, setShuffle, setTransition } from '@/presets/playlist';
@@ -136,6 +139,39 @@ export function swatchStyle(palette: Palette) {
 export function IconTile({ children }: { children: ReactNode }) {
   return (
     <div className="mb-2 flex size-11 items-center justify-center rounded-md border border-foreground bg-live text-live-foreground">{children}</div>
+  );
+}
+
+interface SliderRowProps extends Omit<ComponentProps<typeof Slider>, 'id' | 'value' | 'min' | 'max' | 'step' | 'onValueChange'> {
+  control: TuningControl;
+  display?: string;
+  compact?: boolean;
+  onValueChange?: (value: number) => void;
+}
+
+export function SliderRow({ control, display, compact, onValueChange, children, ...props }: SliderRowProps) {
+  const { key, label, min, max, step, format, description } = control;
+  const id = `tune-${key}`;
+  return (
+    <div className={compact ? 'space-y-2' : 'space-y-2.5'}>
+      <div className="flex items-center justify-between">
+        <Label htmlFor={id} title={compact ? description : undefined} className={cn(compact && 'text-xs font-normal')}>
+          {label}
+        </Label>
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">{display ?? format(settings[key])}</span>
+      </div>
+      <Slider
+        id={id}
+        value={[settings[key]]}
+        min={min}
+        max={max}
+        step={step}
+        onValueChange={([value]) => (onValueChange ?? ((next: number) => setSetting(key, next)))(value)}
+        {...props}
+      />
+      {children}
+      {!compact && <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>}
+    </div>
   );
 }
 

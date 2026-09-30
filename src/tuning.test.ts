@@ -8,8 +8,10 @@ describe('tuningSectionsFor', () => {
     expect(new Set(groups)).toEqual(new Set(['calibration']));
   });
 
-  it('shows every section while exploring or editing', () => {
-    expect(tuningSectionsFor('explore')).toEqual(TUNING_SECTIONS);
-    expect(tuningSectionsFor('edit')).toEqual(TUNING_SECTIONS);
+  it('leaves effect-specific sections to the effects panel while exploring or editing', () => {
+    const shown = TUNING_SECTIONS.filter((section) => section.placement !== 'effects');
+    expect(shown.length).toBeLessThan(TUNING_SECTIONS.length);
+    expect(tuningSectionsFor('explore')).toEqual(shown);
+    expect(tuningSectionsFor('edit')).toEqual(shown);
   });
 });

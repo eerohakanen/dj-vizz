@@ -23,22 +23,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { effectEnabled, strobeActive } from '@/motion';
 import {
@@ -70,9 +65,10 @@ import { showMessage } from '@/dom';
 import { settings } from '@/state';
 import { ui, useEngine } from '@/store';
 import { MIRROR_NAMES, PIXEL_NAMES, PSY_NAMES } from '@/effects/options';
+import { EFFECT_CONTROLS } from '@/tuning';
 import { cn } from '@/lib/utils';
 import { SOURCES, sourceLabel } from './labels';
-import { FLOATING_PANEL, SourcePicker, swatchStyle } from './shared';
+import { FLOATING_PANEL, SliderRow, SourcePicker, swatchStyle } from './shared';
 import { StableLabel } from './StableLabel';
 
 const NO_INPUT_LABEL = 'No input';
@@ -137,46 +133,74 @@ function PaletteSelect() {
   );
 }
 
-interface OptionSubmenuProps {
+const EFFECT_HEADING = 'text-xs font-medium uppercase tracking-wide text-muted-foreground';
+
+function EffectLabel({ htmlFor, label, shortcut }: { htmlFor: string; label: string; shortcut: string }) {
+  return (
+    <Label htmlFor={htmlFor} className="min-w-0 flex-1">
+      {label}
+      <span className="text-xs font-normal text-muted-foreground">{shortcut}</span>
+    </Label>
+  );
+}
+
+interface EffectRowProps {
+  id: string;
   label: string;
   shortcut: string;
+  control: ReactNode;
+  children?: ReactNode;
+}
+
+function EffectRow({ id, label, shortcut, control, children }: EffectRowProps) {
+  return (
+    <div className="space-y-3 py-2.5">
+      <div className="flex min-h-8 items-center gap-3">
+        <EffectLabel htmlFor={id} label={label} shortcut={shortcut} />
+        {control}
+      </div>
+      {children && <div className="space-y-3 border-l-2 border-foreground pl-3">{children}</div>}
+    </div>
+  );
+}
+
+interface EffectSelectProps {
+  id: string;
   names: readonly string[];
   value: number;
   onChange: (index: number) => void;
   unavailable?: string;
 }
 
-function OptionSubmenu({ label, shortcut, names, value, onChange, unavailable }: OptionSubmenuProps) {
+function EffectSelect({ id, names, value, onChange, unavailable }: EffectSelectProps) {
   return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger disabled={!!unavailable} className="data-disabled:opacity-50">
-        {label}
-        <span className="ml-auto text-xs text-muted-foreground">{unavailable ?? names[value]}</span>
-        <DropdownMenuShortcut className="ml-2">{shortcut}</DropdownMenuShortcut>
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent>
-        <DropdownMenuRadioGroup value={String(value)} onValueChange={(next) => onChange(+next)}>
-          {names.map((name, index) => (
-            <DropdownMenuRadioItem key={name} value={String(index)} onSelect={(event) => event.preventDefault()}>
-              {name}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
+    <Select value={String(value)} onValueChange={(next) => onChange(+next)} disabled={!!unavailable}>
+      <SelectTrigger id={id} size="sm" className="w-32">
+        {unavailable ? <span className="text-muted-foreground">{unavailable}</span> : <SelectValue />}
+      </SelectTrigger>
+      <SelectContent position="popper" side="top" align="end">
+        {names.map((name, index) => (
+          <SelectItem key={name} value={String(index)}>
+            {name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
+const pixelateOn = () => settings.pixelate > 0 && pixelateAvailable();
+
 function activeEffectCount() {
-  return TOGGLES.filter(({ key }) => effectEnabled(key)).length + Number(settings.psy > 0) + Number(settings.mirror > 0) + Number(settings.pixelate > 0 && pixelateAvailable());
+  return TOGGLES.filter(({ key }) => effectEnabled(key)).length + Number(settings.psy > 0) + Number(settings.mirror > 0) + Number(pixelateOn());
 }
 
 function EffectsMenu() {
   const count = activeEffectCount();
   return (
-    <DropdownMenu>
+    <Popover>
       <Hint label="Effects">
-        <DropdownMenuTrigger asChild>
+        <PopoverTrigger asChild>
           <Button variant="outline" size="sm">
             <Sparkles />
             Effects
@@ -188,50 +212,84 @@ function EffectsMenu() {
               {count}
             </Badge>
           </Button>
-        </DropdownMenuTrigger>
+        </PopoverTrigger>
       </Hint>
-      <DropdownMenuContent side="top" align="start" className="w-56">
-        <OptionSubmenu label="Psychedelic" shortcut={shortcutFor('psy')} names={PSY_NAMES} value={settings.psy} onChange={setPsy} />
-        <OptionSubmenu label="Mirror" shortcut={shortcutFor('mirror')} names={MIRROR_NAMES} value={settings.mirror} onChange={setMirror} />
-        <OptionSubmenu
-          label="Pixelate"
-          shortcut={shortcutFor('pixelate')}
-          names={PIXEL_NAMES}
-          value={settings.pixelate}
-          onChange={setPixelate}
-          unavailable={pixelateAvailable() ? undefined : 'Not in 3D'}
-        />
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs text-muted-foreground">Layers</DropdownMenuLabel>
-        {TOGGLES.map(({ key, label }) => (
-          <DropdownMenuCheckboxItem
-            key={key}
-            checked={effectEnabled(key)}
-            onCheckedChange={(checked) => setSetting(key, checked)}
-            onSelect={(event) => event.preventDefault()}
+      <PopoverContent
+        side="top"
+        align="start"
+        className="max-h-[calc(100dvh-6rem)] w-80 overflow-y-auto py-3"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
+        <section aria-labelledby="effects-look" className="divide-y divide-border">
+          <h3 id="effects-look" className={cn(EFFECT_HEADING, 'pb-1')}>
+            Look
+          </h3>
+          <EffectRow
+            id="effect-psy"
+            label="Psychedelic"
+            shortcut={shortcutFor('psy')}
+            control={<EffectSelect id="effect-psy" names={PSY_NAMES} value={settings.psy} onChange={setPsy} />}
+          />
+          <EffectRow
+            id="effect-mirror"
+            label="Mirror"
+            shortcut={shortcutFor('mirror')}
+            control={<EffectSelect id="effect-mirror" names={MIRROR_NAMES} value={settings.mirror} onChange={setMirror} />}
+          />
+          <EffectRow
+            id="effect-pixelate"
+            label="Pixelate"
+            shortcut={shortcutFor('pixelate')}
+            control={
+              <EffectSelect
+                id="effect-pixelate"
+                names={PIXEL_NAMES}
+                value={settings.pixelate}
+                onChange={setPixelate}
+                unavailable={pixelateAvailable() ? undefined : 'Not in 3D'}
+              />
+            }
           >
-            {label}
-            <DropdownMenuShortcut>{shortcutFor(key)}</DropdownMenuShortcut>
-          </DropdownMenuCheckboxItem>
-        ))}
+            {pixelateOn() && (
+              <>
+                <SliderRow compact control={EFFECT_CONTROLS.pixelSize} />
+                <SliderRow compact control={EFFECT_CONTROLS.pixelGap} />
+              </>
+            )}
+          </EffectRow>
+        </section>
+        <section aria-labelledby="effects-layers" className="mt-3 divide-y divide-border">
+          <h3 id="effects-layers" className={cn(EFFECT_HEADING, 'pb-1')}>
+            Layers
+          </h3>
+          {TOGGLES.map(({ key, label }) => (
+            <EffectRow
+              key={key}
+              id={`effect-${key}`}
+              label={label}
+              shortcut={shortcutFor(key)}
+              control={<Switch id={`effect-${key}`} checked={effectEnabled(key)} onCheckedChange={(checked) => setSetting(key, checked)} />}
+            >
+              {key === 'trails' && settings.trails && <SliderRow compact control={EFFECT_CONTROLS.trailLength} />}
+              {key === 'strobe' && strobeActive() && (
+                <p className="text-xs text-muted-foreground">Strobe flashes on beats. Avoid if sensitive to flashing light.</p>
+              )}
+            </EffectRow>
+          ))}
+        </section>
         {ui.liveMode === 'explore' && (
           <>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              checked={settings.auto}
-              onCheckedChange={(checked) => setSetting('auto', checked)}
-              onSelect={(event) => event.preventDefault()}
-            >
-              Auto-switch on drops
-              <DropdownMenuShortcut>{shortcutFor('auto')}</DropdownMenuShortcut>
-            </DropdownMenuCheckboxItem>
+            <Separator className="my-2" />
+            <EffectRow
+              id="effect-auto"
+              label="Auto-switch on drops"
+              shortcut={shortcutFor('auto')}
+              control={<Switch id="effect-auto" checked={settings.auto} onCheckedChange={(checked) => setSetting('auto', checked)} />}
+            />
           </>
         )}
-        {strobeActive() && (
-          <p className="px-2 pt-1 pb-1.5 text-xs text-muted-foreground">Strobe flashes on beats. Avoid if sensitive to flashing light.</p>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </PopoverContent>
+    </Popover>
   );
 }
 

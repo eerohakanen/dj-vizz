@@ -1,51 +1,19 @@
-import type { ComponentProps } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { resetTuning, setGain, setSetting } from '@/actions';
 import { shortcutFor } from '@/controls';
 import { settings, signal } from '@/state';
 import { ui, useEngine } from '@/store';
-import { GAIN_CONTROL, tuningSectionsFor, type TuningControl } from '@/tuning';
+import { GAIN_CONTROL, tuningSectionsFor } from '@/tuning';
 import { tuningGroupNote } from './labels';
 import { cn } from '@/lib/utils';
-import { blurAfterPointerClick, FLOATING_PANEL, SIDE_PANEL_WIDTH, MeterBar, SourcePicker, useOverlay, useTicker } from './shared';
+import { blurAfterPointerClick, FLOATING_PANEL, SIDE_PANEL_WIDTH, MeterBar, SliderRow, SourcePicker, useOverlay, useTicker } from './shared';
 
 const LIVE_INTERVAL = 150;
-
-interface SliderRowProps extends Omit<ComponentProps<typeof Slider>, 'id' | 'value' | 'min' | 'max' | 'step' | 'onValueChange'> {
-  control: TuningControl;
-  display?: string;
-  onValueChange?: (value: number) => void;
-}
-
-function SliderRow({ control, display, onValueChange, children, ...props }: SliderRowProps) {
-  const { key, label, min, max, step, format, description } = control;
-  const id = `tune-${key}`;
-  return (
-    <div className="space-y-2.5">
-      <div className="flex items-center justify-between">
-        <Label htmlFor={id}>{label}</Label>
-        <span className="font-mono text-xs tabular-nums text-muted-foreground">{display ?? format(settings[key])}</span>
-      </div>
-      <Slider
-        id={id}
-        value={[settings[key]]}
-        min={min}
-        max={max}
-        step={step}
-        onValueChange={([value]) => (onValueChange ?? ((next: number) => setSetting(key, next)))(value)}
-        {...props}
-      />
-      {children}
-      <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
-    </div>
-  );
-}
 
 function LevelMeter() {
   return (

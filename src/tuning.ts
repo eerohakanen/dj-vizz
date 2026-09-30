@@ -18,6 +18,7 @@ export type TuningGroup = 'calibration' | 'look';
 interface TuningSection {
   title: string;
   group: TuningGroup;
+  placement?: 'effects';
   description: string;
   controls: TuningControl[];
 }
@@ -141,25 +142,34 @@ export const TUNING_SECTIONS = [
         format: multiplier,
         description: 'How far colours move through the palette on each beat and drop. Zero keeps colours steady.',
       },
+    ],
+  },
+  {
+    title: 'Trails',
+    group: 'look',
+    placement: 'effects',
+    description: 'How motion smears while Trails is on.',
+    controls: [
       {
         key: 'trailLength',
-        label: 'Trail length',
+        label: 'Length',
         min: 0.8,
         max: 0.95,
         step: 0.005,
         format: percentOf(0.8, 0.95),
-        description: 'How long motion trails linger while Trails is on. Longer trails smear movement into streaks.',
+        description: 'How long motion trails linger. Longer trails smear movement into streaks.',
       },
     ],
   },
   {
     title: 'Pixelate',
     group: 'look',
+    placement: 'effects',
     description: 'How the picture breaks into pixels while Pixelate is on.',
     controls: [
       {
         key: 'pixelSize',
-        label: 'Pixel size',
+        label: 'Size',
         min: 4,
         max: 48,
         step: 1,
@@ -168,7 +178,7 @@ export const TUNING_SECTIONS = [
       },
       {
         key: 'pixelGap',
-        label: 'Pixel spacing',
+        label: 'Spacing',
         min: 0,
         max: 0.6,
         step: 0.01,
@@ -194,5 +204,9 @@ const controlsIn = <K extends TuningKey>(group: TuningGroup) =>
 export const LOOK_CONTROLS = controlsIn<LookTuningKey>('look');
 export const CALIBRATION_CONTROLS = controlsIn<CalibrationTuningKey>('calibration');
 
+export const EFFECT_CONTROLS = Object.fromEntries(
+  TUNING_SECTIONS.filter((section) => section.placement === 'effects').flatMap((section) => section.controls.map((control) => [control.key, control])),
+) as Record<'trailLength' | 'pixelSize' | 'pixelGap', TuningControl>;
+
 export const tuningSectionsFor = (mode: LiveMode) =>
-  mode === 'play' ? TUNING_SECTIONS.filter((section) => section.group === 'calibration') : TUNING_SECTIONS;
+  TUNING_SECTIONS.filter((section) => (mode === 'play' ? section.group === 'calibration' : section.placement !== 'effects'));
