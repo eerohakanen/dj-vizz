@@ -7,43 +7,14 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { resetTuning, setGain, setSetting } from '@/actions';
-import { audio } from '@/audio/input';
-import { showWarning } from '@/dom';
+import { shortcutFor } from '@/controls';
 import { settings, signal } from '@/state';
 import { useEngine } from '@/store';
 import { GAIN_CONTROL, TUNING_SECTIONS, type TuningControl } from '@/tuning';
-import { SOURCES, TUNING_GROUP_NOTES } from './labels';
-import { MeterBar, useOverlay, useTicker } from './shared';
+import { TUNING_GROUP_NOTES } from './labels';
+import { MeterBar, SourcePicker, useOverlay, useTicker } from './shared';
 
 const LIVE_INTERVAL = 150;
-
-async function switchSource(capture: (typeof SOURCES)[number]['capture']) {
-  const result = await capture();
-  if (result.error) showWarning(result.error);
-}
-
-export function SourcePicker() {
-  return (
-    <div className="space-y-2">
-      <Label>Source</Label>
-      <div className="grid grid-cols-2 gap-2">
-        {SOURCES.map((source) => (
-          <Button
-            key={source.kind}
-            variant={audio.source === source.kind ? 'default' : 'outline'}
-            size="sm"
-            disabled={!!source.unsupported}
-            title={source.unsupported}
-            onClick={() => switchSource(source.capture)}
-          >
-            <source.icon />
-            {source.label}
-          </Button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 interface SliderRowProps extends Omit<ComponentProps<typeof Slider>, 'id' | 'value' | 'min' | 'max' | 'step' | 'onValueChange'> {
   control: TuningControl;
@@ -101,7 +72,7 @@ function GainRows({ active }: { active: boolean }) {
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <Label htmlFor="auto-gain">
-            Auto level <span className="text-xs text-muted-foreground">G</span>
+            Auto level <span className="text-xs text-muted-foreground">{shortcutFor('autoGain')}</span>
           </Label>
           <Switch id="auto-gain" checked={settings.autoGain} onCheckedChange={(checked) => setSetting('autoGain', checked)} />
         </div>

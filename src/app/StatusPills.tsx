@@ -11,6 +11,7 @@ import { SOURCES } from './labels';
 import { GLASS_PANEL, useSourceCapture } from './shared';
 
 const SILENCE_POLL_MS = 250;
+const SILENCE_HINTS = { window: 'the shared tab has audio', mic: 'the microphone' } as const;
 const PILL = 'pointer-events-auto flex items-center gap-3 rounded-full border py-1.5 pr-1.5 pl-4 text-sm';
 
 function ReconnectPill() {
@@ -39,7 +40,7 @@ function SilencePill() {
   if (!silent) return null;
   return (
     <div role="status" className={cn(PILL, GLASS_PANEL)}>
-      <span>No sound detected. Check the shared tab has audio, or raise Input level.</span>
+      <span>No sound detected. Check {SILENCE_HINTS[audio.source ?? 'window']}, or raise Input level.</span>
       <Button size="sm" variant="secondary" onClick={() => openOverlay('tuning')}>
         <SlidersHorizontal />
         Tune

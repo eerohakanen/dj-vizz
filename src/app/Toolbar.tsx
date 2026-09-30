@@ -52,9 +52,8 @@ import { ui, useEngine } from '@/store';
 import { MIRROR_NAMES, PSY_NAMES } from '@/effects/options';
 import { cn } from '@/lib/utils';
 import { SOURCES, sourceLabel } from './labels';
-import { GLASS_PANEL } from './shared';
+import { GLASS_PANEL, SourcePicker } from './shared';
 import { StableLabel } from './StableLabel';
-import { SourcePicker } from './TuningSheet';
 
 const NO_INPUT_LABEL = 'No input';
 const AUDIO_LABELS = [...SOURCES.map((source) => source.label), NO_INPUT_LABEL];
@@ -256,7 +255,6 @@ function PlaylistStatus() {
     </Hint>
   );
 }
-
 
 const FULLSCREEN_UNSUPPORTED = 'Fullscreen is not supported on this device';
 

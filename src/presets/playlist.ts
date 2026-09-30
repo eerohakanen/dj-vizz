@@ -52,6 +52,10 @@ export function advanceTimedPlaylist() {
   if (seconds && clock.time - playlist.startedAt >= seconds) nextPreset();
 }
 
+export function shiftPlaylistClock(gap: number) {
+  playlist.startedAt += gap;
+}
+
 export function setChangeOn(changeOn: ChangeOn) {
   playlist.changeOn = changeOn;
   playlist.beats = 0;

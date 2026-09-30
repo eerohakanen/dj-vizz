@@ -11,7 +11,9 @@ import { clamp01 } from '@/math';
 import { ui, type Overlay } from '@/store';
 import { cn, pluralize } from '@/lib/utils';
 import { CHANGE_OPTIONS, findChangeOption } from '@/presets/change';
-import type { SourceOption } from './labels';
+import { audio } from '@/audio/input';
+import { Button } from '@/components/ui/button';
+import { SOURCES, type SourceOption } from './labels';
 
 export const GLASS_PANEL = 'bg-card/80 shadow-2xl backdrop-blur-xl';
 
@@ -51,6 +53,30 @@ export function useSourceCapture(onConnected?: () => void) {
     else showWarning(result.error);
   };
   return { pending, connect };
+}
+
+export function SourcePicker() {
+  const { pending, connect } = useSourceCapture();
+  return (
+    <div className="space-y-2">
+      <Label>Source</Label>
+      <div className="grid grid-cols-2 gap-2">
+        {SOURCES.map((source) => (
+          <Button
+            key={source.kind}
+            variant={audio.source === source.kind ? 'default' : 'outline'}
+            size="sm"
+            disabled={!!pending || !!source.unsupported}
+            title={source.unsupported}
+            onClick={() => connect(source)}
+          >
+            <source.icon />
+            {source.label}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function IconTile({ children }: { children: ReactNode }) {
@@ -100,10 +126,13 @@ export function FolderSelect({ value, onChange, className, verbose }: FolderSele
 
 function ChangeOnSelect({ triggerProps }: { triggerProps: ComponentProps<typeof SelectTrigger> }) {
   return (
-    <Select value={playlist.changeOn} onValueChange={(value) => {
+    <Select
+      value={playlist.changeOn}
+      onValueChange={(value) => {
         const option = findChangeOption(value);
         if (option) setChangeOn(option.value);
-      }}>
+      }}
+    >
       <SelectTrigger {...triggerProps}>
         <SelectValue />
       </SelectTrigger>

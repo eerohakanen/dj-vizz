@@ -7,7 +7,7 @@ import { advancePaletteFade, buildLut } from './color';
 import { bindControls } from './controls';
 import { psyIndex, type PsyName } from './effects/options';
 import { bindReducedMotion } from './motion';
-import { advanceTimedPlaylist } from './presets/playlist';
+import { advanceTimedPlaylist, shiftPlaylistClock } from './presets/playlist';
 import { approach } from './math';
 import { presentFrame, renderScene } from './render';
 import { restoreSession, saveSession } from './session';
@@ -15,6 +15,7 @@ import { clock, fx, settings } from './state';
 import { ui } from './store';
 
 let lastTimestamp = 0;
+let wasPaused = false;
 
 function psyTarget(name: PsyName) {
   const active = settings.psy;
@@ -33,10 +34,14 @@ function frame(timestamp: number) {
   const elapsed = timestamp - lastTimestamp;
   lastTimestamp = timestamp;
   if (ui.paused) {
+    wasPaused = true;
     requestAnimationFrame(frame);
     return;
   }
-  clock.time = timestamp / 1000;
+  const time = timestamp / 1000;
+  if (wasPaused) shiftPlaylistClock(time - clock.time);
+  wasPaused = false;
+  clock.time = time;
   clock.delta = Math.min(0.05, Math.max(0.001, elapsed / 1000));
   if (elapsed > 0 && elapsed < 100 && !document.hidden) adaptQuality(elapsed);
   updateEffectMixes();
