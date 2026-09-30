@@ -8,6 +8,8 @@ import {
   explore,
   goLive,
   leaveSetup,
+  menuParent,
+  menuTrail,
   newPreset,
   nextScene,
   openPresets,
@@ -125,6 +127,27 @@ describe('navigation actions', () => {
   it('explore goes live in explore mode', () => {
     explore();
     expect(ui).toMatchObject({ screen: 'live', liveMode: 'explore' });
+  });
+});
+
+describe('menu trail', () => {
+  it('places My presets under Home', () => {
+    expect(menuTrail('presets', 'play')).toEqual(['landing', 'presets']);
+    expect(menuParent('presets', 'explore')).toBe('landing');
+  });
+
+  it('places setup under My presets for play and edit', () => {
+    expect(menuTrail('setup', 'play')).toEqual(['landing', 'presets', 'setup']);
+    expect(menuParent('setup', 'edit')).toBe('presets');
+  });
+
+  it('places setup directly under Home when exploring', () => {
+    expect(menuTrail('setup', 'explore')).toEqual(['landing', 'setup']);
+    expect(menuParent('setup', 'explore')).toBe('landing');
+  });
+
+  it('gives Home no parent', () => {
+    expect(menuParent('landing', 'explore')).toBeUndefined();
   });
 });
 

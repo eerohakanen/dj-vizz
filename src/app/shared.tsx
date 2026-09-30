@@ -4,7 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import type { AudioSourceKind } from '@/audio/sources';
 import { showWarning } from '@/dom';
-import { closeOverlay } from '@/actions';
+import { closeOverlay, menuParent, menuTrail, openMenuScreen, type MenuScreen } from '@/actions';
+import { hasOpenLayer, isMenuBackKey } from '@/controls';
 import { currentFolder } from '@/presets/library';
 import { currentChangeOn, currentShuffle, setChangeOn, setShuffle, setTransition } from '@/presets/playlist';
 import { clamp01 } from '@/math';
@@ -14,8 +15,10 @@ import { CHANGE_OPTIONS, findChangeOption } from '@/presets/change';
 import { DEFAULT_TRANSITION, findTransition, TRANSITIONS } from '@/effects/transition';
 import { audio } from '@/audio/input';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import type { Palette } from '@/palettes';
-import { SOURCES, type SourceOption } from './labels';
+import { MENU_SCREEN_LABELS, SOURCES, type SourceOption } from './labels';
 
 export const GLASS_PANEL = 'bg-card/80 shadow-2xl backdrop-blur-xl';
 
@@ -191,5 +194,82 @@ export function PlaybackOptions() {
         <Switch id={shuffleId} checked={currentShuffle()} onCheckedChange={setShuffle} />
       </div>
     </div>
+  );
+}
+
+function useMenuBackKey(target: MenuScreen) {
+  useEffect(() => {
+    const handle = (event: KeyboardEvent) => {
+      if (!isMenuBackKey(event, hasOpenLayer())) return;
+      event.preventDefault();
+      openMenuScreen(target);
+    };
+    addEventListener('keydown', handle);
+    return () => removeEventListener('keydown', handle);
+  }, [target]);
+}
+
+function Breadcrumbs({ trail }: { trail: MenuScreen[] }) {
+  return (
+    <nav aria-label="Breadcrumb" className="min-w-0 max-sm:sr-only">
+      <ol className="flex min-w-0 items-center gap-1.5 text-sm">
+        {trail.map((screen, index) => {
+          const label = MENU_SCREEN_LABELS[screen];
+          const current = index === trail.length - 1;
+          return (
+            <li key={screen} className="flex min-w-0 items-center gap-1.5">
+              {index > 0 && <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/60" aria-hidden />}
+              {current ? (
+                <span aria-current="page" className="truncate font-medium text-foreground">
+                  {label}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openMenuScreen(screen)}
+                  className="shrink-0 rounded-sm text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {label}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+interface MenuNavProps {
+  screen: Exclude<MenuScreen, 'landing'>;
+  width: string;
+  actions?: ReactNode;
+}
+
+export function MenuNav({ screen, width, actions }: MenuNavProps) {
+  const trail = menuTrail(screen, ui.liveMode);
+  const parent = menuParent(screen, ui.liveMode) ?? 'landing';
+  const parentLabel = MENU_SCREEN_LABELS[parent];
+  useMenuBackKey(parent);
+
+  return (
+    <header className="sticky top-0 z-20 shrink-0 border-b border-border/60 bg-background/70 pt-[env(safe-area-inset-top,0px)] backdrop-blur-xl">
+      <div className={cn('mx-auto flex h-14 items-center gap-3 px-4 sm:px-6', width)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-ml-2.5 sm:-ml-2 sm:w-8 sm:has-[>svg]:px-0"
+          aria-label={`Back to ${parentLabel}`}
+          title={`Back to ${parentLabel}`}
+          onClick={() => openMenuScreen(parent)}
+        >
+          <ArrowLeft />
+          <span className="sm:sr-only">{parentLabel}</span>
+        </Button>
+        <Separator orientation="vertical" className="data-[orientation=vertical]:h-5 max-sm:hidden" />
+        <Breadcrumbs trail={trail} />
+        {actions && <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>}
+      </div>
+    </header>
   );
 }

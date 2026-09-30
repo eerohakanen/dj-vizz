@@ -103,7 +103,24 @@ export function leaveVisualizer() {
 
 export const openPresets = () => leaveLive('presets');
 
-export const leaveSetup = () => (ui.liveMode === 'explore' ? leaveVisualizer() : openPresets());
+export type MenuScreen = Exclude<Screen, 'live'>;
+
+export const setupBackTarget = (mode: LiveMode): MenuScreen => (mode === 'explore' ? 'landing' : 'presets');
+
+export function menuTrail(screen: MenuScreen, mode: LiveMode): MenuScreen[] {
+  if (screen === 'landing') return ['landing'];
+  if (screen === 'presets') return ['landing', 'presets'];
+  return [...menuTrail(setupBackTarget(mode), mode), 'setup'];
+}
+
+export const menuParent = (screen: MenuScreen, mode: LiveMode) => menuTrail(screen, mode).at(-2);
+
+export function openMenuScreen(screen: MenuScreen) {
+  if (screen === 'landing') leaveVisualizer();
+  else if (screen === 'presets') openPresets();
+}
+
+export const leaveSetup = () => openMenuScreen(setupBackTarget(ui.liveMode));
 
 export function goLive() {
   ui.screen = 'live';

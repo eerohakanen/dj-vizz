@@ -1,10 +1,9 @@
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { currentFolder } from '@/presets/library';
 import { ui } from '@/store';
 import { SOURCES } from './labels';
-import { IconTile, MenuBackdrop, useSourceCapture } from './shared';
+import { IconTile, MenuBackdrop, MenuNav, useSourceCapture } from './shared';
 
 function setupHeading() {
   const name = currentFolder()?.name;
@@ -18,7 +17,7 @@ function SourceStep({ onConnected }: { onConnected: () => void }) {
   return (
     <>
       <div className="space-y-2 text-center">
-        <h2 className="text-3xl font-semibold tracking-tight text-balance">{setupHeading()}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">{setupHeading()}</h2>
         <p className="text-muted-foreground">Pick an audio source. Your browser will ask for permission next.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -46,17 +45,12 @@ function SourceStep({ onConnected }: { onConnected: () => void }) {
   );
 }
 
-export function Setup({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
+export function Setup({ onDone }: { onDone: () => void }) {
   return (
-    <main className="fixed inset-0 overflow-y-auto">
+    <main className="fixed inset-0 flex flex-col overflow-y-auto">
       <MenuBackdrop />
-      <div className="relative mx-auto flex min-h-full max-w-3xl flex-col justify-center gap-8 px-6 py-12">
-        <div>
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft />
-            Back
-          </Button>
-        </div>
+      <MenuNav screen="setup" width="max-w-3xl" />
+      <div className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-8 px-4 py-10 sm:px-6 sm:py-12">
         <SourceStep onConnected={onDone} />
       </div>
     </main>

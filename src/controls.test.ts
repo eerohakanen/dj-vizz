@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { KEYMAP, keysFor, modeIndexFor, resolveKey, shortcutBlocked, shortcutFor, type ShortcutTarget } from './controls';
+import { isMenuBackKey, KEYMAP, keysFor, modeIndexFor, resolveKey, shortcutBlocked, shortcutFor, type ShortcutTarget } from './controls';
 import type { LiveMode } from './store';
 
 vi.mock('./actions', () => ({
@@ -202,5 +202,23 @@ describe('shortcutBlocked', () => {
 
   it('allows shortcuts from the page itself', () => {
     expect(shortcutBlocked(element([]), ' ')).toBe(false);
+  });
+});
+
+describe('isMenuBackKey', () => {
+  const escape = { key: 'Escape', defaultPrevented: false, metaKey: false, ctrlKey: false, altKey: false };
+
+  it('goes back on a plain Escape with nothing open', () => {
+    expect(isMenuBackKey(escape, false)).toBe(true);
+  });
+
+  it('leaves Escape to an open dialog or menu', () => {
+    expect(isMenuBackKey(escape, true)).toBe(false);
+    expect(isMenuBackKey({ ...escape, defaultPrevented: true }, false)).toBe(false);
+  });
+
+  it('ignores other keys and modified Escape', () => {
+    expect(isMenuBackKey({ ...escape, key: 'Backspace' }, false)).toBe(false);
+    expect(isMenuBackKey({ ...escape, metaKey: true }, false)).toBe(false);
   });
 });

@@ -1,6 +1,7 @@
 import { MicIcon, MonitorSpeaker, type LucideIcon } from 'lucide-react';
 import { WINDOW_UNSUPPORTED, canCaptureWindow, captureMicrophone, captureWindow } from '@/audio/input';
 import type { AudioSourceKind } from '@/audio/sources';
+import type { MenuScreen } from '@/actions';
 import type { LiveMode } from '@/store';
 import type { TuningGroup } from '@/tuning';
 
@@ -40,3 +41,9 @@ const TUNING_GROUP_NOTES: Record<TuningGroup, string> = {
 
 export const tuningGroupNote = (group: TuningGroup, mode: LiveMode) =>
   group === 'look' && mode !== 'edit' ? '' : TUNING_GROUP_NOTES[group];
+
+export const MENU_SCREEN_LABELS: Record<MenuScreen, string> = {
+  landing: 'Home',
+  presets: 'My presets',
+  setup: 'Connect audio',
+};

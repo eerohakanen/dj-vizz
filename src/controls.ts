@@ -313,6 +313,15 @@ export function shortcutBlocked(target: ShortcutTarget, key: string) {
   return ACTIVATION_KEYS.includes(key) && BUTTONS.some((selector) => target.closest(selector));
 }
 
+export type MenuKey = Pick<KeyboardEvent, 'key' | 'defaultPrevented' | 'metaKey' | 'ctrlKey' | 'altKey'>;
+
+export const isMenuBackKey = (event: MenuKey, layerOpen: boolean) =>
+  event.key === 'Escape' && !layerOpen && !event.defaultPrevented && !event.metaKey && !event.ctrlKey && !event.altKey;
+
+const OPEN_LAYERS = '[role="dialog"], [role="alertdialog"], [data-radix-popper-content-wrapper]';
+
+export const hasOpenLayer = () => !!document.querySelector(OPEN_LAYERS);
+
 function blurControlFocus() {
   const active = document.activeElement;
   if (active instanceof HTMLElement && active.closest(`[data-toolbar], ${SIDE_PANEL}`)) active.blur();
