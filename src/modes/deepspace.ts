@@ -1,6 +1,6 @@
 import type * as Three from 'three';
 import { approach, clamp, clamp01, decay, randomRange, TAU } from '../math';
-import { clock, fx, signal } from '../state';
+import { clock, fx, settings, signal } from '../state';
 import {
   additiveOptions,
   advanceSway,
@@ -399,7 +399,7 @@ function steer(stage: DeepSpaceStage) {
 
 function fly(stage: DeepSpaceStage) {
   const { gate, energy, punchBass } = signal;
-  const target = 8 + gate * (energy * 40 + punchBass * 90 + kick.value * 40) + fx.drop * 650;
+  const target = (8 + gate * (energy * 40 + punchBass * 90 + kick.value * 40) + fx.drop * 650) * settings.motion;
   speed += (target - speed) * Math.min(1, clock.delta * (target > speed ? 8 : 2.5));
   const offset = stage.shared.uOffset.value.addScaledVector(stage.heading, speed * clock.delta);
   offset.set(offset.x % CUBE, offset.y % CUBE, offset.z % CUBE);

@@ -1,21 +1,27 @@
+import { bandAt } from '../audio/spectrum';
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
 import { TAU } from '../math';
-import { clock, fx, signal, view } from '../state';
+import { clock, fx, settings, signal, view } from '../state';
 
 const ARMS = 10;
 const STEPS = 34;
 const RINGS = 6;
+const BAND_WIDEN = 0.3;
+const HUE_RATE = 0.05;
+
+let huePhase = 0;
 
 function drawArms(cx: number, cy: number, innerRadius: number, logSpan: number) {
-  const { time } = clock;
+  const { time, delta } = clock;
   const { punchBass, punchMid } = signal;
+  huePhase += delta * HUE_RATE * settings.colorSpeed;
   const twist = (2.2 + Math.sin(time * 0.25) * 1.2 + punchMid * 1.5) * 0.35;
   const rotation = fx.spin * 2.5;
-  const armWidth = (TAU / ARMS) * (0.35 + Math.min(0.25, punchBass * 0.15));
   for (let k = 0; k < ARMS; k++) {
     const start = (k / ARMS) * TAU + rotation;
-    ctx.fillStyle = color((k / ARMS) * 2 + time * 0.05, 0.16 + punchBass * 0.1 + fx.beat * 0.08, 48);
+    const armWidth = (TAU / ARMS) * (0.35 + Math.min(0.25, punchBass * 0.15) + bandAt(k, ARMS) * BAND_WIDEN);
+    ctx.fillStyle = color((k / ARMS) * 2 + huePhase, 0.16 + punchBass * 0.1 + fx.beat * 0.08, 48);
     ctx.beginPath();
     for (let i = 0; i <= STEPS; i++) {
       const f = i / STEPS;

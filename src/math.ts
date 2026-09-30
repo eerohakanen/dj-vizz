@@ -19,6 +19,8 @@ export const frameAlpha = (alpha: number, delta: number) => 1 - decay(1 - alpha,
 export const follow = (value: number, target: number, attack: number, release: number, delta: number) =>
   value + (target - value) * (1 - Math.exp(-delta / (target > value ? attack : release)));
 
+export const updatePeak = (peak: number, level: number, fall: number, delta: number) => Math.max(level, peak - fall * delta);
+
 export const smoothstep = (t: number) => t * t * (3 - 2 * t);
 
 export const wrap = (value: number, length: number) => ((value % length) + length) % length;

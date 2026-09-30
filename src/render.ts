@@ -6,13 +6,16 @@ import { drawLasers } from './effects/lasers';
 import { applyMirror } from './effects/mirror';
 import { drawParticles, drawShockwaves } from './effects/particles';
 import { drawTransition } from './effects/transition';
-import { frameAlpha, frameScale, signedRandom } from './math';
+import { clamp01, frameAlpha, frameScale, signedRandom } from './math';
 import { currentMode } from './mode';
 import { clock, fx, settings, signal, view } from './state';
 
 const LIQUID_STRIPS = 40;
+const WASH_RATE = 0.3;
 const TRAIL_CALM_SHORTENING = 0.15;
 const CALM_DAMPING = 0.6;
+
+let washAngle = 0;
 
 const calmScale = () => 1 - CALM_DAMPING * fx.calm;
 
@@ -106,8 +109,8 @@ function drawLiquid(o: CanvasRenderingContext2D) {
 
 function drawRainbowWash(o: CanvasRenderingContext2D) {
   const { width, height } = view;
-  const { time } = clock;
-  const gradient = o.createConicGradient(fx.spin * 1.5 + time * 0.3, width / 2, height / 2);
+  washAngle += clock.delta * WASH_RATE * settings.colorSpeed;
+  const gradient = o.createConicGradient(fx.spin * 1.5 + washAngle, width / 2, height / 2);
   for (let i = 0; i <= 6; i++) gradient.addColorStop(i / 6, `hsl(${((i * 60 + fx.hue) % 360) | 0},100%,50%)`);
   o.globalCompositeOperation = 'hue';
   o.globalAlpha = fx.rainbowMix * 0.85;
@@ -124,10 +127,14 @@ function fillWith(o: CanvasRenderingContext2D, operation: GlobalCompositeOperati
 
 function drawFlashes(o: CanvasRenderingContext2D) {
   const calm = calmScale();
-  if (fx.tripMix > 0.02 && fx.beat > 0.3) fillWith(o, 'difference', color(0, fx.beat * 0.55 * fx.tripMix * calm, 60));
+  if (fx.tripMix > 0.02 && fx.beat > 0.3) fillWith(o, 'difference', color(0, fx.beat * 0.55 * fx.tripMix * settings.flashes * calm, 60));
   if (fx.strobeFlash > 0.02) fillWith(o, 'lighter', color(0, fx.strobeFlash * 0.45 * calm, 70));
   if (fx.snare > 0.05) fillWith(o, 'lighter', color(0.5, fx.snare * 0.18 * Math.min(1, settings.reactivity) * settings.flashes * calm, 75));
-  if (fx.invert > 0.4) fillWith(o, 'difference', '#fff');
+  if (fx.invert > 0.02) {
+    o.globalAlpha = clamp01(fx.invert);
+    fillWith(o, 'difference', '#fff');
+    o.globalAlpha = 1;
+  }
   o.globalCompositeOperation = 'source-over';
   if (fx.flash > 0.02) fillWith(o, 'source-over', `rgba(255,255,255,${(fx.flash * 0.75 * calm).toFixed(3)})`);
 }

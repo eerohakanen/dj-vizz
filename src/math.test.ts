@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { approach, clamp, clamp01, decay, follow, frameAlpha, hueDelta, lerp, randomRange, signedRandom, smoothstep, wrap } from './math';
+import { approach, clamp, clamp01, decay, follow, frameAlpha, hueDelta, lerp, randomRange, signedRandom, smoothstep, updatePeak, wrap } from './math';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -184,6 +184,28 @@ describe('frameAlpha', () => {
   it('accumulates the same fade over equal time at 120 Hz', () => {
     const at60 = Math.pow(1 - frameAlpha(0.13, 1 / 60), 6);
     const at120 = Math.pow(1 - frameAlpha(0.13, 1 / 120), 12);
+    expect(at120).toBeCloseTo(at60, 10);
+  });
+});
+
+describe('updatePeak', () => {
+  it('jumps up to a higher level immediately', () => {
+    expect(updatePeak(0.2, 0.9, 0.5, 1 / 60)).toBe(0.9);
+  });
+
+  it('falls at the given rate per second', () => {
+    expect(updatePeak(1, 0, 0.5, 0.5)).toBeCloseTo(0.75, 10);
+  });
+
+  it('never falls below the current level', () => {
+    expect(updatePeak(0.5, 0.4, 0.5, 10)).toBe(0.4);
+  });
+
+  it('falls the same amount over equal time at 60 and 120 Hz', () => {
+    let at60 = 1;
+    let at120 = 1;
+    for (let i = 0; i < 30; i++) at60 = updatePeak(at60, 0, 0.6, 1 / 60);
+    for (let i = 0; i < 60; i++) at120 = updatePeak(at120, 0, 0.6, 1 / 120);
     expect(at120).toBeCloseTo(at60, 10);
   });
 });

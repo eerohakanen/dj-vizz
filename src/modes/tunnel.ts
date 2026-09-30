@@ -1,11 +1,27 @@
+import { bandAt } from '../audio/spectrum';
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
-import { frameScale, TAU } from '../math';
-import { clock, fx, signal, view } from '../state';
+import { frameScale, lerp, TAU } from '../math';
+import { clock, fx, settings, signal, view } from '../state';
 
 const SIDE_COUNTS = [4, 5, 6, 8];
+const SEGMENTS_PER_SIDE = 6;
+const BAND_BULGE = 0.22;
 
 const rings: { radius: number; alpha: number }[] = [];
+
+function polygonPoint(sides: number, turn: number, spin: number) {
+  const corner = Math.floor(turn * sides);
+  const fraction = turn * sides - corner;
+  const from = (corner / sides) * TAU + spin;
+  const to = ((corner + 1) / sides) * TAU + spin;
+  return {
+    x: lerp(Math.cos(from), Math.cos(to), fraction),
+    y: lerp(Math.sin(from), Math.sin(to), fraction),
+  };
+}
+
+const mirroredBand = (turn: number) => bandAt(Math.abs(turn * 2 - 1), 1);
 
 export function resetRings() {
   rings.length = 0;
@@ -28,16 +44,20 @@ export function drawTunnel() {
   for (const ring of rings) {
     if (ring.alpha <= 0.02) continue;
     rings[alive++] = ring;
-    ring.radius += (1 + signal.punchBass * 20 + fx.drop * 30) * pixelRatio * (1 + (ring.radius / maxRadius) * 2) * step;
+    ring.radius += (1 + signal.punchBass * 20 + fx.drop * 30) * pixelRatio * (1 + (ring.radius / maxRadius) * 2) * settings.motion * step;
     const depth = ring.radius / maxRadius;
     ring.alpha = 1 - depth;
     ctx.strokeStyle = color(depth * 2, ring.alpha);
     ctx.lineWidth = (1 + depth * 10 + fx.beat * 4) * pixelRatio;
     ctx.beginPath();
-    for (let i = 0; i <= sides; i++) {
-      const angle = (i / sides) * TAU + fx.spin * 2 + depth;
-      const x = cx + Math.cos(angle) * ring.radius;
-      const y = cy + Math.sin(angle) * ring.radius;
+    const vertices = sides * SEGMENTS_PER_SIDE;
+    const spin = fx.spin * 2 + depth;
+    for (let i = 0; i <= vertices; i++) {
+      const turn = i / vertices;
+      const point = polygonPoint(sides, turn, spin);
+      const reach = ring.radius * (1 + mirroredBand(turn) * BAND_BULGE);
+      const x = cx + point.x * reach;
+      const y = cy + point.y * reach;
       if (i) ctx.lineTo(x, y);
       else ctx.moveTo(x, y);
     }
