@@ -19,6 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import type { Palette } from '@/palettes';
 import { MENU_SCREEN_LABELS, SOURCES, type SourceOption } from './labels';
+import { LiveCanvas } from './LiveCanvas';
 
 export const FLOATING_PANEL = 'border-2 border-foreground bg-card shadow-hard';
 
@@ -42,16 +43,18 @@ function waveformPath(width: number, height: number, points: number) {
 
 const WAVEFORM = waveformPath(WAVE_WIDTH, WAVE_HEIGHT, WAVE_POINTS);
 
-export function MenuBackdrop() {
+const WAVE_BAND = 'absolute inset-x-0 bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] h-16 w-full text-foreground sm:h-24';
+
+export function MenuBackdrop({ live = false }: { live?: boolean }) {
   return (
     <div className="pointer-events-none fixed inset-0 bg-background" aria-hidden>
-      <svg
-        viewBox={`0 0 ${WAVE_WIDTH} ${WAVE_HEIGHT}`}
-        preserveAspectRatio="none"
-        className="absolute inset-x-0 bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] h-16 w-full text-foreground sm:h-24"
-      >
-        <path d={WAVEFORM} fill="none" stroke="currentColor" strokeWidth={1.25} vectorEffect="non-scaling-stroke" />
-      </svg>
+      {live ? (
+        <LiveCanvas className={cn(WAVE_BAND, 'block')} />
+      ) : (
+        <svg viewBox={`0 0 ${WAVE_WIDTH} ${WAVE_HEIGHT}`} preserveAspectRatio="none" className={WAVE_BAND}>
+          <path d={WAVEFORM} fill="none" stroke="currentColor" strokeWidth={1.25} vectorEffect="non-scaling-stroke" />
+        </svg>
+      )}
     </div>
   );
 }

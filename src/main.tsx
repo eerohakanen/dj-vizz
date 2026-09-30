@@ -41,10 +41,11 @@ function syncCanvasVisibility() {
 function frame(timestamp: number) {
   const elapsed = timestamp - lastTimestamp;
   lastTimestamp = timestamp;
+  const accentDelta = Math.min(0.05, Math.max(0, elapsed / 1000));
   if (ui.paused || !visualsShown()) {
     wasPaused = true;
     buildLut();
-    syncAccent();
+    syncAccent(accentDelta);
     requestAnimationFrame(frame);
     return;
   }
@@ -59,7 +60,7 @@ function frame(timestamp: number) {
   advanceTimedPlaylist();
   analyse();
   buildLut();
-  syncAccent();
+  syncAccent(accentDelta);
   renderScene();
   presentFrame();
   requestAnimationFrame(frame);

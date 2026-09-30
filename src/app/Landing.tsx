@@ -6,9 +6,9 @@ import { MenuBackdrop } from './shared';
 export function Landing() {
   return (
     <main className="fixed inset-0 overflow-y-auto">
-      <MenuBackdrop />
+      <MenuBackdrop live />
       <div className="relative mx-auto flex min-h-full max-w-xl flex-col items-center justify-center gap-8 px-6 py-12 text-center">
-        <div className="space-y-4">
+        <div className="space-y-5">
           <h1 className="font-display text-[2.75rem] leading-[0.9] font-bold tracking-[-0.06em] text-balance uppercase sm:text-7xl">
             <span className="bg-live px-[0.08em] text-live-foreground">DJ</span> Visualizer
           </h1>

@@ -19,6 +19,7 @@ const STYLE_CACHE_LIMIT = 4096;
 const lut = new Float32Array(LUT_SIZE * 3);
 const styleCache = new Map<number, string>();
 const shade = new Int16Array(3);
+const blended = new Float32Array(3);
 const built = { palette: -1, previousPalette: -1, fade: -1, hue: NaN, keyStrength: NaN, minor: false };
 const currentHsl = new Float32Array(3);
 const previousHsl = new Float32Array(3);
@@ -144,10 +145,25 @@ const alphaSteps = (alpha: number) => (alpha < 0 ? 0 : alpha > 1 ? 1000 : Math.r
 export const styleKey = (hue: number, saturation: number, lightness: number, alpha: number) =>
   (hue * 10201 + saturation * 101 + lightness) * 1001 + alphaSteps(alpha);
 
+function lutPosition(position: number) {
+  const x = (position * 0.5 + fx.hue / 360) % 1;
+  return (x < 0 ? x + 1 : x) * LUT_SIZE;
+}
+
+export function blendedHsl(position: number) {
+  const scaled = lutPosition(position);
+  const cell = scaled | 0;
+  const from = (cell % LUT_SIZE) * 3;
+  const to = ((cell + 1) % LUT_SIZE) * 3;
+  const blend = scaled - cell;
+  blended[0] = wrap(lut[from] + hueDelta(lut[from], lut[to]) * blend, 360);
+  blended[1] = lerp(lut[from + 1], lut[to + 1], blend);
+  blended[2] = lerp(lut[from + 2], lut[to + 2], blend);
+  return blended;
+}
+
 export function colorHsl(position: number, lightness?: number) {
-  let x = (position * 0.5 + fx.hue / 360) % 1;
-  if (x < 0) x += 1;
-  const k = ((x * LUT_SIZE) | 0) * 3;
+  const k = (lutPosition(position) | 0) * 3;
   const mood = (signal.brightness - 0.5) * 14;
   const light = lut[k + 2] + (lightness == null ? 0 : lightness - 58) + fx.beat * 8 + mood;
   shade[0] = lut[k];
