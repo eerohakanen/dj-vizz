@@ -129,6 +129,11 @@ export function goLive() {
   notify();
 }
 
+export function finishSetup() {
+  if (ui.screen === 'setup') goLive();
+  else disconnectAudio();
+}
+
 function enter(mode: LiveMode) {
   flushAutosave();
   ui.liveMode = mode;

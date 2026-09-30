@@ -6,6 +6,7 @@ import {
   enterEdit,
   enterPlay,
   explore,
+  finishSetup,
   goLive,
   leaveSetup,
   menuParent,
@@ -17,7 +18,7 @@ import {
   switchToEdit,
   switchToPlay,
 } from './actions';
-import { audio } from './audio/input';
+import { audio, disconnectAudio } from './audio/input';
 import { showMessage } from './dom';
 import { createPreset, library, playlist } from './presets/library';
 import { settings } from './state';
@@ -122,6 +123,25 @@ describe('navigation actions', () => {
     expect(ui.screen).toBe('setup');
     leaveSetup();
     expect(ui.screen).toBe('landing');
+  });
+
+  it('finishSetup goes live while setup is still open', () => {
+    audio.live = false;
+    enterPlay(0);
+    finishSetup();
+    expect(ui.screen).toBe('live');
+    expect(playlist.playing).toBe(true);
+  });
+
+  it('finishSetup drops a capture that resolves after leaving setup', () => {
+    audio.live = false;
+    enterPlay(0);
+    leaveSetup();
+    vi.mocked(disconnectAudio).mockClear();
+    finishSetup();
+    expect(ui.screen).toBe('presets');
+    expect(playlist.playing).toBe(false);
+    expect(disconnectAudio).toHaveBeenCalledOnce();
   });
 
   it('explore goes live in explore mode', () => {

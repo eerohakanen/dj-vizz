@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { goLive, leaveVisualizer } from '@/actions';
+import { finishSetup, leaveVisualizer } from '@/actions';
 import { holdWakeLock } from '@/wake-lock';
 import { ui, useEngine } from '@/store';
 import { AnalysisHud } from './AnalysisHud';
@@ -33,7 +33,7 @@ export function App() {
     <TooltipProvider delayDuration={300}>
       {screen === 'landing' && <Landing />}
       {screen === 'presets' && <PresetsMenu />}
-      {screen === 'setup' && <Setup onDone={goLive} />}
+      {screen === 'setup' && <Setup onDone={finishSetup} />}
       {screen === 'live' && (
         <>
           <Toolbar />
