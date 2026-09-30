@@ -1,4 +1,5 @@
 import { TUNING_DEFAULTS } from './state';
+import type { LiveMode } from './store';
 
 export type TuningKey = Exclude<keyof typeof TUNING_DEFAULTS, 'autoGain'>;
 
@@ -167,3 +168,6 @@ const controlsIn = <K extends TuningKey>(group: TuningGroup) =>
 
 export const LOOK_CONTROLS = controlsIn<LookTuningKey>('look');
 export const CALIBRATION_CONTROLS = controlsIn<CalibrationTuningKey>('calibration');
+
+export const tuningSectionsFor = (mode: LiveMode) =>
+  mode === 'play' ? TUNING_SECTIONS.filter((section) => section.group === 'calibration') : TUNING_SECTIONS;

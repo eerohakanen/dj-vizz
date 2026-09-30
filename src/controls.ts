@@ -291,22 +291,38 @@ export const resolveKey = (event: KeyLike, mode: LiveMode) => keysFor(mode).find
 
 export const shortcutFor = (id: string) => KEYMAP.find((entry) => entry.id === id)?.display.join(', ') ?? '';
 
-const isTyping = (target: Element) => target.matches('input, textarea, select, [contenteditable="true"]');
-const isInMenu = (target: Element) => !!target.closest('[role="menu"], [role="listbox"], [role="slider"], [role="dialog"]');
+export interface ShortcutTarget {
+  matches: (selector: string) => boolean;
+  closest: (selector: string) => unknown;
+}
 
-function blurToolbarFocus() {
+const TEXT_ENTRY = ['input', 'textarea', 'select', '[contenteditable="true"]'];
+const POPUPS = ['[role="menu"]', '[role="listbox"]', '[role="slider"]'];
+const PANEL_CONTROLS = ['[role="combobox"]', '[role="switch"]'];
+const ACTIVATION_KEYS = [' ', 'Enter'];
+const BUTTONS = ['button', '[role="button"]'];
+const SIDE_PANEL = '[data-side-panel]';
+
+export function shortcutBlocked(target: ShortcutTarget, key: string) {
+  if (TEXT_ENTRY.some((selector) => target.matches(selector))) return true;
+  if (POPUPS.some((selector) => target.closest(selector))) return true;
+  if (!target.closest(SIDE_PANEL)) return !!target.closest('[role="dialog"]');
+  if (PANEL_CONTROLS.some((selector) => target.matches(selector))) return true;
+  return ACTIVATION_KEYS.includes(key) && BUTTONS.some((selector) => target.closest(selector));
+}
+
+function blurControlFocus() {
   const active = document.activeElement;
-  if (active instanceof HTMLElement && active.closest('[data-toolbar]')) active.blur();
+  if (active instanceof HTMLElement && active.closest(`[data-toolbar], ${SIDE_PANEL}`)) active.blur();
 }
 
 function handleKey(event: KeyboardEvent) {
   if (ui.screen !== 'live' || event.metaKey || event.ctrlKey || event.altKey) return;
-  const target = event.target as Element;
-  if (isTyping(target) || isInMenu(target)) return;
+  if (shortcutBlocked(event.target as Element, event.key)) return;
   const entry = resolveKey(event, ui.liveMode);
   if (!entry) return;
   event.preventDefault();
-  blurToolbarFocus();
+  blurControlFocus();
   entry.run(event);
 }
 

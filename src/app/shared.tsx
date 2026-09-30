@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ComponentProps, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ComponentProps, type MouseEvent, type ReactNode } from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -18,6 +18,12 @@ import type { Palette } from '@/palettes';
 import { SOURCES, type SourceOption } from './labels';
 
 export const GLASS_PANEL = 'bg-card/80 shadow-2xl backdrop-blur-xl';
+
+export function blurAfterPointerClick(event: MouseEvent) {
+  if (!event.detail || !(event.target instanceof Element)) return;
+  const control = event.target.closest('button, [role="button"]');
+  if (control instanceof HTMLElement) control.blur();
+}
 
 export function useOverlay(name: Overlay) {
   return {

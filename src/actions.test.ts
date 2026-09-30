@@ -16,6 +16,7 @@ import {
   switchToPlay,
 } from './actions';
 import { audio } from './audio/input';
+import { showMessage } from './dom';
 import { createPreset, library, playlist } from './presets/library';
 import { settings } from './state';
 import { ui } from './store';
@@ -157,5 +158,34 @@ describe('scene editing actions', () => {
     expect(playlist.index).toBe(1);
     previousScene();
     expect(playlist.index).toBe(0);
+  });
+});
+
+describe('scene guards', () => {
+  it('re-applies the stored scene quietly when switching to edit', () => {
+    enterEdit(0);
+    switchToPlay();
+    settings.psy = 3;
+    vi.mocked(showMessage).mockClear();
+    switchToEdit();
+    expect(settings.psy).toBe(0);
+    expect(playlist.selected).toBe(0);
+    expect(showMessage).not.toHaveBeenCalled();
+  });
+
+  it('does not reload the scene already being edited', () => {
+    enterEdit(0);
+    playlist.beats = 5;
+    editScene(0);
+    expect(playlist.beats).toBe(5);
+  });
+
+  it('does not step when the preset has fewer than two scenes', () => {
+    library.folders[0].presets = [createPreset('Only', 0, 1)];
+    enterPlay(0);
+    playlist.beats = 5;
+    nextScene();
+    previousScene();
+    expect(playlist.beats).toBe(5);
   });
 });

@@ -9,7 +9,12 @@ export const currentChangeOn = () => currentFolder()?.changeOn ?? DEFAULT_CHANGE
 
 export const currentShuffle = () => currentFolder()?.shuffle ?? false;
 
-export function loadPreset(index: number) {
+interface LoadOptions {
+  announce?: boolean;
+  transition?: TransitionKind;
+}
+
+export function loadPreset(index: number, { announce = !playlist.playing, transition }: LoadOptions = {}) {
   const folder = currentFolder();
   const preset = folder?.presets[index];
   if (!folder || !preset) return;
@@ -17,8 +22,8 @@ export function loadPreset(index: number) {
   playlist.selected = playlist.index = index;
   playlist.beats = 0;
   playlist.startedAt = clock.time;
-  applyPreset(preset, folder.transition);
-  if (!playlist.playing) showMessage(`▶ ${preset.name}  (${index + 1}/${presets.length})`);
+  applyPreset(preset, transition ?? folder.transition);
+  if (announce) showMessage(`▶ ${preset.name}  (${index + 1}/${presets.length})`);
   notify();
 }
 

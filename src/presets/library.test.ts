@@ -10,6 +10,7 @@ import {
   deletePreset,
   duplicateScene,
   importFolders,
+  movePreset,
   library,
   migrateLibrary,
   NAME_LIMIT,
@@ -335,5 +336,30 @@ describe('restorePreset', () => {
     expect(playlist.selected).toBe(1);
     restorePreset(removed, 0, library.folders[0]);
     expect(playlist.selected).toBe(2);
+  });
+});
+
+describe('scene selection', () => {
+  beforeEach(() => {
+    resetFolders(['a', 'b', 'c'].map((name) => snapshot(name)));
+    playlist.selected = playlist.index = 0;
+  });
+
+  it('steps from a newly added scene', () => {
+    addScene();
+    expect(playlist.index).toBe(3);
+  });
+
+  it('steps from a duplicated scene', () => {
+    duplicateScene(1);
+    expect(playlist.index).toBe(2);
+  });
+
+  it('moves the selected and current positions with their scenes', () => {
+    movePreset(0, 1);
+    expect([playlist.selected, playlist.index]).toEqual([1, 1]);
+    playlist.selected = playlist.index = 2;
+    movePreset(1, 1);
+    expect([playlist.selected, playlist.index]).toEqual([1, 1]);
   });
 });

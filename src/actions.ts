@@ -4,7 +4,7 @@ import { clamp, wrap } from './math';
 import { allowStrobe, revokeStrobe, strobeActive } from './motion';
 import { audio, disconnectAudio } from './audio/input';
 import { flushAutosave } from './presets/autosave';
-import { addScene, createFolder, duplicateScene, playlist, selectFolder } from './presets/library';
+import { addScene, createFolder, currentFolder, duplicateScene, playlist, selectFolder } from './presets/library';
 import { loadPreset, nextPreset, previousPreset, startPlaybackAt } from './presets/playlist';
 import { settings, TUNING_DEFAULTS } from './state';
 import { notify, ui, type LiveMode, type Overlay, type Screen } from './store';
@@ -155,11 +155,13 @@ export function switchToEdit() {
   ui.liveMode = 'edit';
   settings.auto = false;
   playlist.playing = false;
+  loadPreset(Math.max(playlist.selected, 0), { announce: false, transition: 'cut' });
   ui.overlay = 'scenes';
   notify();
 }
 
 export function editScene(index: number) {
+  if (index === playlist.selected) return;
   flushAutosave();
   loadPreset(index);
 }
@@ -176,12 +178,16 @@ export function duplicateAndEditScene(index: number) {
   return copy;
 }
 
+const canStepScenes = () => (currentFolder()?.presets.length ?? 0) > 1;
+
 export function nextScene() {
+  if (!canStepScenes()) return;
   flushAutosave();
   nextPreset();
 }
 
 export function previousScene() {
+  if (!canStepScenes()) return;
   flushAutosave();
   previousPreset();
 }

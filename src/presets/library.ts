@@ -279,7 +279,7 @@ export function savePreset(name?: string) {
   const folder = currentFolder() ?? library.folders[createFolder()];
   const preset = snapshot(cleanName(name, defaultPresetName()));
   folder.presets.push(preset);
-  playlist.selected = folder.presets.length - 1;
+  playlist.selected = playlist.index = folder.presets.length - 1;
   saveLibrary();
   return preset;
 }
@@ -295,7 +295,7 @@ export function duplicateScene(index: number) {
   if (!folder || !source) return -1;
   const copy = structuredClone({ ...source, name: cleanName(`${source.name} copy`, source.name) });
   folder.presets.splice(index + 1, 0, copy);
-  playlist.selected = index + 1;
+  playlist.selected = playlist.index = index + 1;
   saveLibrary();
   return index + 1;
 }
@@ -312,8 +312,9 @@ export function movePreset(index: number, step: number) {
   const target = index + step;
   if (!presets || target < 0 || target >= presets.length) return;
   [presets[index], presets[target]] = [presets[target], presets[index]];
-  if (playlist.selected === index) playlist.selected = target;
-  else if (playlist.selected === target) playlist.selected = index;
+  const follow = (position: number) => (position === index ? target : position === target ? index : position);
+  playlist.selected = follow(playlist.selected);
+  playlist.index = follow(playlist.index);
   saveLibrary();
 }
 

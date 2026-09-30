@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { KEYMAP, keysFor, modeIndexFor, resolveKey, shortcutFor } from './controls';
+import { KEYMAP, keysFor, modeIndexFor, resolveKey, shortcutBlocked, shortcutFor, type ShortcutTarget } from './controls';
 import type { LiveMode } from './store';
 
 vi.mock('./actions', () => ({
@@ -164,5 +164,43 @@ describe('KEYMAP', () => {
     expect(shortcutFor('psy')).toBe('P');
     expect(shortcutFor('pause')).toBe('B');
     expect(shortcutFor('missing')).toBe('');
+  });
+});
+
+describe('shortcutBlocked', () => {
+  const element = (selectors: string[], parent?: ShortcutTarget): ShortcutTarget => {
+    const self: ShortcutTarget = {
+      matches: (selector: string) => selectors.includes(selector),
+      closest: (selector: string) => (selectors.includes(selector) ? self : (parent?.closest(selector) ?? null)),
+    };
+    return self;
+  };
+  const panel = element(['[data-side-panel]', '[role="dialog"]']);
+  const modal = element(['[role="dialog"]']);
+  const panelButton = element(['button'], panel);
+
+  it('lets shortcuts through from buttons in a side panel', () => {
+    expect(shortcutBlocked(panelButton, 'c')).toBe(false);
+    expect(shortcutBlocked(panel, ' ')).toBe(false);
+  });
+
+  it('leaves Space and Enter to a focused side panel button', () => {
+    expect(shortcutBlocked(panelButton, ' ')).toBe(true);
+    expect(shortcutBlocked(panelButton, 'Enter')).toBe(true);
+  });
+
+  it('guards text entry, selects and switches inside a side panel', () => {
+    expect(shortcutBlocked(element(['input'], panel), 'c')).toBe(true);
+    expect(shortcutBlocked(element(['button', '[role="combobox"]'], panel), 'c')).toBe(true);
+    expect(shortcutBlocked(element(['button', '[role="switch"]'], panel), 'c')).toBe(true);
+  });
+
+  it('guards modal dialogs and open menus', () => {
+    expect(shortcutBlocked(element(['button'], modal), 'c')).toBe(true);
+    expect(shortcutBlocked(element(['[role="menuitem"]'], element(['[role="menu"]'])), 'c')).toBe(true);
+  });
+
+  it('allows shortcuts from the page itself', () => {
+    expect(shortcutBlocked(element([]), ' ')).toBe(false);
   });
 });

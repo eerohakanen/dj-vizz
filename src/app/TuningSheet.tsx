@@ -9,11 +9,11 @@ import { Switch } from '@/components/ui/switch';
 import { resetTuning, setGain, setSetting } from '@/actions';
 import { shortcutFor } from '@/controls';
 import { settings, signal } from '@/state';
-import { useEngine } from '@/store';
-import { GAIN_CONTROL, TUNING_SECTIONS, type TuningControl } from '@/tuning';
+import { ui, useEngine } from '@/store';
+import { GAIN_CONTROL, tuningSectionsFor, type TuningControl } from '@/tuning';
 import { TUNING_GROUP_NOTES } from './labels';
 import { cn } from '@/lib/utils';
-import { GLASS_PANEL, MeterBar, SourcePicker, useOverlay, useTicker } from './shared';
+import { blurAfterPointerClick, GLASS_PANEL, MeterBar, SourcePicker, useOverlay, useTicker } from './shared';
 
 const LIVE_INTERVAL = 150;
 
@@ -88,19 +88,24 @@ function GainRows({ active }: { active: boolean }) {
 export function TuningSheet() {
   useEngine();
   const overlay = useOverlay('tuning');
+  const playing = ui.liveMode === 'play';
   return (
     <Sheet {...overlay} modal={false}>
       <SheetContent
+        data-side-panel
         overlay={false}
+        onClick={blurAfterPointerClick}
         onInteractOutside={(event) => event.preventDefault()}
         className={cn(GLASS_PANEL, 'flex w-full flex-col gap-0 sm:max-w-md')}
       >
         <SheetHeader>
           <SheetTitle>Tune</SheetTitle>
-          <SheetDescription>Adjust what the visualizer hears and how strongly it reacts.</SheetDescription>
+          <SheetDescription>
+            {playing ? 'Adjust what the visualizer hears.' : 'Adjust what the visualizer hears and how strongly it reacts.'}
+          </SheetDescription>
         </SheetHeader>
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 pb-4">
-          {TUNING_SECTIONS.map((section, index) => (
+          {tuningSectionsFor(ui.liveMode).map((section, index) => (
             <section key={section.title} className="space-y-5">
               {index > 0 && <Separator />}
               <div>
@@ -120,13 +125,17 @@ export function TuningSheet() {
             </section>
           ))}
         </div>
-        <Separator />
-        <SheetFooter>
-          <Button variant="outline" onClick={resetTuning}>
-            <RotateCcw />
-            Reset to defaults
-          </Button>
-        </SheetFooter>
+        {!playing && (
+          <>
+            <Separator />
+            <SheetFooter>
+              <Button variant="outline" onClick={resetTuning}>
+                <RotateCcw />
+                Reset to defaults
+              </Button>
+            </SheetFooter>
+          </>
+        )}
       </SheetContent>
     </Sheet>
   );
