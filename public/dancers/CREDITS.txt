@@ -1,0 +1,8 @@
+Dancing Girl Sprites by Luis Zuno (@ansimuz), CC0
+https://opengameart.org/content/dancing-girl-sprites
+
+waltz.png: Man and woman dancing a waltz (1887), Eadweard Muybridge, public domain
+https://commons.wikimedia.org/wiki/File:Man_and_woman_dancing_a_waltz_(1887).gif
+horse.png: Muybridge race horse animated (1887), Eadweard Muybridge, public domain
+https://commons.wikimedia.org/wiki/File:Muybridge_race_horse_animated.gif
+Both cropped, downscaled and packed into animated PNGs

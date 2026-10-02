@@ -34,7 +34,7 @@ export const GLOW_POINT_FRAGMENT = `
 const RETRY_DELAY_MS = 5000;
 const KICK_ATTACK = 0.03;
 
-export function lazyStage<T>(load: () => Promise<T>) {
+export function lazyStage<T>(load: () => Promise<T>, failure = '3D mode failed to load') {
   let stage: T | undefined;
   let loading = false;
   let warned = false;
@@ -51,7 +51,7 @@ export function lazyStage<T>(load: () => Promise<T>) {
             retryAt = Date.now() + RETRY_DELAY_MS;
             if (warned) return;
             warned = true;
-            showWarning('3D mode failed to load');
+            showWarning(failure);
           })
           .finally(() => {
             loading = false;

@@ -26,7 +26,7 @@ import {
 } from './library';
 
 vi.mock('../canvas', () => ({ output: {}, transitionCtx: {}, transitionFrame: {} }));
-vi.mock('../modes/index', () => ({ MODES: Array.from({ length: 21 }, (_, index) => ({ name: `Mode ${index}`, threeD: index >= 9 && index <= 11 })) }));
+vi.mock('../modes/index', () => ({ MODES: Array.from({ length: 24 }, (_, index) => ({ name: `Mode ${index}`, threeD: index >= 9 && index <= 11 })) }));
 vi.mock('../mode', async () => {
   const { settings } = await import('../state');
   return { setMode: vi.fn((index: number) => (settings.mode = index)) };

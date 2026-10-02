@@ -5,7 +5,9 @@ import { drawBars, dropBars } from './bars';
 import { drawBlob } from './blob';
 import { drawCells, kickCells, shatterCells } from './cells';
 import { drawChladni, jumpChladni, stepChladni } from './chladni';
+import { drawDancer, pulseDancer, switchDance } from './dancer';
 import { drawDeepSpace, pulseDeepSpace } from './deepspace';
+import { drawGallop, dropGallop, pulseGallop } from './gallop';
 import { drawGalaxy } from './galaxy';
 import { bloomGolden, drawGolden, twistGolden } from './golden';
 import { drawGrid } from './grid';
@@ -19,8 +21,9 @@ import { bumpTopo, drawTopo, quakeTopo } from './topo';
 import { drawTruchet, flipTruchet, scrambleTruchet } from './truchet';
 import { drawTunnel, spawnRing, spawnRingVolley } from './tunnel';
 import { drawWarp } from './warp';
+import { drawWaltz, dropWaltz, pulseWaltz } from './waltz';
 
-export const MODE_GROUPS = ['Spectrum', 'Flight', 'Patterns', 'ASCII', '3D'] as const;
+export const MODE_GROUPS = ['Spectrum', 'Flight', 'Patterns', 'ASCII', 'Characters', '3D'] as const;
 
 export type ModeGroup = (typeof MODE_GROUPS)[number];
 
@@ -79,4 +82,7 @@ export const MODES = [
   defineMode('Topo', 'Patterns', 'Contour lines over terrain that quakes on kicks', drawTopo, { trails: false, fade: 0.35, onBeat: bumpTopo, onDrop: quakeTopo }),
   defineMode('Cells', 'Patterns', 'Voronoi cells that scatter on the beat', drawCells, { trails: false, fade: 0.35, onBeat: kickCells, onDrop: shatterCells }),
   defineMode('Golden', 'Spectrum', 'A sunflower spiral whose seeds swell with the spectrum', drawGolden, { trails: false, fade: 0.4, onBeat: twistGolden, onDrop: bloomGolden }),
+  defineMode('Dancer', 'Characters', 'A pixel-art dancer moving in time with the beat', drawDancer, { trails: false, fade: 0.4, onBeat: pulseDancer, onDrop: switchDance }),
+  defineMode('Waltz', 'Characters', 'A flickering 1887 Muybridge film of a waltzing couple', drawWaltz, { trails: false, fade: 0.4, onBeat: pulseWaltz, onDrop: dropWaltz }),
+  defineMode('Gallop', 'Characters', "Muybridge's race horse galloping down a numbered track", drawGallop, { trails: false, fade: 0.4, onBeat: pulseGallop, onDrop: dropGallop }),
 ];

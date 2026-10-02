@@ -114,6 +114,9 @@ const twoDFolders = (): Folder[] => [
     createPreset('Chladni · Ice', 14, 6),
     createPreset('Topo · Ocean', 18, 3),
     createPreset('Cells · Vaporwave', 19, 7),
+    createPreset('Dancer · Neon', 21, 1),
+    createPreset('Waltz · Vaporwave', 22, 7),
+    createPreset('Gallop · Gold', 23, 9),
   ]),
   starterFolder('ASCII', [
     createPreset('ASCII knot · Gold', 12, 9),
@@ -133,6 +136,7 @@ const starterFolders = (): Folder[] => [
     createPreset('Dotted laser tunnel', 2, 4, { pixelate: pixelIndex('Round'), effects: { lasers: true } }),
     createPreset('Bead galaxy', 4, 9, { pixelate: pixelIndex('Round') }),
     createPreset('Pixel scope', 3, 8, { pixelate: pixelIndex('Square') }),
+    createPreset('Pixel dancer', 21, 11, { pixelate: pixelIndex('Square') }),
   ]),
   ...twoDFolders(),
   starterFolder('3D', [
