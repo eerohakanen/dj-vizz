@@ -15,6 +15,7 @@ const MIN_STARS = 120;
 const MAX_STARS = 1000;
 const DENSITY_ATTACK = 0.15;
 const DENSITY_RELEASE = 1.5;
+const ARRIVAL_DEPTH = 0.6;
 
 interface Star {
   x: number;
@@ -23,6 +24,7 @@ interface Star {
   previousZ: number;
   hue: number;
   turn: number;
+  live: boolean;
 }
 
 function respawn(star: Star) {
@@ -40,7 +42,13 @@ function recycle(star: Star) {
   star.z = star.previousZ = 1;
 }
 
-const stars = Array.from({ length: MAX_STARS }, () => respawn({ x: 0, y: 0, z: 0, previousZ: 0, hue: 0, turn: 0 }));
+function arrive(star: Star) {
+  respawn(star);
+  star.z = star.previousZ = ARRIVAL_DEPTH + Math.random() * (1 - ARRIVAL_DEPTH);
+  star.live = true;
+}
+
+const stars = Array.from({ length: MAX_STARS }, (_, i) => respawn({ x: 0, y: 0, z: 0, previousZ: 0, hue: 0, turn: 0, live: i < MIN_STARS }));
 const centerGlow = gradientCache(() => ctx.createRadialGradient(0, 0, 0, 0, 0, 1));
 const buckets = Array.from({ length: HUES * DEPTH_BUCKETS * LEVEL_BUCKETS }, (): number[] => []);
 let density = 0;
@@ -49,9 +57,13 @@ let activeStars = MIN_STARS;
 function updateActiveStars() {
   const target = clamp01(signal.energy * 1.2 + fx.drop * 0.6) * signal.gate;
   density = follow(density, target, DENSITY_ATTACK, DENSITY_RELEASE, clock.delta);
-  const count = Math.round(lerp(MIN_STARS, MAX_STARS, density));
-  for (let i = activeStars; i < count; i++) recycle(stars[i]);
-  activeStars = count;
+  activeStars = Math.round(lerp(MIN_STARS, MAX_STARS, density));
+  for (let i = 0; i < activeStars; i++) if (!stars[i].live) arrive(stars[i]);
+}
+
+function retire(star: Star, index: number) {
+  if (index < activeStars) recycle(star);
+  else star.live = false;
 }
 
 function collectStreaks() {
@@ -62,18 +74,19 @@ function collectStreaks() {
   const speed = signal.gate * (0.12 + signal.punchBass * 2.2 + fx.drop * 5) * settings.motion * clock.delta;
   for (const bucket of buckets) bucket.length = 0;
   updateActiveStars();
-  for (let i = 0; i < activeStars; i++) {
+  for (let i = 0; i < MAX_STARS; i++) {
     const star = stars[i];
+    if (!star.live) continue;
     star.previousZ = star.z;
     star.z -= speed;
     if (star.z < 0.02) {
-      recycle(star);
+      retire(star, i);
       continue;
     }
     const x = cx + (star.x / star.z) * focal;
     const y = cy + (star.y / star.z) * focal;
     if (x < -MARGIN || x > width + MARGIN || y < -MARGIN || y > height + MARGIN) {
-      recycle(star);
+      retire(star, i);
       continue;
     }
     const level = bandAt(star.turn, 1);

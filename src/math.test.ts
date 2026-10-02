@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { approach, clamp, clamp01, decay, follow, frameAlpha, hueDelta, keepNewest, lerp, quantize, randomRange, signedRandom, smoothstep, stretch, updatePeak, wrap } from './math';
+import { approach, clamp, clamp01, decay, follow, frameAlpha, hueDelta, keepNewest, lerp, quantize, randomRange, rise, signedRandom, smoothstep, stretch, updatePeak, wobble, wrap } from './math';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -249,5 +249,31 @@ describe('stretch', () => {
   it('stays inside the unit interval', () => {
     expect(stretch(0.1, 0.3, 0.5, 0.1)).toBe(0);
     expect(stretch(0.9, 0.3, 0.5, 0.1)).toBe(1);
+  });
+});
+
+describe('rise', () => {
+  it('climbs toward a higher target over the attack time', () => {
+    const value = rise(0, 1, 0.02, 0.016);
+    expect(value).toBeGreaterThan(0.4);
+    expect(value).toBeLessThan(0.7);
+  });
+
+  it('follows a falling target immediately', () => {
+    expect(rise(0.8, 0.3, 0.02, 0.016)).toBe(0.3);
+  });
+});
+
+describe('wobble', () => {
+  it('stays within half a unit either side', () => {
+    for (let t = 0; t < 2; t += 0.003) expect(Math.abs(wobble(t, 0))).toBeLessThanOrEqual(0.5);
+  });
+
+  it('moves continuously between nearby frames', () => {
+    for (let t = 0; t < 2; t += 0.016) expect(Math.abs(wobble(t + 0.001, 1) - wobble(t, 1))).toBeLessThan(0.05);
+  });
+
+  it('gives each axis its own path', () => {
+    expect(wobble(0.4, 0)).not.toBeCloseTo(wobble(0.4, 1));
   });
 });

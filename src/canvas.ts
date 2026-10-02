@@ -105,8 +105,11 @@ export function resize() {
 let averageFrameMs = 16;
 let slowMs = 0;
 let fastMs = 0;
+let upgradeWaitMs = 12000;
+let sinceUpgradeMs = Infinity;
 
 export function adaptQuality(frameMs: number) {
+  sinceUpgradeMs += frameMs;
   averageFrameMs += (frameMs - averageFrameMs) * 0.05;
   if (averageFrameMs > 21) {
     slowMs += frameMs;
@@ -120,12 +123,14 @@ export function adaptQuality(frameMs: number) {
   }
   if (slowMs > 1500 && view.quality > 0.45) {
     view.quality = Math.max(0.45, view.quality * 0.82);
+    if (sinceUpgradeMs < 30000) upgradeWaitMs = Math.min(300000, upgradeWaitMs * 2);
     slowMs = 0;
     averageFrameMs = 16;
     resize();
-  } else if (fastMs > 12000 && view.quality < 1) {
+  } else if (fastMs > upgradeWaitMs && view.quality < 1) {
     view.quality = Math.min(1, view.quality * 1.1);
     fastMs = 0;
+    sinceUpgradeMs = 0;
     resize();
   }
 }

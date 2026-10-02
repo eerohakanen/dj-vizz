@@ -1,5 +1,5 @@
-import { approach, decay, follow, frameScale, lerp, stretch, updatePeak } from '../math';
-import { clock, fx, intensity, settings, signal } from '../state';
+import { approach, decay, follow, frameScale, lerp, rise, stretch, updatePeak } from '../math';
+import { clock, fx, impulse, intensity, settings, signal } from '../state';
 import { detectDrums } from './drums';
 import { type DropFrame, dropState, stepDrop } from './drop';
 import { audio } from './input';
@@ -9,6 +9,8 @@ import { advanceTempo, beatStrength, heldBeatPeriod, isLocked } from './tempo';
 
 const SPECTRUM_ATTACK = 0.03;
 const SPECTRUM_RELEASE = 0.1;
+const HIT_ATTACK = 0.02;
+const HUE_GLIDE = 6;
 const BEAT_BOOST = 0.0625;
 const DROP_BOOST = 0.03125;
 const CALM_RISE = 0.8;
@@ -84,12 +86,17 @@ function computeGain(raw: number, delta: number) {
 }
 
 function decayEffects(delta: number) {
-  fx.beat *= decay(0.002, delta);
+  impulse.beat *= decay(0.002, delta);
+  impulse.kick *= decay(0.004, delta);
+  impulse.snare *= decay(0.002, delta);
+  impulse.hat *= decay(0.0005, delta);
+  fx.beat = rise(fx.beat, impulse.beat, HIT_ATTACK, delta);
+  fx.kick = rise(fx.kick, impulse.kick, HIT_ATTACK, delta);
+  fx.snare = rise(fx.snare, impulse.snare, HIT_ATTACK, delta);
+  fx.hat = rise(fx.hat, impulse.hat, HIT_ATTACK, delta);
+  fx.hue = approach(fx.hue, impulse.hue, HUE_GLIDE, delta);
   fx.drop *= decay(0.4, delta);
   fx.shake *= decay(0.02, delta);
-  fx.kick *= decay(0.004, delta);
-  fx.snare *= decay(0.002, delta);
-  fx.hat *= decay(0.0005, delta);
 }
 
 function fillSpectrum(frequencies: Uint8Array, gain: number, delta: number) {
@@ -179,7 +186,7 @@ export function analyse(events: AnalysisEvents) {
   analyseMusic(time, delta, hits.snareTimes.length / 2);
 
   if (advanceTempo(time, delta, hits.kick, hits.snare) && gate > 0.3) {
-    fx.beat = Math.min(1, beatStrength(time));
+    impulse.beat = Math.min(1, beatStrength(time));
     signal.lastBeat = time;
     events.onBeat();
   }

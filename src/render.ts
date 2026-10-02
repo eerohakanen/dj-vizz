@@ -4,7 +4,7 @@ import { drawLasers } from './effects/lasers';
 import { applyMirror } from './effects/mirror';
 import { applyPixelate } from './effects/pixelate';
 import { drawTransition } from './effects/transition';
-import { frameAlpha, frameScale, signedRandom } from './math';
+import { frameAlpha, frameScale, wobble } from './math';
 import { currentMode, setMode } from './mode';
 import { MODES } from './modes/index';
 import { motionScale, shakeLevel } from './motion';
@@ -50,8 +50,8 @@ function applyBeatShake(ctx: CanvasRenderingContext2D) {
   const { width, height, pixelRatio } = view;
   const punch = 1 + (fx.kick * 0.04 + fx.beat * 0.015 + fx.drop * 0.1) * intensity() * shakeLevel() * signal.gate;
   const shake = (fx.shake + signal.tension * signal.tension * 0.12 * motionScale()) * calmScale();
-  const jitter = () => signedRandom(shake * 60 * pixelRatio);
-  ctx.translate(width / 2 + jitter(), height / 2 + jitter());
+  const amplitude = shake * 60 * pixelRatio;
+  ctx.translate(width / 2 + wobble(clock.time, 0) * amplitude, height / 2 + wobble(clock.time, 1) * amplitude);
   ctx.scale(punch, punch);
   ctx.translate(-width / 2, -height / 2);
 }

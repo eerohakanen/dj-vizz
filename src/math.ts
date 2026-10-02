@@ -19,6 +19,12 @@ export const frameAlpha = (alpha: number, delta: number) => 1 - decay(1 - alpha,
 export const follow = (value: number, target: number, attack: number, release: number, delta: number) =>
   value + (target - value) * (1 - Math.exp(-delta / (target > value ? attack : release)));
 
+export const rise = (value: number, target: number, attack: number, delta: number) =>
+  target > value ? follow(value, target, attack, attack, delta) : target;
+
+export const wobble = (time: number, axis: number) =>
+  (Math.sin(time * 29 + axis * 2.1) * 0.5 + Math.sin(time * 43 + axis * 4.7) * 0.3 + Math.sin(time * 61 + axis * 1.3) * 0.2) * 0.5;
+
 export const updatePeak = (peak: number, level: number, fall: number, delta: number) => Math.max(level, peak - fall * delta);
 
 export const stretch = (level: number, floor: number, peak: number, minRange: number) =>

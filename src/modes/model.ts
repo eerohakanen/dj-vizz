@@ -1,5 +1,6 @@
 import type * as Three from 'three';
 import type { MeshSurfaceSampler as Sampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js';
+import { approach } from '../math';
 import { clock, fx, signal } from '../state';
 import {
   additiveOptions,
@@ -22,6 +23,7 @@ import {
 
 const POINT_COUNT = 24000;
 const BASE_FOV = 45;
+const FOV_GLIDE = 8;
 const ORBIT_RADIUS = 3.4;
 
 const DISPLACE = `
@@ -71,6 +73,7 @@ const loadModules = () => Promise.all([import('three'), import('three/examples/j
 
 type Modules = Awaited<ReturnType<typeof loadModules>>;
 type ModelStage = ReturnType<typeof buildStage>;
+type Shape = { geometry: Three.BufferGeometry; points: Three.BufferGeometry };
 
 const SHAPES: ((THREE: ThreeModule) => Three.BufferGeometry)[] = [
   (THREE) => new THREE.TorusKnotGeometry(0.6, 0.22, 220, 36),
@@ -82,6 +85,7 @@ const SHAPES: ((THREE: ThreeModule) => Three.BufferGeometry)[] = [
 const kick = createKick();
 let shapeIndex = 0;
 let dropping = false;
+let nextShape: Shape | undefined;
 
 function injectDisplacement<T extends Three.Material>(material: T, uniforms: Record<string, Three.IUniform>) {
   material.onBeforeCompile = (shader) => {
@@ -111,20 +115,35 @@ function samplePoints(THREE: ThreeModule, MeshSurfaceSampler: typeof Sampler, ge
   return points;
 }
 
-function useShape(stage: ModelStage, index: number) {
-  const { THREE, MeshSurfaceSampler, solid, wire, points } = stage;
+function buildShape(stage: ModelStage, index: number): Shape {
+  const { THREE, MeshSurfaceSampler } = stage;
   const geometry = normalizeGeometry(SHAPES[index](THREE));
+  return { geometry, points: samplePoints(THREE, MeshSurfaceSampler, geometry) };
+}
+
+const whenIdle = (task: () => void) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(task) : setTimeout(task, 0));
+
+function prepareNextShape(stage: ModelStage) {
+  whenIdle(() => {
+    nextShape ??= buildShape(stage, (shapeIndex + 1) % SHAPES.length);
+  });
+}
+
+function useShape(stage: ModelStage, shape: Shape) {
+  const { solid, wire, points } = stage;
   solid.geometry.dispose();
   points.geometry.dispose();
-  solid.geometry = wire.geometry = geometry;
-  points.geometry = samplePoints(THREE, MeshSurfaceSampler, geometry);
+  solid.geometry = wire.geometry = shape.geometry;
+  points.geometry = shape.points;
 }
 
 function cycleShape(stage: ModelStage) {
   if (fx.drop > 0.9 && !dropping) {
     dropping = true;
     shapeIndex = (shapeIndex + 1) % SHAPES.length;
-    useShape(stage, shapeIndex);
+    useShape(stage, nextShape ?? buildShape(stage, shapeIndex));
+    nextShape = undefined;
+    prepareNextShape(stage);
   } else if (fx.drop < 0.5) dropping = false;
 }
 
@@ -190,7 +209,8 @@ function buildStage([THREE, { MeshSurfaceSampler }]: Modules) {
 
 function createStage(modules: Modules) {
   const created = buildStage(modules);
-  useShape(created, shapeIndex);
+  useShape(created, buildShape(created, shapeIndex));
+  prepareNextShape(created);
   return created;
 }
 
@@ -239,7 +259,7 @@ function moveCamera(stage: ModelStage) {
   camera.position.set(Math.sin(time * 0.13) * radius + jitter(), sway(0.09, 1) * 0.9 + jitter(), Math.cos(time * 0.13) * radius);
   camera.lookAt(0, 0, 0);
   camera.rotation.z += fx.spin * 0.2;
-  camera.fov = BASE_FOV + kick.value * 4 + fx.drop * 18;
+  camera.fov = approach(camera.fov, BASE_FOV + kick.value * 4 + fx.drop * 18, FOV_GLIDE, clock.delta);
   camera.updateProjectionMatrix();
 }
 

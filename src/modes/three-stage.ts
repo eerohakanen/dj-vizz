@@ -2,8 +2,8 @@ import type * as Three from 'three';
 import { BACKGROUND, createCanvas, sceneCtx } from '../canvas';
 import { colorHsl } from '../color';
 import { showWarning } from '../dom';
-import { approach, decay, hueDelta, lerp, randomRange, signedRandom, TAU } from '../math';
-import { clock, fx, signal, view } from '../state';
+import { approach, decay, hueDelta, lerp, randomRange, rise, TAU, wobble } from '../math';
+import { clock, fx, impulse, signal, view } from '../state';
 
 export type ThreeModule = typeof Three;
 
@@ -32,6 +32,7 @@ export const GLOW_POINT_FRAGMENT = `
 `;
 
 const RETRY_DELAY_MS = 5000;
+const KICK_ATTACK = 0.03;
 
 export function lazyStage<T>(load: () => Promise<T>) {
   let stage: T | undefined;
@@ -64,11 +65,13 @@ export function lazyStage<T>(load: () => Promise<T>) {
 export function createKick() {
   return {
     value: 0,
+    peak: 0,
     pulse() {
-      this.value = Math.max(this.value, fx.beat);
+      this.peak = Math.max(this.peak, impulse.beat);
     },
     decay() {
-      this.value *= decay(0.03, clock.delta);
+      this.peak *= decay(0.03, clock.delta);
+      this.value = rise(this.value, this.peak, KICK_ATTACK, clock.delta);
     },
   };
 }
@@ -103,7 +106,10 @@ export function sway(frequency: number, harmonic: number, offset = 0) {
 
 export const glowLevel = (kick: number) => 0.7 + signal.mid * 0.8 + kick * 0.8 + fx.drop;
 
-export const cameraJitter = (scale: number) => () => signedRandom(fx.shake * scale);
+export function cameraJitter(scale: number) {
+  let axis = 0;
+  return () => wobble(clock.time, axis++) * fx.shake * scale;
+}
 
 export type Uniforms = Record<string, Three.IUniform<number>>;
 

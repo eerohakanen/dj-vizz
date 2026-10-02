@@ -1,6 +1,6 @@
 import type * as Three from 'three';
 import { approach, clamp, clamp01, decay, randomRange, TAU } from '../math';
-import { clock, fx, settings, signal } from '../state';
+import { clock, fx, impulse, settings, signal } from '../state';
 import {
   additiveOptions,
   advanceSway,
@@ -35,6 +35,7 @@ const GALAXY_ARMS = 3;
 const SUN_COUNT = 3;
 const NEBULA_COUNT = 10;
 const BASE_FOV = 70;
+const FOV_GLIDE = 8;
 
 const STAR_VERTEX = `
   ${STREAM}
@@ -360,13 +361,13 @@ function moveCamera(stage: DeepSpaceStage) {
     yaw + sway(0.13, 2, 1) * 0.06,
     bank + roll + fx.spin * 0.15 + sway(0.09, 1) * 0.2,
   );
-  camera.fov = BASE_FOV + kick.value * 6 + Math.min(40, fx.drop * 35 + Math.max(0, speed - 60) * 0.04);
+  camera.fov = approach(camera.fov, BASE_FOV + kick.value * 6 + Math.min(40, fx.drop * 35 + Math.max(0, speed - 60) * 0.04), FOV_GLIDE, clock.delta);
   camera.updateProjectionMatrix();
 }
 
 export function pulseDeepSpace() {
   kick.pulse();
-  if (fx.beat > 0.5 && Math.random() < 0.35 + signal.energy * 0.4) throwTurn(fx.beat);
+  if (impulse.beat > 0.5 && Math.random() < 0.35 + signal.energy * 0.4) throwTurn(impulse.beat);
 }
 
 export function drawDeepSpace() {

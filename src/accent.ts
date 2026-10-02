@@ -9,10 +9,12 @@ const LIGHTNESS_STEP = 0.1;
 const BASE_LIGHTNESS = 50;
 const CYCLE_SECONDS = 9;
 const FAVICON_HUE_STEP = 30;
+const WRITE_INTERVAL = 0.1;
 
 let applied = '';
 let appliedIcon = '';
 let phase = 0;
+let sinceWrite = WRITE_INTERVAL;
 
 const linear = (channel: number) => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
 
@@ -63,10 +65,13 @@ function syncFavicon(hue: number, saturation: number) {
 
 export function syncAccent(delta: number) {
   phase = advanceAccentPhase(phase, delta, motionScale());
+  sinceWrite += delta;
+  if (sinceWrite < WRITE_INTERVAL) return;
   const [hue, saturation] = blendedHsl(accentPosition());
   const style = accentStyle(hue, saturation);
   if (style === applied) return;
   applied = style;
+  sinceWrite = 0;
   document.documentElement.style.setProperty('--live', style);
   syncFavicon(hue, saturation);
 }

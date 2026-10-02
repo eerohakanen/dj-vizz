@@ -163,11 +163,11 @@ export function blendedHsl(position: number) {
 }
 
 export function colorHsl(position: number, lightness?: number) {
-  const k = (lutPosition(position) | 0) * 3;
+  const hsl = blendedHsl(position);
   const mood = (signal.brightness - 0.5) * 14;
-  const light = lut[k + 2] + (lightness == null ? 0 : lightness - 58) + fx.beat * 8 + mood;
-  shade[0] = lut[k];
-  shade[1] = lut[k + 1];
+  const light = hsl[2] + (lightness == null ? 0 : lightness - 58) + fx.beat * 8 + mood;
+  shade[0] = hsl[0];
+  shade[1] = hsl[1];
   shade[2] = light < 5 ? 5 : light > 95 ? 95 : light;
   return shade;
 }

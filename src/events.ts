@@ -7,7 +7,7 @@ import { PALETTES } from './palettes';
 import { changeOption } from './presets/change';
 import { playlist } from './presets/library';
 import { currentChangeOn, nextPreset } from './presets/playlist';
-import { fx, intensity, settings, signal } from './state';
+import { fx, impulse, intensity, settings, signal } from './state';
 
 const DOWNBEAT_HUE_BOOST = 1.6;
 
@@ -28,7 +28,7 @@ export function triggerDrop() {
   registerDrop();
   fx.drop = 1;
   fx.shake = 1.4 * shakeLevel();
-  fx.hue += 120 * settings.colorSpeed;
+  impulse.hue += 120 * settings.colorSpeed;
   fx.vortexDirection = -fx.vortexDirection;
   if (claimed) {
     if (settings.auto) setPalette(dropPalette(), true);
@@ -41,7 +41,7 @@ export function triggerDrop() {
 }
 
 export function onBeat() {
-  fx.hue += (12 + fx.beat * 20) * settings.colorSpeed * (signal.downbeat ? DOWNBEAT_HUE_BOOST : 1);
+  impulse.hue += (12 + impulse.beat * 20) * settings.colorSpeed * (signal.downbeat ? DOWNBEAT_HUE_BOOST : 1);
   const every = changeOption(currentChangeOn()).beats;
   const held = currentMode().busy();
   if (playlist.playing) {
@@ -51,17 +51,17 @@ export function onBeat() {
     setMode(settings.mode + 1);
   }
   currentMode().onBeat();
-  fx.shake = Math.max(fx.shake, 0.22 * fx.beat * intensity() * shakeLevel());
+  fx.shake = Math.max(fx.shake, 0.22 * impulse.beat * intensity() * shakeLevel());
 }
 
 export function onKick(strength: number) {
-  fx.kick = Math.max(fx.kick, strength);
+  impulse.kick = Math.max(impulse.kick, strength);
 }
 
 export function onSnare(strength: number) {
-  fx.snare = Math.max(fx.snare, strength);
+  impulse.snare = Math.max(impulse.snare, strength);
 }
 
 export function onHat(strength: number) {
-  fx.hat = Math.max(fx.hat, strength);
+  impulse.hat = Math.max(impulse.hat, strength);
 }

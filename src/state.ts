@@ -67,6 +67,14 @@ export const signal = {
   vocal: 0,
 };
 
+export const impulse = {
+  hue: 0,
+  beat: 0,
+  kick: 0,
+  snare: 0,
+  hat: 0,
+};
+
 export const fx = {
   hue: 0,
   beat: 0,
