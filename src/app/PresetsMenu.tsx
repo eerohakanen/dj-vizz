@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import {
   Compass,
   Download,
@@ -127,14 +127,14 @@ function PresetCard({ folder, index, onRename, onDelete }: PresetCardProps) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ hasDefaults }: { hasDefaults: boolean }) {
   return (
     <Card className="items-center px-6 py-12 text-center">
       <IconTile>
         <ListMusic className="size-5" />
       </IconTile>
       <div className="max-w-sm space-y-2">
-        <h2 className="text-xl font-semibold">No presets yet</h2>
+        <h3 className="text-xl font-semibold">{hasDefaults ? 'None of your own yet' : 'No presets yet'}</h3>
         <p className="text-muted-foreground">
           A preset is a sequence of scenes that plays through your set. Create one, or explore freely and come back
           later.
@@ -154,12 +154,47 @@ function EmptyState() {
   );
 }
 
+interface IndexedFolder {
+  folder: Folder;
+  index: number;
+}
+
+interface PresetSectionProps {
+  title: string;
+  folders: IndexedFolder[];
+  onRename: (folder: Folder, index: number) => void;
+  onDelete: (index: number) => void;
+  children?: ReactNode;
+}
+
+function PresetSection({ title, folders, onRename, onDelete, children }: PresetSectionProps) {
+  return (
+    <section className="flex flex-col gap-4">
+      <h2 className="font-display text-xl font-bold tracking-[-0.04em] uppercase">{title}</h2>
+      {folders.length ? (
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {folders.map(({ folder, index }) => (
+            <li key={index} className="flex">
+              <PresetCard folder={folder} index={index} onRename={() => onRename(folder, index)} onDelete={() => onDelete(index)} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        children
+      )}
+    </section>
+  );
+}
+
 export function PresetsMenu() {
   useEngine();
   const [nameRequest, setNameRequest] = useState<NameRequest | null>(null);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const pendingDelete = deleteIndex === null ? undefined : library.folders[deleteIndex];
+  const indexed = library.folders.map((folder, index) => ({ folder, index }));
+  const mine = indexed.filter(({ folder }) => !folder.starter);
+  const defaults = indexed.filter(({ folder }) => folder.starter);
 
   const importFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -214,31 +249,21 @@ export function PresetsMenu() {
       <div className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-2">
-            <h1 className="font-display text-3xl font-bold tracking-[-0.04em] uppercase sm:text-4xl">My presets</h1>
+            <h1 className="font-display text-3xl font-bold tracking-[-0.04em] uppercase sm:text-4xl">Presets</h1>
             <p className="text-muted-foreground">Sequences of scenes that play through your set.</p>
           </div>
-          {!!library.folders.length && (
+          {!!mine.length && (
             <Button className="w-full sm:w-auto" onClick={newPreset}>
               <Plus />
               New preset
             </Button>
           )}
         </header>
-        {library.folders.length ? (
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {library.folders.map((folder, index) => (
-              <li key={index} className="flex">
-                <PresetCard
-                  folder={folder}
-                  index={index}
-                  onRename={() => requestRename(folder, index)}
-                  onDelete={() => setDeleteIndex(index)}
-                />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <EmptyState />
+        <PresetSection title="My presets" folders={mine} onRename={requestRename} onDelete={setDeleteIndex}>
+          <EmptyState hasDefaults={!!defaults.length} />
+        </PresetSection>
+        {!!defaults.length && (
+          <PresetSection title="Default presets" folders={defaults} onRename={requestRename} onDelete={setDeleteIndex} />
         )}
       </div>
       <input ref={fileInput} type="file" accept=".json,application/json" hidden onChange={importFile} />

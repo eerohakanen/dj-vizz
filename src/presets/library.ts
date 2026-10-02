@@ -13,7 +13,7 @@ import { MIRROR_NAMES, mirrorIndex, PIXEL_NAMES, pixelIndex, PSY_NAMES, psyIndex
 
 const STORAGE_KEY = 'djviz.presets.v4';
 const LEGACY_STORAGE_KEYS = ['djviz.presets.v3', 'djviz.presets.v2', 'djviz.presets.v1'];
-export const LIBRARY_VERSION = 10;
+export const LIBRARY_VERSION = 11;
 const INTENSITY_SCALE_VERSION = 5;
 const SCENE_SHAPE_VERSION = 3;
 const PALETTE_SHIFT_VERSION = 2;
@@ -21,6 +21,7 @@ const MODE_SHIFT_VERSION = 7;
 const STARTER_SETS_VERSION = 8;
 const ASCII_STARTERS_VERSION = 9;
 const STARTER_REGROUP_VERSION = 10;
+const STARTER_FLAG_VERSION = 11;
 const REPLACED_STARTER_NAME = 'Default';
 const REGROUPED_STARTER_NAME = '2D';
 const PIXELATED_STARTER_NAME = 'Pixelated 2D';
@@ -48,6 +49,7 @@ export interface Folder {
   transition: TransitionKind;
   changeOn: ChangeOn;
   shuffle: boolean;
+  starter?: boolean;
 }
 
 interface Library {
@@ -88,6 +90,7 @@ const starterFolder = (name: string, presets: Preset[]): Folder => ({
   transition: DEFAULT_TRANSITION,
   changeOn: DEFAULT_CHANGE_ON,
   shuffle: false,
+  starter: true,
   presets,
 });
 
@@ -162,13 +165,23 @@ const withoutMovedPreset = (folders: Folder[]) =>
     folder.name === PIXELATED_STARTER_NAME ? { ...folder, presets: folder.presets.filter((preset) => preset.name !== MOVED_PIXELATED_PRESET) } : folder,
   );
 
-function upgradeStarters(folders: Folder[], cur: number, version: number) {
+function regroupStarters(folders: Folder[], cur: number, version: number) {
   if (version < STARTER_SETS_VERSION) return replaceFolder(folders, cur, REPLACED_STARTER_NAME, starterFolders);
   if (version < STARTER_REGROUP_VERSION) {
     const kept = version < ASCII_STARTERS_VERSION ? folders : withoutMovedPreset(folders);
     return replaceFolder(kept, cur, REGROUPED_STARTER_NAME, regroupTwoD);
   }
   return { folders, cur };
+}
+
+function flagStarters(folders: Folder[]) {
+  const starterNames = new Set(starterFolders().map((folder) => folder.name));
+  return folders.map((folder) => (starterNames.has(folder.name) ? { ...folder, starter: true } : folder));
+}
+
+function upgradeStarters(folders: Folder[], cur: number, version: number) {
+  const regrouped = regroupStarters(folders, cur, version);
+  return version < STARTER_FLAG_VERSION ? { ...regrouped, folders: flagStarters(regrouped.folders) } : regrouped;
 }
 
 const REMOVED_PALETTE = 1;
@@ -207,7 +220,7 @@ export function readLegacyTuning(raw: Record<string, unknown>, version = LIBRARY
   return Object.fromEntries(Object.entries(tuning).filter((entry): entry is [TuningKey, number] => isNumber(entry[1])));
 }
 
-function migrateFolders(data: Record<string, unknown>): Folder[] {
+function migrateFolders(data: Record<string, unknown>, keepStarter: boolean): Folder[] {
   if (!Array.isArray(data.folders)) throw new Error('Not a preset library');
   const version = numberOr(data.version, 1);
   return data.folders
@@ -218,13 +231,14 @@ function migrateFolders(data: Record<string, unknown>): Folder[] {
       transition: findTransition(folder.transition)?.value ?? DEFAULT_TRANSITION,
       changeOn: findChangeOption(folder.changeOn)?.value ?? DEFAULT_CHANGE_ON,
       shuffle: folder.shuffle === true,
+      ...(keepStarter && folder.starter === true && { starter: true }),
     }));
 }
 
 export function migrateLibrary(data: unknown): Library | null {
   if (!isRecord(data)) return null;
   try {
-    const folders = migrateFolders(data);
+    const folders = migrateFolders(data, true);
     const cur = clamp(numberOr(data.cur, 0) | 0, 0, Math.max(0, folders.length - 1));
     return { version: LIBRARY_VERSION, ...upgradeStarters(folders, cur, numberOr(data.version, 1)) };
   } catch {
@@ -305,7 +319,7 @@ export function applyPreset(preset: Preset | undefined, transition?: TransitionK
 
 export function importFolders(data: unknown) {
   if (!isRecord(data)) throw new Error('Not a preset library');
-  const folders = migrateFolders(data);
+  const folders = migrateFolders(data, false);
   library.folders.push(...folders);
   return folders.length;
 }

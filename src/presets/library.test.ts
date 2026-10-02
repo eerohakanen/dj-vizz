@@ -65,7 +65,7 @@ beforeEach(() => {
 describe('migrateLibrary', () => {
   it('maps v2 short keys into the v3 shape and drops calibration', () => {
     const migrated = migrateLibrary(legacyLibrary(2));
-    expect(migrated?.version).toBe(10);
+    expect(migrated?.version).toBe(11);
     expect(migrated?.folders[0].presets[0]).toEqual({
       name: 'Old look',
       mode: 3,
@@ -116,7 +116,7 @@ describe('migrateLibrary', () => {
   });
 
   it('accepts an empty library but rejects non-arrays', () => {
-    expect(migrateLibrary({ version: 5, cur: 3, folders: [] })).toEqual({ version: 10, cur: 0, folders: [] });
+    expect(migrateLibrary({ version: 5, cur: 3, folders: [] })).toEqual({ version: 11, cur: 0, folders: [] });
     expect(migrateLibrary({ version: 2 })).toBeNull();
     expect(migrateLibrary({ version: 2, folders: 'x' })).toBeNull();
     expect(migrateLibrary('nope')).toBeNull();
@@ -154,6 +154,18 @@ describe('migrateLibrary', () => {
     expect(migrated.folders.map((folder) => folder.name)).not.toContain('2D · Mine');
     expect(migrateLibrary(migrated)!.folders).toEqual(migrated.folders);
   });
+
+  it('flags v10 starter folders by name and leaves custom ones unflagged', () => {
+    const names = ['Pixelated 2D', '2D · Mine', 'Mine', '3D'];
+    const migrated = migrateLibrary({ version: 10, cur: 0, folders: names.map((name) => ({ name, presets: [] })) })!;
+    expect(migrated.folders.map((folder) => !!folder.starter)).toEqual([true, false, false, true]);
+    expect(migrateLibrary(migrated)!.folders).toEqual(migrated.folders);
+  });
+
+  it('keeps a renamed starter flagged once stored as v11', () => {
+    const migrated = migrateLibrary({ version: 11, cur: 0, folders: [{ name: 'Renamed', presets: [], starter: true }] })!;
+    expect(migrated.folders[0].starter).toBe(true);
+  });
 });
 
 describe('readLegacyTuning', () => {
@@ -175,6 +187,13 @@ describe('importFolders', () => {
     expect(imported.palette).toBe(4);
     expect(imported).not.toHaveProperty('gain');
     expect(imported).not.toHaveProperty('agc');
+    library.folders.length = before;
+  });
+
+  it('treats imported folders as the user\'s own', () => {
+    const before = library.folders.length;
+    importFolders({ version: 11, folders: [{ name: 'Shared', presets: [], starter: true }] });
+    expect(library.folders.at(-1)).not.toHaveProperty('starter');
     library.folders.length = before;
   });
 
@@ -300,6 +319,7 @@ describe('stored v3 and v4 libraries', () => {
   it('starts with the starter sets when nothing is stored', async () => {
     const fresh = await load([]);
     expect(fresh.library.folders.map((folder) => folder.name)).toEqual(['Pixelated 2D', '2D · Spectrum', '2D · Flight', '2D · Patterns', 'ASCII', '3D']);
+    expect(fresh.library.folders.every((folder) => folder.starter)).toBe(true);
   });
 });
 
