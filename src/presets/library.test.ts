@@ -26,7 +26,7 @@ import {
 } from './library';
 
 vi.mock('../canvas', () => ({ output: {}, transitionCtx: {}, transitionFrame: {} }));
-vi.mock('../modes/index', () => ({ MODES: Array.from({ length: 12 }, (_, index) => ({ name: `Mode ${index}`, threeD: index >= 9 })) }));
+vi.mock('../modes/index', () => ({ MODES: Array.from({ length: 16 }, (_, index) => ({ name: `Mode ${index}`, threeD: index >= 9 && index <= 11 })) }));
 vi.mock('../mode', async () => {
   const { settings } = await import('../state');
   return { setMode: vi.fn((index: number) => (settings.mode = index)) };
@@ -65,7 +65,7 @@ beforeEach(() => {
 describe('migrateLibrary', () => {
   it('maps v2 short keys into the v3 shape and drops calibration', () => {
     const migrated = migrateLibrary(legacyLibrary(2));
-    expect(migrated?.version).toBe(8);
+    expect(migrated?.version).toBe(9);
     expect(migrated?.folders[0].presets[0]).toEqual({
       name: 'Old look',
       mode: 3,
@@ -116,7 +116,7 @@ describe('migrateLibrary', () => {
   });
 
   it('accepts an empty library but rejects non-arrays', () => {
-    expect(migrateLibrary({ version: 5, cur: 3, folders: [] })).toEqual({ version: 8, cur: 0, folders: [] });
+    expect(migrateLibrary({ version: 5, cur: 3, folders: [] })).toEqual({ version: 9, cur: 0, folders: [] });
     expect(migrateLibrary({ version: 2 })).toBeNull();
     expect(migrateLibrary({ version: 2, folders: 'x' })).toBeNull();
     expect(migrateLibrary('nope')).toBeNull();
@@ -134,6 +134,22 @@ describe('migrateLibrary', () => {
   it('keeps a Default folder saved by v8', () => {
     const migrated = migrateLibrary({ version: 8, cur: 0, folders: [{ name: 'Default', presets: [] }] });
     expect(migrated?.folders.map((folder) => folder.name)).toEqual(['Default']);
+  });
+
+  it('appends the v9 starter presets to v8 starter folders once', () => {
+    const kept = createPreset('Blob · Ice', 7, 6);
+    const added = createPreset('Matrix · Toxic', 13, 3);
+    const migrated = migrateLibrary({ version: 8, cur: 1, folders: [{ name: 'Mine', presets: [] }, { name: '2D', presets: [kept, added] }] })!;
+    const names = migrated.folders[1].presets.map((preset) => preset.name);
+    expect(names).toEqual(['Blob · Ice', 'Matrix · Toxic', 'ASCII knot · Gold', 'Chladni · Ice', 'Truchet · Neon']);
+    expect(migrated.folders[1].presets[1].palette).toBe(3);
+    expect(migrated.folders[0].presets).toEqual([]);
+    expect(migrated.cur).toBe(1);
+    expect(migrateLibrary(migrated)!.folders[1].presets).toHaveLength(5);
+  });
+
+  it('adds nothing to v8 folders that only share a prototype key', () => {
+    expect(migrateLibrary({ version: 8, cur: 0, folders: [{ name: 'constructor', presets: [] }] })!.folders[0].presets).toEqual([]);
   });
 });
 
@@ -206,7 +222,7 @@ describe('applyPreset', () => {
   });
 
   it('wraps the pixel shape', () => {
-    applyPreset(createPreset('Blocky', 0, 0, { pixelate: 5 }));
+    applyPreset(createPreset('Blocky', 0, 0, { pixelate: 6 }));
     expect(settings.pixelate).toBe(1);
   });
 

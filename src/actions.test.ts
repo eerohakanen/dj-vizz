@@ -255,7 +255,7 @@ describe('scene guards', () => {
 
 describe('cyclePixelate', () => {
   it('steps through the pixel shapes in 2D modes', () => {
-    settings.pixelate = 3;
+    settings.pixelate = 4;
     cyclePixelate();
     expect(settings.pixelate).toBe(0);
   });

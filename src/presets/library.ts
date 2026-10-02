@@ -13,12 +13,13 @@ import { MIRROR_NAMES, mirrorIndex, PIXEL_NAMES, pixelIndex, PSY_NAMES, psyIndex
 
 const STORAGE_KEY = 'djviz.presets.v4';
 const LEGACY_STORAGE_KEYS = ['djviz.presets.v3', 'djviz.presets.v2', 'djviz.presets.v1'];
-export const LIBRARY_VERSION = 8;
+export const LIBRARY_VERSION = 9;
 const INTENSITY_SCALE_VERSION = 5;
 const SCENE_SHAPE_VERSION = 3;
 const PALETTE_SHIFT_VERSION = 2;
 const MODE_SHIFT_VERSION = 7;
 const STARTER_SETS_VERSION = 8;
+const STARTER_ADDITIONS_VERSION = 9;
 const REPLACED_STARTER_NAME = 'Default';
 export const NAME_LIMIT = 40;
 
@@ -85,16 +86,32 @@ const starterFolder = (name: string, presets: Preset[]): Folder => ({
   presets,
 });
 
+const starterAdditions = () =>
+  new Map<string, Preset[]>([
+    ['Pixelated 2D', [createPreset('ASCII galaxy', 4, 3, { pixelate: pixelIndex('ASCII') })]],
+    [
+      '2D',
+      [
+        createPreset('ASCII knot · Gold', 12, 9),
+        createPreset('Matrix · Toxic', 13, 8),
+        createPreset('Chladni · Ice', 14, 6),
+        createPreset('Truchet · Neon', 15, 1),
+      ],
+    ],
+  ]);
+
+const withAdditions = (name: string, presets: Preset[]) => [...presets, ...(starterAdditions().get(name) ?? [])];
+
 const starterFolders = (): Folder[] => [
-  starterFolder('Pixelated 2D', [
+  starterFolder('Pixelated 2D', withAdditions('Pixelated 2D', [
     createPreset('Pixel bars', 0, 1, { pixelate: pixelIndex('Square') }),
     createPreset('Diamond hex', 8, 11, { pixelate: pixelIndex('Diamond') }),
     createPreset('8-bit grid', 5, 7, { pixelate: pixelIndex('Square') }),
     createPreset('Dotted laser tunnel', 2, 4, { pixelate: pixelIndex('Round'), effects: { lasers: true } }),
     createPreset('Bead galaxy', 4, 9, { pixelate: pixelIndex('Round') }),
     createPreset('Pixel scope', 3, 8, { pixelate: pixelIndex('Square') }),
-  ]),
-  starterFolder('2D', [
+  ])),
+  starterFolder('2D', withAdditions('2D', [
     createPreset('Warp · Fire', 6, 5),
     createPreset('Radial vortex', 1, 7, { psy: psyIndex('Vortex') }),
     createPreset('Kaleido galaxy', 4, 1, { mirror: mirrorIndex('Kaleido') }),
@@ -102,7 +119,7 @@ const starterFolders = (): Folder[] => [
     createPreset('Liquid bars', 0, 2, { psy: psyIndex('Liquid') }),
     createPreset('Rainbow hex', 8, 0, { psy: psyIndex('Rainbow') }),
     createPreset('Blob · Ice', 7, 6),
-  ]),
+  ])),
   starterFolder('3D', [
     createPreset('Deep Space · Ice', 9, 6),
     createPreset('Model · Neon', 10, 1),
@@ -119,6 +136,20 @@ const starterLibrary = (): Library => ({
 function replaceStarterFolders(folders: Folder[], cur: number) {
   const groups = folders.map((folder) => (folder.name === REPLACED_STARTER_NAME ? starterFolders() : [folder]));
   return { folders: groups.flat(), cur: groups.slice(0, cur).reduce((total, group) => total + group.length, 0) };
+}
+
+function addStarterPresets(folders: Folder[]) {
+  const additions = starterAdditions();
+  return folders.map((folder) => {
+    const missing = (additions.get(folder.name) ?? []).filter((preset) => !folder.presets.some((existing) => existing.name === preset.name));
+    return missing.length ? { ...folder, presets: [...folder.presets, ...missing] } : folder;
+  });
+}
+
+function upgradeStarters(folders: Folder[], cur: number, version: number) {
+  if (version < STARTER_SETS_VERSION) return replaceStarterFolders(folders, cur);
+  if (version < STARTER_ADDITIONS_VERSION) return { folders: addStarterPresets(folders), cur };
+  return { folders, cur };
 }
 
 const REMOVED_PALETTE = 1;
@@ -176,8 +207,7 @@ export function migrateLibrary(data: unknown): Library | null {
   try {
     const folders = migrateFolders(data);
     const cur = clamp(numberOr(data.cur, 0) | 0, 0, Math.max(0, folders.length - 1));
-    const current = numberOr(data.version, 1) < STARTER_SETS_VERSION ? replaceStarterFolders(folders, cur) : { folders, cur };
-    return { version: LIBRARY_VERSION, ...current };
+    return { version: LIBRARY_VERSION, ...upgradeStarters(folders, cur, numberOr(data.version, 1)) };
   } catch {
     return null;
   }

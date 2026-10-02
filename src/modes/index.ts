@@ -1,13 +1,17 @@
+import { drawAsciiKnot, kickAsciiKnot } from './asciiknot';
 import { drawBars, dropBars } from './bars';
 import { drawBlob } from './blob';
+import { drawChladni, jumpChladni, stepChladni } from './chladni';
 import { drawDeepSpace, pulseDeepSpace } from './deepspace';
 import { drawGalaxy } from './galaxy';
 import { drawGrid } from './grid';
 import { drawHex } from './hex';
+import { burstMatrix, drawMatrix } from './matrix';
 import { drawModel, pulseModel } from './model';
 import { drawRadial } from './radial';
 import { drawScope } from './scope';
 import { claimSolarDrop, drawSolar, pulseSolar, solarBusy, solarHandoff } from './solar';
+import { drawTruchet, flipTruchet, scrambleTruchet } from './truchet';
 import { drawTunnel, spawnRing, spawnRingVolley } from './tunnel';
 import { drawWarp } from './warp';
 
@@ -55,4 +59,8 @@ export const MODES = [
   defineMode('Deep Space', '3D flight through a glowing star field', drawDeepSpace, { trails: false, opaque: true, threeD: true, onBeat: pulseDeepSpace }),
   defineMode('Model', 'A 3D point-cloud asteroid orbited by the camera', drawModel, { trails: false, opaque: true, threeD: true, onBeat: pulseModel }),
   defineMode('Solar System', 'A cinematic 3D tour of the planets', drawSolar, { trails: false, opaque: true, threeD: true, onBeat: pulseSolar, claimDrop: claimSolarDrop, busy: solarBusy, handoff: solarHandoff }),
+  defineMode('ASCII Knot', 'A torus knot spun out of ASCII characters', drawAsciiKnot, { trails: false, fade: 0.5, onBeat: kickAsciiKnot }),
+  defineMode('Matrix Rain', 'Falling glyph columns that race with the energy', drawMatrix, { trails: false, fade: 0.35, onBeat: burstMatrix }),
+  defineMode('Chladni', 'Cymatic sand patterns that reshape on the beat', drawChladni, { trails: false, fade: 0.3, onBeat: stepChladni, onDrop: jumpChladni }),
+  defineMode('Truchet', 'A maze of arcs whose tiles flip on every beat', drawTruchet, { trails: false, fade: 0.4, onBeat: flipTruchet, onDrop: scrambleTruchet }),
 ];
