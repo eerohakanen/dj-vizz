@@ -1,7 +1,34 @@
-import { Compass, ListMusic } from 'lucide-react';
+import { Compass, Download, ListMusic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { explore, openPresets } from '@/actions';
+import { isDesktop } from '@/desktop';
+import { downloadsFor } from '@/downloads';
 import { MenuBackdrop } from './shared';
+
+function DesktopDownloads() {
+  const downloads = downloadsFor(navigator.userAgent);
+  if (!downloads.length) return null;
+  return (
+    <div className="flex w-full max-w-sm flex-col items-center gap-2 border-t pt-6">
+      <div className="flex flex-wrap justify-center gap-2">
+        {downloads.map((download) => (
+          <Button key={download.platform} variant="outline" className="px-5" asChild>
+            <a href={download.url}>
+              <Download />
+              {download.label}
+            </a>
+          </Button>
+        ))}
+      </div>
+      <p className="text-sm text-muted-foreground">
+        The desktop app keeps the show running in the background and lets you pick your audio input.
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Not yet signed: on Mac, open it once, then choose Open Anyway in System Settings, Privacy & Security. On Windows, choose More info, then Run anyway.
+      </p>
+    </div>
+  );
+}
 
 export function Landing() {
   return (
@@ -28,7 +55,10 @@ export function Landing() {
           </Button>
           <p className="text-sm text-muted-foreground">Build sequences of scenes for your set.</p>
         </div>
-        <p className="text-xs text-muted-foreground">Runs entirely in your browser. Nothing is recorded or uploaded.</p>
+        {!isDesktop && <DesktopDownloads />}
+        <p className="text-xs text-muted-foreground">
+          Runs entirely {isDesktop ? 'on your computer' : 'in your browser'}. Nothing is recorded or uploaded.
+        </p>
       </div>
     </main>
   );

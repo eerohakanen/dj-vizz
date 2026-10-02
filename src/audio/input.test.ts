@@ -29,6 +29,9 @@ class FakeAudioContext {
 }
 
 const getUserMedia = vi.fn();
+const enumerateDevices = vi.fn();
+
+const device = (kind: string, deviceId: string, label = deviceId) => ({ kind, deviceId, label });
 
 async function loadInput() {
   vi.resetModules();
@@ -37,7 +40,8 @@ async function loadInput() {
 
 beforeEach(() => {
   getUserMedia.mockReset();
-  vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } });
+  enumerateDevices.mockReset();
+  vi.stubGlobal('navigator', { mediaDevices: { getUserMedia, enumerateDevices } });
   vi.stubGlobal('AudioContext', FakeAudioContext);
 });
 
@@ -97,5 +101,59 @@ describe('audio capture', () => {
     const result = await captureMicrophone();
 
     expect(result.error).toContain('Microphone blocked (NotAllowedError)');
+  });
+});
+
+describe('input devices', () => {
+  it('lists real audio inputs without the browser pseudo devices', async () => {
+    const { listInputDevices } = await loadInput();
+    enumerateDevices.mockResolvedValueOnce([
+      device('audioinput', 'default', 'Default - Mixer'),
+      device('audioinput', 'communications', 'Communications'),
+      device('audioinput', 'mixer'),
+      device('audiooutput', 'speakers'),
+      device('audioinput', 'interface'),
+    ]);
+
+    expect((await listInputDevices()).map((input) => input.deviceId)).toEqual(['mixer', 'interface']);
+  });
+
+  it('lists nothing until the browser reveals device labels', async () => {
+    const { listInputDevices } = await loadInput();
+    enumerateDevices.mockResolvedValueOnce([device('audioinput', 'mixer', ''), device('audioinput', 'interface', '')]);
+
+    expect(await listInputDevices()).toEqual([]);
+  });
+
+  it('opens the chosen device', async () => {
+    const { audio, captureMicrophone } = await loadInput();
+    audio.inputDevice = 'mixer';
+    getUserMedia.mockResolvedValueOnce(fakeStream().stream);
+
+    await captureMicrophone();
+
+    expect(getUserMedia.mock.calls[0][0].audio.deviceId).toEqual({ exact: 'mixer' });
+  });
+
+  it('falls back to the default input when the chosen device is gone', async () => {
+    const { audio, captureMicrophone } = await loadInput();
+    audio.inputDevice = 'unplugged';
+    getUserMedia.mockRejectedValueOnce(Object.assign(new Error('gone'), { name: 'OverconstrainedError' }));
+    getUserMedia.mockResolvedValueOnce(fakeStream().stream);
+
+    expect(await captureMicrophone()).toEqual({ ok: true });
+    expect(getUserMedia.mock.calls[1][0].audio).not.toHaveProperty('deviceId');
+    expect(audio.inputDevice).toBe('unplugged');
+  });
+
+  it('reconnects the microphone when the device changes while it is live', async () => {
+    const { audio, captureMicrophone, selectInputDevice } = await loadInput();
+    getUserMedia.mockResolvedValue(fakeStream().stream);
+    await captureMicrophone();
+
+    expect(await selectInputDevice('interface')).toEqual({ ok: true });
+    expect(getUserMedia).toHaveBeenCalledTimes(2);
+    expect(getUserMedia.mock.calls[1][0].audio.deviceId).toEqual({ exact: 'interface' });
+    expect(audio.inputDevice).toBe('interface');
   });
 });

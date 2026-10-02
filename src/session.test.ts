@@ -54,6 +54,17 @@ describe('session persistence', () => {
     expect(currentFolder()?.changeOn).toBe('b32');
   });
 
+  it('remembers the chosen input device with calibration', async () => {
+    stored.set('djviz.calibration.v1', JSON.stringify({ inputDevice: 'usb-mixer' }));
+    const { restoreSession, saveSession } = await import('./session');
+    const { audio } = await import('./audio/input');
+    restoreSession();
+    expect(audio.inputDevice).toBe('usb-mixer');
+    audio.inputDevice = 'interface-2';
+    saveSession();
+    expect(JSON.parse(stored.get('djviz.calibration.v1')!)).toMatchObject({ inputDevice: 'interface-2' });
+  });
+
   it('saves calibration and session under separate keys', async () => {
     const { saveSession } = await import('./session');
     const { settings } = await import('./state');
@@ -61,7 +72,7 @@ describe('session persistence', () => {
     saveSession();
     const calibration = JSON.parse(stored.get('djviz.calibration.v1')!);
     const session = JSON.parse(stored.get('djviz.session.v1')!);
-    expect(calibration).toEqual({ autoGain: false, gain: 33, noiseGate: 0.03, beatSensitivity: 1, dropSensitivity: 1 });
+    expect(calibration).toEqual({ autoGain: false, inputDevice: '', gain: 33, noiseGate: 0.03, beatSensitivity: 1, dropSensitivity: 1 });
     expect(session).toMatchObject({ look: { mode: 4, tuning: { reactivity: 2 } } });
     expect(session).not.toHaveProperty('source');
     expect(session).not.toHaveProperty('changeOn');

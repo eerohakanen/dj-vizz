@@ -1,3 +1,5 @@
+import { desktop } from './desktop';
+
 let sentinel: WakeLockSentinel | null = null;
 let requesting = false;
 let wanted = false;
@@ -27,6 +29,7 @@ const reacquire = () => {
 
 export function holdWakeLock() {
   wanted = true;
+  desktop?.holdAwake(true);
   document.addEventListener('visibilitychange', reacquire);
   acquire();
   return releaseWakeLock;
@@ -34,6 +37,7 @@ export function holdWakeLock() {
 
 function releaseWakeLock() {
   wanted = false;
+  desktop?.holdAwake(false);
   document.removeEventListener('visibilitychange', reacquire);
   sentinel?.release().catch(() => {});
   sentinel = null;

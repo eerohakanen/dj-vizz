@@ -1,3 +1,4 @@
+import { audio } from './audio/input';
 import { isNumber, isRecord } from './lib/utils';
 import { clamp } from './math';
 import { readPreset, resolveLook, snapshot } from './presets/library';
@@ -32,6 +33,7 @@ function write(key: string, value: unknown) {
 
 const calibrationSnapshot = () => ({
   autoGain: settings.autoGain,
+  inputDevice: audio.inputDevice,
   ...Object.fromEntries(CALIBRATION_CONTROLS.map(({ key }) => [key, settings[key]])),
 });
 
@@ -53,6 +55,7 @@ function scheduleSave() {
 
 function restoreCalibration(stored: Record<string, unknown>) {
   if (typeof stored.autoGain === 'boolean') settings.autoGain = stored.autoGain;
+  if (typeof stored.inputDevice === 'string') audio.inputDevice = stored.inputDevice;
   for (const { key, min, max } of CALIBRATION_CONTROLS) {
     const value = stored[key];
     if (isNumber(value)) settings[key] = clamp(value, min, max);

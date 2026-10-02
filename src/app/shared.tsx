@@ -16,7 +16,7 @@ import { ui, type Overlay } from '@/store';
 import { cn } from '@/lib/utils';
 import { CHANGE_OPTIONS, findChangeOption } from '@/presets/change';
 import { DEFAULT_TRANSITION, findTransition, TRANSITIONS } from '@/effects/transition';
-import { audio } from '@/audio/input';
+import { audio, listInputDevices, selectInputDevice } from '@/audio/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
@@ -106,6 +106,60 @@ export function useSourceCapture(onConnected?: () => void) {
   return { pending, connect };
 }
 
+const DEFAULT_INPUT = 'default';
+
+function useInputDevices() {
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  useEffect(() => {
+    let active = true;
+    const refresh = () => {
+      listInputDevices().then(
+        (list) => active && setDevices(list),
+        () => {},
+      );
+    };
+    refresh();
+    navigator.mediaDevices?.addEventListener?.('devicechange', refresh);
+    return () => {
+      active = false;
+      navigator.mediaDevices?.removeEventListener?.('devicechange', refresh);
+    };
+  }, [audio.source]);
+  return devices;
+}
+
+async function chooseInputDevice(value: string) {
+  const result = await selectInputDevice(value === DEFAULT_INPUT ? '' : value);
+  if (result?.error) showWarning(result.error);
+}
+
+export function InputDevicePicker({ className }: { className?: string }) {
+  const id = useId();
+  const devices = useInputDevices();
+  if (!devices.length) return null;
+  const value = devices.some((device) => device.deviceId === audio.inputDevice) ? audio.inputDevice : DEFAULT_INPUT;
+  return (
+    <div className={cn('min-w-0 space-y-1.5', className)}>
+      <Label htmlFor={id} className="text-xs text-muted-foreground">
+        Microphone input
+      </Label>
+      <Select value={value} onValueChange={chooseInputDevice}>
+        <SelectTrigger id={id} size="sm" className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={DEFAULT_INPUT}>System default</SelectItem>
+          {devices.map((device) => (
+            <SelectItem key={device.deviceId} value={device.deviceId}>
+              {device.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export function SourcePicker() {
   const { pending, connect } = useSourceCapture();
   return (
@@ -126,6 +180,7 @@ export function SourcePicker() {
           </Button>
         ))}
       </div>
+      <InputDevicePicker className="pt-1" />
     </div>
   );
 }

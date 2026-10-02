@@ -27,6 +27,7 @@ export const audio = {
   external: false,
   source: null as AudioSourceKind | null,
   lost: null as AudioSourceKind | null,
+  inputDevice: '',
 };
 
 declare global {
@@ -159,10 +160,33 @@ export async function captureWindow(): Promise<CaptureResult> {
   return { ok: true };
 }
 
+const PSEUDO_DEVICES = new Set(['', 'default', 'communications']);
+
+export async function listInputDevices() {
+  const devices = (await navigator.mediaDevices?.enumerateDevices?.()) ?? [];
+  const inputs = devices.filter((device) => device.kind === 'audioinput' && !PSEUDO_DEVICES.has(device.deviceId));
+  return inputs.every((device) => device.label) ? inputs : [];
+}
+
+const microphoneConstraints = (deviceId: string) => ({
+  audio: deviceId ? { ...UNPROCESSED, deviceId: { exact: deviceId } } : UNPROCESSED,
+});
+
+const MISSING_DEVICE_ERRORS = new Set(['OverconstrainedError', 'NotFoundError']);
+
+async function openMicrophone(deviceId: string) {
+  try {
+    return await navigator.mediaDevices.getUserMedia(microphoneConstraints(deviceId));
+  } catch (error) {
+    if (!deviceId || !MISSING_DEVICE_ERRORS.has((error as Error).name)) throw error;
+    return navigator.mediaDevices.getUserMedia(microphoneConstraints(''));
+  }
+}
+
 export async function captureMicrophone(): Promise<CaptureResult> {
   const isCurrent = startCapture();
   try {
-    const captured = await navigator.mediaDevices.getUserMedia({ audio: UNPROCESSED });
+    const captured = await openMicrophone(audio.inputDevice);
     if (!isCurrent()) {
       stopTracks(captured);
       return SUPERSEDED;
@@ -173,4 +197,10 @@ export async function captureMicrophone(): Promise<CaptureResult> {
     if (!isCurrent()) return SUPERSEDED;
     return { error: `Microphone blocked (${(error as Error).name}). Allow microphone access for this page and try again.` };
   }
+}
+
+export async function selectInputDevice(deviceId: string): Promise<CaptureResult | undefined> {
+  audio.inputDevice = deviceId;
+  notify();
+  if (audio.source === 'mic') return captureMicrophone();
 }

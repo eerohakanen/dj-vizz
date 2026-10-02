@@ -1,14 +1,23 @@
 {
   "name": "dj-vizz",
+  "productName": "DJ Visualizer",
+  "version": "0.1.0",
+  "description": "Live, beat-reactive visuals for your mix",
+  "author": "Eero Hakanen",
   "private": true,
   "type": "module",
+  "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p electron",
     "test": "vitest run",
-    "eval:drops": "DROP_EVAL=1 vitest run scripts/drop-eval --silent=false"
+    "eval:drops": "DROP_EVAL=1 vitest run scripts/drop-eval --silent=false",
+    "build:electron": "tsc --noEmit -p electron && vite build -c vite.electron.config.ts && vite build -c vite.electron.config.ts --mode preload",
+    "dev:desktop": "npm run build:electron && node electron/dev.ts",
+    "build:desktop": "npm run build && npm run build:electron",
+    "dist:desktop": "npm run build:desktop && electron-builder --publish never"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -16,6 +25,8 @@
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",

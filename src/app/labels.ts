@@ -1,6 +1,7 @@
 import { MicIcon, MonitorSpeaker, type LucideIcon } from 'lucide-react';
 import { WINDOW_UNSUPPORTED, canCaptureWindow, captureMicrophone, captureWindow } from '@/audio/input';
 import type { AudioSourceKind } from '@/audio/sources';
+import { isDesktop } from '@/desktop';
 import type { MenuScreen } from '@/actions';
 import type { LiveMode } from '@/store';
 import type { TuningGroup } from '@/tuning';
@@ -14,14 +15,23 @@ export interface SourceOption {
   capture: typeof captureWindow;
 }
 
+const BROWSER_WINDOW_SOURCE = {
+  label: 'Window audio',
+  description: 'Share a tab, window or your entire screen. Turn on "Share audio" in the picker.',
+  unsupported: canCaptureWindow ? undefined : WINDOW_UNSUPPORTED,
+};
+
+const DESKTOP_WINDOW_SOURCE = {
+  label: 'System audio',
+  description: 'Listen to everything playing on this computer.',
+};
+
 export const SOURCES: readonly SourceOption[] = [
   {
     kind: 'window',
-    label: 'Window audio',
     icon: MonitorSpeaker,
-    description: 'Share a tab, window or your entire screen. Turn on "Share audio" in the picker.',
-    unsupported: canCaptureWindow ? undefined : WINDOW_UNSUPPORTED,
     capture: captureWindow,
+    ...(isDesktop ? DESKTOP_WINDOW_SOURCE : BROWSER_WINDOW_SOURCE),
   },
   {
     kind: 'mic',

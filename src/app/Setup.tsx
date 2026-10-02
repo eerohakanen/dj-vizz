@@ -3,7 +3,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { currentFolder } from '@/presets/library';
 import { ui } from '@/store';
 import { SOURCES } from './labels';
-import { IconTile, MenuBackdrop, MenuNav, useSourceCapture } from './shared';
+import { IconTile, InputDevicePicker, MenuBackdrop, MenuNav, useSourceCapture } from './shared';
 
 function setupHeading() {
   const name = currentFolder()?.name;
@@ -41,6 +41,7 @@ function SourceStep({ onConnected }: { onConnected: () => void }) {
           </button>
         ))}
       </div>
+      <InputDevicePicker className="mx-auto w-full max-w-xs" />
     </>
   );
 }

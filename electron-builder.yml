@@ -1,0 +1,28 @@
+appId: io.github.eerohakanen.djvizz
+productName: DJ Visualizer
+directories:
+  output: release
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+  - "!node_modules/**/*"
+mac:
+  target:
+    - target: dmg
+      arch: universal
+  category: public.app-category.music
+  artifactName: DJ-Visualizer-mac.${ext}
+  identity: "-"
+  hardenedRuntime: false
+  extendInfo:
+    NSMicrophoneUsageDescription: DJ Visualizer listens to your microphone or audio interface to drive the visuals.
+    NSAudioCaptureUsageDescription: DJ Visualizer listens to the sound playing on this computer to drive the visuals.
+win:
+  target:
+    - target: nsis
+      arch: x64
+  artifactName: DJ-Visualizer-windows.${ext}
+nsis:
+  oneClick: true
+publish: null
