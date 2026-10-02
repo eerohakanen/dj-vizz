@@ -1,10 +1,12 @@
 import { createCanvas } from './canvas';
 import { clamp } from './math';
+import { view } from './state';
 
 export const DENSITY_RAMP = ' .:-=+*#%@';
 export const RAIN_GLYPHS = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎ0123456789:=*+<>';
 
 const GLYPH_FONT = 'ui-monospace, Menlo, Consolas, monospace';
+const MIN_GLYPH_LEVEL = 0.03;
 
 export const glyphIndex = (level: number, count: number) => clamp(Math.floor(level * count), 0, count - 1);
 
@@ -52,3 +54,31 @@ export function createGlyphSheet(glyphs: string) {
 }
 
 export type GlyphSheet = ReturnType<typeof createGlyphSheet>;
+
+export function drawGlyphField(
+  target: CanvasRenderingContext2D,
+  field: Float32Array,
+  columns: number,
+  rows: number,
+  cell: number,
+  sheets: HTMLCanvasElement[],
+  count: number,
+) {
+  const offsetX = (target.canvas.width - columns * cell) / 2;
+  const offsetY = (target.canvas.height - rows * cell) / 2;
+  const tones = sheets.length;
+  for (let row = 0; row < rows; row++) {
+    for (let column = 0; column < columns; column++) {
+      const level = field[row * columns + column];
+      if (level <= MIN_GLYPH_LEVEL) continue;
+      const glyph = glyphIndex(level, count - 1) + 1;
+      const sheet = sheets[Math.min(tones - 1, (level * tones) | 0)];
+      target.drawImage(sheet, glyph * cell, 0, cell, cell, offsetX + column * cell, offsetY + row * cell, cell, cell);
+    }
+  }
+}
+
+export function glyphGrid(cellSize: number) {
+  const cell = Math.max(6, Math.round(cellSize * view.pixelRatio));
+  return { cell, columns: Math.ceil(view.width / cell), rows: Math.ceil(view.height / cell) };
+}

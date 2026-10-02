@@ -26,7 +26,7 @@ import {
 } from './library';
 
 vi.mock('../canvas', () => ({ output: {}, transitionCtx: {}, transitionFrame: {} }));
-vi.mock('../modes/index', () => ({ MODES: Array.from({ length: 16 }, (_, index) => ({ name: `Mode ${index}`, threeD: index >= 9 && index <= 11 })) }));
+vi.mock('../modes/index', () => ({ MODES: Array.from({ length: 21 }, (_, index) => ({ name: `Mode ${index}`, threeD: index >= 9 && index <= 11 })) }));
 vi.mock('../mode', async () => {
   const { settings } = await import('../state');
   return { setMode: vi.fn((index: number) => (settings.mode = index)) };
@@ -65,7 +65,7 @@ beforeEach(() => {
 describe('migrateLibrary', () => {
   it('maps v2 short keys into the v3 shape and drops calibration', () => {
     const migrated = migrateLibrary(legacyLibrary(2));
-    expect(migrated?.version).toBe(9);
+    expect(migrated?.version).toBe(10);
     expect(migrated?.folders[0].presets[0]).toEqual({
       name: 'Old look',
       mode: 3,
@@ -116,7 +116,7 @@ describe('migrateLibrary', () => {
   });
 
   it('accepts an empty library but rejects non-arrays', () => {
-    expect(migrateLibrary({ version: 5, cur: 3, folders: [] })).toEqual({ version: 9, cur: 0, folders: [] });
+    expect(migrateLibrary({ version: 5, cur: 3, folders: [] })).toEqual({ version: 10, cur: 0, folders: [] });
     expect(migrateLibrary({ version: 2 })).toBeNull();
     expect(migrateLibrary({ version: 2, folders: 'x' })).toBeNull();
     expect(migrateLibrary('nope')).toBeNull();
@@ -125,9 +125,9 @@ describe('migrateLibrary', () => {
   it('replaces the old Default folder with the starter sets in place for v7 libraries', () => {
     const mine = { name: 'Mine', presets: [createPreset('Kept', 2, 5)] };
     const migrated = migrateLibrary({ version: 7, cur: 2, folders: [mine, { name: 'Default', presets: [] }, { name: 'Last', presets: [] }] });
-    expect(migrated?.folders.map((folder) => folder.name)).toEqual(['Mine', 'Pixelated 2D', '2D', '3D', 'Last']);
+    expect(migrated?.folders.map((folder) => folder.name)).toEqual(['Mine', 'Pixelated 2D', '2D · Spectrum', '2D · Flight', '2D · Patterns', 'ASCII', '3D', 'Last']);
     expect(migrated?.folders[0].presets).toEqual(mine.presets);
-    expect(migrated?.cur).toBe(4);
+    expect(migrated?.cur).toBe(7);
     expect(migrateLibrary({ version: 7, cur: 1, folders: [mine, { name: 'Default', presets: [] }] })?.cur).toBe(1);
   });
 
@@ -136,20 +136,23 @@ describe('migrateLibrary', () => {
     expect(migrated?.folders.map((folder) => folder.name)).toEqual(['Default']);
   });
 
-  it('appends the v9 starter presets to v8 starter folders once', () => {
-    const kept = createPreset('Blob · Ice', 7, 6);
-    const added = createPreset('Matrix · Toxic', 13, 3);
-    const migrated = migrateLibrary({ version: 8, cur: 1, folders: [{ name: 'Mine', presets: [] }, { name: '2D', presets: [kept, added] }] })!;
-    const names = migrated.folders[1].presets.map((preset) => preset.name);
-    expect(names).toEqual(['Blob · Ice', 'Matrix · Toxic', 'ASCII knot · Gold', 'Chladni · Ice', 'Truchet · Neon']);
-    expect(migrated.folders[1].presets[1].palette).toBe(3);
-    expect(migrated.folders[0].presets).toEqual([]);
-    expect(migrated.cur).toBe(1);
-    expect(migrateLibrary(migrated)!.folders[1].presets).toHaveLength(5);
+  it('splits the v8 and v9 2D folder into themed folders and keeps custom scenes', () => {
+    const custom = createPreset('My look', 2, 4);
+    const starter = createPreset('Blob · Ice', 7, 6);
+    const pixelated = { name: 'Pixelated 2D', presets: [createPreset('Pixel bars', 0, 1, { pixelate: 1 }), createPreset('ASCII galaxy', 4, 3, { pixelate: 4 })] };
+    const migrated = migrateLibrary({ version: 9, cur: 2, folders: [pixelated, { name: '2D', presets: [starter, custom] }, { name: 'Last', presets: [] }] })!;
+    expect(migrated.folders.map((folder) => folder.name)).toEqual(['Pixelated 2D', '2D · Spectrum', '2D · Flight', '2D · Patterns', 'ASCII', '2D · Mine', 'Last']);
+    expect(migrated.folders[0].presets.map((preset) => preset.name)).toEqual(['Pixel bars']);
+    expect(migrated.folders[5].presets).toEqual([custom]);
+    expect(migrated.cur).toBe(6);
   });
 
-  it('adds nothing to v8 folders that only share a prototype key', () => {
-    expect(migrateLibrary({ version: 8, cur: 0, folders: [{ name: 'constructor', presets: [] }] })!.folders[0].presets).toEqual([]);
+  it('leaves v8 pixelated scenes alone and adds no leftover folder without custom scenes', () => {
+    const pixelated = { name: 'Pixelated 2D', presets: [createPreset('ASCII galaxy', 4, 3, { pixelate: 4 })] };
+    const migrated = migrateLibrary({ version: 8, cur: 0, folders: [pixelated, { name: '2D', presets: [createPreset('Blob · Ice', 7, 6)] }] })!;
+    expect(migrated.folders[0].presets).toHaveLength(1);
+    expect(migrated.folders.map((folder) => folder.name)).not.toContain('2D · Mine');
+    expect(migrateLibrary(migrated)!.folders).toEqual(migrated.folders);
   });
 });
 
@@ -198,11 +201,20 @@ describe('starter presets', () => {
     }
   });
 
-  it('keep 2D presets unpixelated on 2D modes', () => {
-    for (const preset of starterSet('2D')) {
+  it('keep themed 2D presets unpixelated on 2D modes', () => {
+    for (const preset of ['2D · Spectrum', '2D · Flight', '2D · Patterns'].flatMap(starterSet)) {
       expect(preset.pixelate).toBe(0);
       expect(MODES[preset.mode].threeD).toBe(false);
     }
+  });
+
+  it('keep ASCII presets on 2D modes', () => {
+    for (const preset of starterSet('ASCII')) expect(MODES[preset.mode].threeD).toBe(false);
+  });
+
+  it('use every mode at least once', () => {
+    const used = new Set(starters().flatMap((folder) => folder.presets.map((preset) => preset.mode)));
+    expect(used.size).toBe(MODES.length);
   });
 
   it('give each 3D mode exactly one 3D preset', () => {
@@ -287,7 +299,7 @@ describe('stored v3 and v4 libraries', () => {
 
   it('starts with the starter sets when nothing is stored', async () => {
     const fresh = await load([]);
-    expect(fresh.library.folders.map((folder) => folder.name)).toEqual(['Pixelated 2D', '2D', '3D']);
+    expect(fresh.library.folders.map((folder) => folder.name)).toEqual(['Pixelated 2D', '2D · Spectrum', '2D · Flight', '2D · Patterns', 'ASCII', '3D']);
   });
 });
 

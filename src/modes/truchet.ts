@@ -6,7 +6,7 @@ import { clock, fx, settings, signal, view } from '../state';
 
 const TILE = 64;
 const QUARTER_TURN = Math.PI / 2;
-const BEAT_FLIP_SHARE = 0.12;
+const BEAT_FLIP_SHARE = 0.2;
 const DROP_FLIP_SHARE = 0.5;
 
 let turns = new Float32Array(0);
@@ -24,7 +24,7 @@ function flip(share: number) {
   for (let i = 0; i < targets.length; i++) if (Math.random() < share) targets[i]++;
 }
 
-export const flipTruchet = () => flip(BEAT_FLIP_SHARE);
+export const flipTruchet = () => flip(BEAT_FLIP_SHARE * (0.6 + signal.punchBass));
 
 export const scrambleTruchet = () => flip(DROP_FLIP_SHARE);
 
@@ -49,7 +49,7 @@ export function drawTruchet() {
   layout(columns, rows);
   const offsetX = (width - columns * size) / 2;
   const offsetY = (height - rows * size) / 2;
-  const rate = (6 + fx.drop * 10) * settings.motion;
+  const rate = (8 + fx.drop * 10 + fx.kick * 6) * settings.motion;
   const cx = columns / 2;
   const cy = rows / 2;
   const reach = Math.hypot(cx, cy);
@@ -61,9 +61,9 @@ export function drawTruchet() {
       turns[index] = approach(turns[index], targets[index], rate, clock.delta);
       const distance = Math.hypot(column - cx, row - cy);
       const level = bandAt(Math.floor((distance / reach) * 40), 40);
-      const wave = Math.max(0, 1 - Math.abs(distance - ripple) / 2) * fx.beat;
-      const intensity = Math.min(1, 0.15 + level * 0.9 + wave);
-      ctx.lineWidth = size * (0.06 + intensity * 0.18);
+      const wave = Math.max(0, 1 - Math.abs(distance - ripple) / 2) * (0.4 + fx.beat);
+      const intensity = Math.min(1, 0.05 + level * 1.4 + wave + fx.snare * 0.3);
+      ctx.lineWidth = size * (0.03 + intensity * 0.3);
       ctx.strokeStyle = color(distance / reach + turns[index] * 0.1, 0.3 + intensity * 0.7);
       drawTile(offsetX + column * size, offsetY + row * size, size, turns[index]);
     }

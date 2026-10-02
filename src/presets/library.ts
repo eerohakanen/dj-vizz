@@ -13,14 +13,19 @@ import { MIRROR_NAMES, mirrorIndex, PIXEL_NAMES, pixelIndex, PSY_NAMES, psyIndex
 
 const STORAGE_KEY = 'djviz.presets.v4';
 const LEGACY_STORAGE_KEYS = ['djviz.presets.v3', 'djviz.presets.v2', 'djviz.presets.v1'];
-export const LIBRARY_VERSION = 9;
+export const LIBRARY_VERSION = 10;
 const INTENSITY_SCALE_VERSION = 5;
 const SCENE_SHAPE_VERSION = 3;
 const PALETTE_SHIFT_VERSION = 2;
 const MODE_SHIFT_VERSION = 7;
 const STARTER_SETS_VERSION = 8;
-const STARTER_ADDITIONS_VERSION = 9;
+const ASCII_STARTERS_VERSION = 9;
+const STARTER_REGROUP_VERSION = 10;
 const REPLACED_STARTER_NAME = 'Default';
+const REGROUPED_STARTER_NAME = '2D';
+const PIXELATED_STARTER_NAME = 'Pixelated 2D';
+const MOVED_PIXELATED_PRESET = 'ASCII galaxy';
+const LEFTOVER_FOLDER_NAME = '2D · Mine';
 export const NAME_LIMIT = 40;
 
 export interface PresetEffects {
@@ -86,40 +91,47 @@ const starterFolder = (name: string, presets: Preset[]): Folder => ({
   presets,
 });
 
-const starterAdditions = () =>
-  new Map<string, Preset[]>([
-    ['Pixelated 2D', [createPreset('ASCII galaxy', 4, 3, { pixelate: pixelIndex('ASCII') })]],
-    [
-      '2D',
-      [
-        createPreset('ASCII knot · Gold', 12, 9),
-        createPreset('Matrix · Toxic', 13, 8),
-        createPreset('Chladni · Ice', 14, 6),
-        createPreset('Truchet · Neon', 15, 1),
-      ],
-    ],
-  ]);
-
-const withAdditions = (name: string, presets: Preset[]) => [...presets, ...(starterAdditions().get(name) ?? [])];
+const twoDFolders = (): Folder[] => [
+  starterFolder('2D · Spectrum', [
+    createPreset('Liquid bars', 0, 2, { psy: psyIndex('Liquid') }),
+    createPreset('Radial vortex', 1, 7, { psy: psyIndex('Vortex') }),
+    createPreset('Scope · Ocean', 3, 3),
+    createPreset('Golden · Sunset', 20, 2),
+  ]),
+  starterFolder('2D · Flight', [
+    createPreset('Warp · Fire', 6, 5),
+    createPreset('Kaleido galaxy', 4, 1, { mirror: mirrorIndex('Kaleido') }),
+    createPreset('Laser tunnel', 2, 11, { effects: { lasers: true } }),
+    createPreset('Retro Grid · Vaporwave', 5, 7),
+  ]),
+  starterFolder('2D · Patterns', [
+    createPreset('Rainbow hex', 8, 0, { psy: psyIndex('Rainbow') }),
+    createPreset('Blob · Ice', 7, 6),
+    createPreset('Truchet · Neon', 15, 1),
+    createPreset('Chladni · Ice', 14, 6),
+    createPreset('Topo · Ocean', 18, 3),
+    createPreset('Cells · Vaporwave', 19, 7),
+  ]),
+  starterFolder('ASCII', [
+    createPreset('ASCII knot · Gold', 12, 9),
+    createPreset('Matrix · Toxic', 13, 8),
+    createPreset('ASCII fire · Fire', 16, 5),
+    createPreset('ASCII plasma · Cyberpunk', 17, 11),
+    createPreset(MOVED_PIXELATED_PRESET, 4, 3, { pixelate: pixelIndex('ASCII') }),
+    createPreset('ASCII hex · Neon', 8, 1, { pixelate: pixelIndex('ASCII') }),
+  ]),
+];
 
 const starterFolders = (): Folder[] => [
-  starterFolder('Pixelated 2D', withAdditions('Pixelated 2D', [
+  starterFolder(PIXELATED_STARTER_NAME, [
     createPreset('Pixel bars', 0, 1, { pixelate: pixelIndex('Square') }),
     createPreset('Diamond hex', 8, 11, { pixelate: pixelIndex('Diamond') }),
     createPreset('8-bit grid', 5, 7, { pixelate: pixelIndex('Square') }),
     createPreset('Dotted laser tunnel', 2, 4, { pixelate: pixelIndex('Round'), effects: { lasers: true } }),
     createPreset('Bead galaxy', 4, 9, { pixelate: pixelIndex('Round') }),
     createPreset('Pixel scope', 3, 8, { pixelate: pixelIndex('Square') }),
-  ])),
-  starterFolder('2D', withAdditions('2D', [
-    createPreset('Warp · Fire', 6, 5),
-    createPreset('Radial vortex', 1, 7, { psy: psyIndex('Vortex') }),
-    createPreset('Kaleido galaxy', 4, 1, { mirror: mirrorIndex('Kaleido') }),
-    createPreset('Laser tunnel', 2, 11, { effects: { lasers: true } }),
-    createPreset('Liquid bars', 0, 2, { psy: psyIndex('Liquid') }),
-    createPreset('Rainbow hex', 8, 0, { psy: psyIndex('Rainbow') }),
-    createPreset('Blob · Ice', 7, 6),
-  ])),
+  ]),
+  ...twoDFolders(),
   starterFolder('3D', [
     createPreset('Deep Space · Ice', 9, 6),
     createPreset('Model · Neon', 10, 1),
@@ -133,22 +145,29 @@ const starterLibrary = (): Library => ({
   folders: starterFolders(),
 });
 
-function replaceStarterFolders(folders: Folder[], cur: number) {
-  const groups = folders.map((folder) => (folder.name === REPLACED_STARTER_NAME ? starterFolders() : [folder]));
+function replaceFolder(folders: Folder[], cur: number, name: string, replace: (folder: Folder) => Folder[]) {
+  const groups = folders.map((folder) => (folder.name === name ? replace(folder) : [folder]));
   return { folders: groups.flat(), cur: groups.slice(0, cur).reduce((total, group) => total + group.length, 0) };
 }
 
-function addStarterPresets(folders: Folder[]) {
-  const additions = starterAdditions();
-  return folders.map((folder) => {
-    const missing = (additions.get(folder.name) ?? []).filter((preset) => !folder.presets.some((existing) => existing.name === preset.name));
-    return missing.length ? { ...folder, presets: [...folder.presets, ...missing] } : folder;
-  });
+function regroupTwoD(folder: Folder) {
+  const regrouped = twoDFolders();
+  const starterNames = new Set(regrouped.flatMap((group) => group.presets.map((preset) => preset.name)));
+  const leftovers = folder.presets.filter((preset) => !starterNames.has(preset.name));
+  return leftovers.length ? [...regrouped, { ...folder, name: LEFTOVER_FOLDER_NAME, presets: leftovers }] : regrouped;
 }
 
+const withoutMovedPreset = (folders: Folder[]) =>
+  folders.map((folder) =>
+    folder.name === PIXELATED_STARTER_NAME ? { ...folder, presets: folder.presets.filter((preset) => preset.name !== MOVED_PIXELATED_PRESET) } : folder,
+  );
+
 function upgradeStarters(folders: Folder[], cur: number, version: number) {
-  if (version < STARTER_SETS_VERSION) return replaceStarterFolders(folders, cur);
-  if (version < STARTER_ADDITIONS_VERSION) return { folders: addStarterPresets(folders), cur };
+  if (version < STARTER_SETS_VERSION) return replaceFolder(folders, cur, REPLACED_STARTER_NAME, starterFolders);
+  if (version < STARTER_REGROUP_VERSION) {
+    const kept = version < ASCII_STARTERS_VERSION ? folders : withoutMovedPreset(folders);
+    return replaceFolder(kept, cur, REGROUPED_STARTER_NAME, regroupTwoD);
+  }
   return { folders, cur };
 }
 

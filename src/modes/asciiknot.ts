@@ -1,8 +1,8 @@
-import { createGlyphSheet, DENSITY_RAMP, glyphIndex } from '../ascii';
+import { createGlyphSheet, DENSITY_RAMP, drawGlyphField, glyphGrid } from '../ascii';
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
 import { decay, TAU } from '../math';
-import { clock, fx, settings, signal, view } from '../state';
+import { clock, fx, settings, signal } from '../state';
 
 const KNOT_P = 2;
 const KNOT_Q = 3;
@@ -13,7 +13,7 @@ const CAMERA_DISTANCE = 7;
 const CELL = 11;
 const LIGHT = normalize(0.3, 0.6, -0.75);
 
-const glyphs = createGlyphSheet(DENSITY_RAMP);
+const tones = [createGlyphSheet(DENSITY_RAMP), createGlyphSheet(DENSITY_RAMP), createGlyphSheet(DENSITY_RAMP)];
 const curve = new Float32Array(PATH_STEPS * 12);
 let depth = new Float32Array(0);
 let shade = new Float32Array(0);
@@ -50,7 +50,7 @@ function buildCurve() {
 buildCurve();
 
 export function kickAsciiKnot() {
-  spinKick += 1.2;
+  spinKick += 2.5;
 }
 
 function rasterize(columns: number, rows: number, scale: number) {
@@ -58,7 +58,7 @@ function rasterize(columns: number, rows: number, scale: number) {
   const sinA = Math.sin(angleA);
   const cosB = Math.cos(angleB);
   const sinB = Math.sin(angleB);
-  const thickness = TUBE_RADIUS * (1 + signal.bass * 0.35 + fx.kick * 0.15);
+  const thickness = TUBE_RADIUS * (0.8 + signal.punchBass * 0.45 + fx.kick * 0.35 + fx.snare * 0.2);
   for (let i = 0; i < PATH_STEPS; i++) {
     const o = i * 12;
     for (let j = 0; j < TUBE_STEPS; j++) {
@@ -86,35 +86,24 @@ function rasterize(columns: number, rows: number, scale: number) {
       const nz1 = ny * sinA + nz * cosA;
       const nx2 = nx * cosB + nz1 * sinB;
       const nz2 = -nx * sinB + nz1 * cosB;
-      shade[cell] = Math.max(0.08, nx2 * LIGHT[0] + ny1 * LIGHT[1] + nz2 * LIGHT[2]);
+      shade[cell] = Math.min(1, Math.max(0.08, nx2 * LIGHT[0] + ny1 * LIGHT[1] + nz2 * LIGHT[2]) * (0.55 + signal.gate * 0.3 + fx.beat * 0.45));
     }
   }
 }
 
 export function drawAsciiKnot() {
-  const { width, height, pixelRatio } = view;
-  const cell = Math.max(6, Math.round(CELL * pixelRatio));
-  const columns = Math.ceil(width / cell);
-  const rows = Math.ceil(height / cell);
+  const { cell, columns, rows } = glyphGrid(CELL);
   if (depth.length !== columns * rows) {
     depth = new Float32Array(columns * rows);
     shade = new Float32Array(columns * rows);
   }
   depth.fill(0);
+  shade.fill(0);
   const step = clock.delta * settings.motion;
-  spinKick *= decay(0.2, clock.delta);
-  angleA += step * (0.35 + signal.gate * (signal.mid * 0.8 + spinKick));
-  angleB += step * (0.22 + signal.gate * (signal.bass * 1.2 + fx.drop * 3 + spinKick));
-  rasterize(columns, rows, Math.min(columns, rows) * 0.85 * (1 + fx.kick * 0.08));
-  const sheet = glyphs.paint(cell, color(0.15 + fx.spin * 0.05, 1, 62 + fx.hat * 20));
-  const offsetX = (width - columns * cell) / 2;
-  const offsetY = (height - rows * cell) / 2;
-  for (let row = 0; row < rows; row++) {
-    for (let column = 0; column < columns; column++) {
-      const index = row * columns + column;
-      if (depth[index] === 0) continue;
-      const glyph = glyphIndex(shade[index] * (0.85 + fx.beat * 0.3), glyphs.count - 1) + 1;
-      ctx.drawImage(sheet, glyph * cell, 0, cell, cell, offsetX + column * cell, offsetY + row * cell, cell, cell);
-    }
-  }
+  spinKick *= decay(0.15, clock.delta);
+  angleA += step * (0.3 + signal.gate * (signal.mid * 1.2 + spinKick));
+  angleB += step * (0.2 + signal.gate * (signal.punchBass * 1.8 + fx.drop * 4 + spinKick));
+  rasterize(columns, rows, Math.min(columns, rows) * 0.8 * (1 + fx.kick * 0.22 + fx.drop * 0.3));
+  const sheets = tones.map((tone, index) => tone.paint(cell, color(0.15 + index * 0.12 + fx.beat * 0.1, 1, 40 + index * 20 + fx.hat * 15)));
+  drawGlyphField(ctx, shade, columns, rows, cell, sheets, tones[0].count);
 }

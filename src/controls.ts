@@ -40,7 +40,7 @@ export interface KeyEntry {
   run: (event: KeyboardEvent) => void;
 }
 
-const SHIFT_MODE_CODES = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'];
+const SHIFT_MODE_CODES = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0'];
 const FIRST_SHIFT_MODE = 10;
 
 export function modeIndexFor({ key, code, shiftKey }: KeyLike) {

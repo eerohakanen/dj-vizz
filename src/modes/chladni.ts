@@ -1,10 +1,9 @@
-import { chladniSmall as plate, chladniSmallCtx as plateCtx, gradientCache, sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
 import { approach, clamp01, smoothstep } from '../math';
 import { clock, fx, settings, signal, view } from '../state';
+import { createPlate } from './plate';
 
-const PIXEL = 4;
-const BEATS_PER_SHAPE = 8;
+const BEATS_PER_SHAPE = 4;
 const SHAPES: [number, number][] = [
   [1, 2],
   [1, 3],
@@ -20,8 +19,7 @@ const SHAPES: [number, number][] = [
   [5, 6],
 ];
 
-const tint = gradientCache(() => plateCtx.createLinearGradient(0, 0, 1, 1));
-let pixels: ImageData | null = null;
+const plate = createPlate(4);
 let cosColumnsN = new Float32Array(0);
 let cosColumnsM = new Float32Array(0);
 let cosRowsN = new Float32Array(0);
@@ -33,62 +31,48 @@ let m = SHAPES[0][1];
 
 export function stepChladni() {
   beats++;
-  if (beats % BEATS_PER_SHAPE === 0) shape = (shape + 1) % SHAPES.length;
+  if (signal.downbeat || beats % BEATS_PER_SHAPE === 0) shape = (shape + 1) % SHAPES.length;
 }
 
 export function jumpChladni() {
   shape = (shape + 1 + Math.floor(Math.random() * (SHAPES.length - 1))) % SHAPES.length;
 }
 
-function resizePlate(columns: number, rows: number) {
-  if (pixels?.width === columns && pixels.height === rows) return;
-  plate.width = columns;
-  plate.height = rows;
-  pixels = plateCtx.createImageData(columns, rows);
+function fillCosines(target: Float32Array, frequency: number, count: number, aspect: number, phase: number) {
+  for (let i = 0; i < count; i++) target[i] = Math.cos(frequency * Math.PI * (((i + 0.5) / count) * 2 - 1) * aspect + phase);
+}
+
+function fitTables(columns: number, rows: number) {
+  if (cosColumnsN.length === columns && cosRowsN.length === rows) return;
   cosColumnsN = new Float32Array(columns);
   cosColumnsM = new Float32Array(columns);
   cosRowsN = new Float32Array(rows);
   cosRowsM = new Float32Array(rows);
 }
 
-function fillCosines(target: Float32Array, frequency: number, count: number, aspect: number, phase: number) {
-  for (let i = 0; i < count; i++) target[i] = Math.cos(frequency * Math.PI * (((i + 0.5) / count) * 2 - 1) * aspect + phase);
-}
-
 export function drawChladni() {
-  const { width, height, pixelRatio, minSide } = view;
-  const cellSize = Math.max(2, Math.round(PIXEL * pixelRatio));
-  const columns = Math.ceil(width / cellSize);
-  const rows = Math.ceil(height / cellSize);
-  resizePlate(columns, rows);
+  const { width, height, minSide } = view;
+  const { columns, rows } = plate.fit();
+  fitTables(columns, rows);
   const [targetN, targetM] = SHAPES[shape];
-  const rate = (1.2 + fx.drop * 6) * settings.motion;
+  const rate = (4 + fx.drop * 8) * settings.motion;
   n = approach(n, targetN, rate, clock.delta);
   m = approach(m, targetM, rate, clock.delta);
-  const wobble = Math.sin(clock.time * 0.4) * 0.25 * signal.gate;
-  fillCosines(cosColumnsN, n, columns, width / minSide, wobble);
-  fillCosines(cosColumnsM, m, columns, width / minSide, -wobble);
-  fillCosines(cosRowsN, n, rows, height / minSide, -wobble);
-  fillCosines(cosRowsM, m, rows, height / minSide, wobble);
-  const line = 0.05 + signal.bass * 0.22 + fx.kick * 0.12;
-  const glow = 0.25 + signal.mid * 0.6;
-  const data = pixels!.data;
+  const pulse = 1 + fx.kick * 0.18 + fx.drop * 0.3;
+  const wobble = Math.sin(clock.time * 0.7) * 0.3 * signal.gate + fx.hat * 0.08;
+  fillCosines(cosColumnsN, n * pulse, columns, width / minSide, wobble);
+  fillCosines(cosColumnsM, m * pulse, columns, width / minSide, -wobble);
+  fillCosines(cosRowsN, n * pulse, rows, height / minSide, -wobble);
+  fillCosines(cosRowsM, m * pulse, rows, height / minSide, wobble);
+  const line = 0.03 + signal.punchBass * 0.2 + fx.kick * 0.22;
+  const glow = signal.mid * 0.5 + fx.snare * 0.4;
+  const gain = 0.35 + signal.gate * 0.45 + fx.beat * 0.4;
   for (let row = 0; row < rows; row++) {
     for (let column = 0; column < columns; column++) {
       const value = Math.abs(cosColumnsN[column] * cosRowsM[row] - cosColumnsM[column] * cosRowsN[row]);
       const nodal = smoothstep(clamp01(1 - value / line));
-      const alpha = Math.max(nodal, (1 - value) * glow * 0.35);
-      const index = (row * columns + column) * 4 + 3;
-      data[index] = alpha * 255;
+      plate.set(row * columns + column, clamp01(Math.max(nodal, (1 - value) * glow * 0.4) * gain));
     }
   }
-  plateCtx.putImageData(pixels!, 0, 0);
-  plateCtx.globalCompositeOperation = 'source-in';
-  plateCtx.setTransform(columns, 0, 0, rows, 0, 0);
-  plateCtx.fillStyle = tint(color(n * 0.13, 1), color(0.5 + m * 0.11, 1));
-  plateCtx.fillRect(0, 0, 1, 1);
-  plateCtx.setTransform(1, 0, 0, 1, 0, 0);
-  plateCtx.globalCompositeOperation = 'source-over';
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(plate, 0, 0, columns * cellSize, rows * cellSize);
+  plate.present(color(n * 0.13 + fx.beat * 0.2, 1), color(0.5 + m * 0.11, 1, 58 + fx.kick * 25));
 }

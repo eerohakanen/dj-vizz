@@ -8,7 +8,7 @@ import { clock, fx, settings, signal, view } from '../state';
 const CELL = 16;
 const MIN_TRAIL = 6;
 const MAX_TRAIL = 26;
-const BURST_SHARE = 0.18;
+const BURST_SHARE = 0.3;
 const MUTATE_SHARE = 0.03;
 
 interface Drop {
@@ -36,13 +36,18 @@ function layout(columns: number, rows: number) {
   seeds = new Uint8Array(columns * rows).map(() => (Math.random() * 256) | 0);
 }
 
-export function burstMatrix() {
+function burst(share: number) {
   for (const drop of drops) {
-    if (Math.random() > BURST_SHARE) continue;
+    if (Math.random() > share) continue;
     drop.head = 0;
-    drop.speed = randomRange(18, 34);
+    drop.speed = randomRange(22, 40);
+    drop.trail = randomRange(MIN_TRAIL, MAX_TRAIL) * (1 + signal.energy);
   }
 }
+
+export const burstMatrix = () => burst(BURST_SHARE * (0.5 + signal.punchBass));
+
+export const floodMatrix = () => burst(1);
 
 function mutate() {
   const changes = Math.ceil(seeds.length * MUTATE_SHARE * (0.3 + fx.hat));
@@ -56,9 +61,9 @@ export function drawMatrix() {
   const rows = Math.ceil(height / cell);
   layout(columns, rows);
   mutate();
-  const pace = (0.35 + signal.gate * (signal.energy * 2.5 + fx.drop * 4)) * settings.motion * clock.delta;
-  const trailSheet = trailGlyphs.paint(cell, color(0.25, 1, 52));
-  const headSheet = headGlyphs.paint(cell, color(0.25, 1, 85 + fx.hat * 10));
+  const pace = (0.25 + signal.gate * (signal.energy * 2 + signal.punchBass * 1.5 + fx.kick * 2 + fx.drop * 4)) * settings.motion * clock.delta;
+  const trailSheet = trailGlyphs.paint(cell, color(0.25 + fx.beat * 0.15, 1, 45 + fx.kick * 20));
+  const headSheet = headGlyphs.paint(cell, color(0.25, 1, 80 + fx.hat * 15));
   const count = trailGlyphs.count;
   for (let column = 0; column < columns; column++) {
     const drop = drops[column];
@@ -72,7 +77,7 @@ export function drawMatrix() {
       if (row < 0) break;
       if (row >= rows) continue;
       const glyph = seeds[row * columns + column] % count;
-      ctx.globalAlpha = k === 0 ? 1 : Math.min(1, (1 - k / drop.trail) * (0.45 + level * 0.9));
+      ctx.globalAlpha = k === 0 ? 1 : Math.min(1, (1 - k / drop.trail) * (0.2 + level * 1.6 + fx.beat * 0.3));
       ctx.drawImage(k === 0 ? headSheet : trailSheet, glyph * cell, 0, cell, cell, x, row * cell, cell, cell);
     }
   }
