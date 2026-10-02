@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { approach, clamp, clamp01, decay, follow, frameAlpha, hueDelta, keepNewest, lerp, quantize, randomRange, signedRandom, smoothstep, updatePeak, wrap } from './math';
+import { approach, clamp, clamp01, decay, follow, frameAlpha, hueDelta, keepNewest, lerp, quantize, randomRange, signedRandom, smoothstep, stretch, updatePeak, wrap } from './math';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -229,5 +229,25 @@ describe('quantize', () => {
     expect(quantize(100.2, 0.5)).toBe(100);
     expect(quantize(100.3, 0.5)).toBe(100.5);
     expect(quantize(0.3, 1 / 4)).toBe(0.25);
+  });
+});
+
+describe('stretch', () => {
+  it('maps the floor to zero and the peak to one', () => {
+    expect(stretch(0.3, 0.3, 0.5, 0.1)).toBe(0);
+    expect(stretch(0.5, 0.3, 0.5, 0.1)).toBe(1);
+  });
+
+  it('expands a small change inside a narrow range', () => {
+    expect(stretch(0.4, 0.3, 0.5, 0.1)).toBeCloseTo(0.5, 10);
+  });
+
+  it('never divides by a range narrower than the minimum', () => {
+    expect(stretch(0.31, 0.3, 0.3, 0.1)).toBeCloseTo(0.1, 10);
+  });
+
+  it('stays inside the unit interval', () => {
+    expect(stretch(0.1, 0.3, 0.5, 0.1)).toBe(0);
+    expect(stretch(0.9, 0.3, 0.5, 0.1)).toBe(1);
   });
 });

@@ -61,7 +61,7 @@ function detectOnset(detector: OnsetDetector, frequencies: Uint8Array, time: num
   const threshold = mean + (detector.sensitivity / settings.beatSensitivity) * deviation + 0.012;
   if (flux < threshold || level < 0.2 || time - detector.lastOnset < detector.refractory) return 0;
   detector.lastOnset = time;
-  return Math.min(1, 0.4 + (flux - threshold) / (deviation * 4 + 0.02));
+  return Math.min(1, 0.55 + (flux - threshold) / (deviation * 2.5 + 0.02));
 }
 
 export function detectDrums(time: number, gate: number) {

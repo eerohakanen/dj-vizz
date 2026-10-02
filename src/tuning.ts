@@ -64,7 +64,7 @@ export const TUNING_SECTIONS = [
       {
         key: 'beatSensitivity',
         label: 'Beat detection',
-        min: 0.5,
+        min: 0.2,
         max: 2,
         step: 0.05,
         format: multiplier,
@@ -91,11 +91,21 @@ export const TUNING_SECTIONS = [
       {
         key: 'reactivity',
         label: 'Overall intensity',
-        min: 0.5,
+        min: 0.1,
         max: 3,
         step: 0.1,
         format: multiplier,
         description: 'Master strength for everything below. One knob to make the whole show calmer or wilder.',
+      },
+      {
+        key: 'contrast',
+        label: 'Sensitivity to change',
+        min: 0,
+        max: 1,
+        step: 0.05,
+        format: percentOf(0, 1),
+        description:
+          'How strongly small changes in the music swing the visuals. High values exaggerate every shift; zero follows raw loudness.',
       },
       {
         key: 'motion',

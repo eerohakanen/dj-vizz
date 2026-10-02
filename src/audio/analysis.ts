@@ -1,5 +1,5 @@
 import { onBeat, onHat, onKick, onSnare, triggerDrop } from '../events';
-import { approach, decay, follow, frameScale, lerp } from '../math';
+import { approach, decay, follow, frameScale, lerp, stretch, updatePeak } from '../math';
 import { clock, fx, settings, signal, TUNING_DEFAULTS } from '../state';
 import { detectDrums } from './drums';
 import { audio } from './input';
@@ -9,11 +9,36 @@ import { advanceTempo, beatStrength } from './tempo';
 
 const DROP_COOLDOWN = 8;
 const SPECTRUM_ATTACK = 0.03;
-const SPECTRUM_RELEASE = 0.18;
+const SPECTRUM_RELEASE = 0.1;
 const BEAT_BOOST = 0.1;
 const DROP_BOOST = 0.05;
 const CALM_RISE = 0.8;
 const CALM_FALL = 2.5;
+const FLOOR_RISE = 4;
+const FLOOR_FALL = 0.3;
+const PEAK_FALL = 0.15;
+const BAND_MIN_RANGE = 0.12;
+const LEVEL_MIN_RANGE = 0.1;
+const STRETCH_HEADROOM = 1.1;
+
+interface LevelRange {
+  floor: number;
+  peak: number;
+}
+
+const bassRange: LevelRange = { floor: 0, peak: 0 };
+const midRange: LevelRange = { floor: 0, peak: 0 };
+const highRange: LevelRange = { floor: 0, peak: 0 };
+const bandFloor = new Float32Array(BAND_COUNT);
+const bandPeak = new Float32Array(BAND_COUNT);
+
+const trackFloor = (floor: number, level: number, delta: number) => follow(floor, level, FLOOR_RISE, FLOOR_FALL, delta);
+
+function emphasise(range: LevelRange, level: number, delta: number) {
+  range.floor = trackFloor(range.floor, level, delta);
+  range.peak = updatePeak(range.peak, level, PEAK_FALL, delta);
+  return lerp(level, stretch(level, range.floor, range.peak, LEVEL_MIN_RANGE) * STRETCH_HEADROOM, settings.contrast);
+}
 
 const bandStart = new Int16Array(BAND_COUNT);
 const bandEnd = new Int16Array(BAND_COUNT);
@@ -68,7 +93,10 @@ function fillSpectrum(frequencies: Uint8Array, gain: number, delta: number) {
   for (let i = 0; i < BAND_COUNT; i++) {
     let max = 0;
     for (let j = bandStart[i]; j < bandEnd[i]; j++) if (frequencies[j] > max) max = frequencies[j];
-    const level = Math.max(0, max / 255 - 0.08) * gain * 1.2;
+    const raw = Math.max(0, max / 255 - 0.08) * gain * 1.2;
+    bandFloor[i] = trackFloor(bandFloor[i], raw, delta);
+    bandPeak[i] = updatePeak(bandPeak[i], raw, PEAK_FALL, delta);
+    const level = lerp(raw, stretch(raw, bandFloor[i], bandPeak[i], BAND_MIN_RANGE), settings.contrast);
     const target = Math.min(1.25, Math.pow(level, 1.3) * 1.3 * signal.gate * boost);
     spectrum[i] = follow(spectrum[i], target, SPECTRUM_ATTACK, SPECTRUM_RELEASE, delta);
   }
@@ -102,11 +130,11 @@ export function analyse() {
   const { gate } = signal;
   const react = settings.reactivity;
   const motion = react * settings.motion;
-  signal.bass = Math.min(1.2, bass * gate);
-  signal.mid = Math.min(1.2, mid * gate);
-  signal.high = Math.min(1.2, high * gate);
+  signal.bass = Math.min(1.2, emphasise(bassRange, bass, delta) * gate);
+  signal.mid = Math.min(1.2, emphasise(midRange, mid, delta) * gate);
+  signal.high = Math.min(1.2, emphasise(highRange, high, delta) * gate);
   signal.bassAverage = lerp(signal.bass, signal.bassAverage, decay(0.94, frameScale(delta)));
-  signal.punchBass = Math.min(1.8, (signal.bass + Math.max(0, signal.bass - signal.bassAverage) * 2.5) * react);
+  signal.punchBass = Math.min(1.8, (signal.bass + Math.max(0, signal.bass - signal.bassAverage) * 4) * react);
   signal.punchMid = Math.min(1.8, signal.mid * react);
   signal.punchHigh = Math.min(1.8, signal.high * react * 1.2);
 

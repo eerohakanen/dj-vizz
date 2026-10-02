@@ -19,6 +19,7 @@ export const TUNING_DEFAULTS = {
   beatSensitivity: 1,
   dropSensitivity: 1,
   reactivity: 1.6,
+  contrast: 0.7,
   motion: 1,
   punch: 1,
   flashes: 1,

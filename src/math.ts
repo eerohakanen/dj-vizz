@@ -21,6 +21,9 @@ export const follow = (value: number, target: number, attack: number, release: n
 
 export const updatePeak = (peak: number, level: number, fall: number, delta: number) => Math.max(level, peak - fall * delta);
 
+export const stretch = (level: number, floor: number, peak: number, minRange: number) =>
+  clamp01((level - floor) / Math.max(minRange, peak - floor));
+
 export function keepNewest<T>(items: T[], max: number) {
   if (items.length > max) items.splice(0, items.length - max);
 }
