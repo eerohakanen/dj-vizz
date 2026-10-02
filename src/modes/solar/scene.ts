@@ -15,7 +15,9 @@ import {
 import { createTextureLoader, loadAsteroid, type Modules } from './assets';
 import { createBlackHole } from './blackhole';
 import { BELT_ANGLE, BELT_CLEARANCE, BELT_ORBIT, BODIES, type Body, orbitPoint, SKY_TEXTURE } from './bodies';
+import { createPhenomena } from './phenomena';
 import { createSupernova } from './supernova';
+import { createSystemMap } from './systemMap';
 
 export const BASE_FOV = 55;
 const FAR = 1500;
@@ -337,7 +339,9 @@ export function buildStage(modules: Modules) {
       material.needsUpdate = true;
     }
   });
-  scene.add(belt, dust, supernova.shell, supernova.shards, supernova.debris, blackHole.group);
+  const systemMap = createSystemMap(THREE, centers);
+  const phenomena = createPhenomena(THREE);
+  scene.add(belt, dust, systemMap.orbits, systemMap.markers, phenomena.points, supernova.shell, supernova.shards, supernova.embers, supernova.debris, blackHole.group);
   loadAsteroid(modules, (geometry) => {
     belt.geometry.dispose();
     belt.geometry = geometry;
@@ -362,7 +366,7 @@ export function buildStage(modules: Modules) {
 
   const camera = new THREE.PerspectiveCamera(BASE_FOV, 1, 0.05, FAR);
   camera.position.copy(centers[0]).add(new THREE.Vector3(0, 0, BODIES[0].view));
-  prewarm(renderer, scene, camera, [supernova.shell, supernova.shards, supernova.debris, blackHole.group]);
+  prewarm(renderer, scene, camera, [systemMap.orbits, systemMap.markers, supernova.shell, supernova.shards, supernova.embers, supernova.debris, blackHole.group]);
 
   return {
     THREE,
@@ -380,6 +384,8 @@ export function buildStage(modules: Modules) {
     belt,
     dust,
     supernova,
+    systemMap,
+    phenomena,
     blackHole,
     streaks,
     streakUniforms,

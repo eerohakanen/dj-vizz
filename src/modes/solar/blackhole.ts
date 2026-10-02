@@ -97,7 +97,7 @@ export function animateBlackHole(stage: SolarStage, cataclysm: Cataclysm, kick: 
   const { group, body, diskUniforms, haloUniforms } = stage.blackHole;
   const collapse = phaseLevel(cataclysm, 'collapse');
   const dive = phaseLevel(cataclysm, 'dive');
-  const grow = smoothstep(clamp01((collapse - 0.2) / 0.5));
+  const grow = smoothstep(clamp01(collapse / 0.4));
   if (stage.skyMaterial.map) stage.skyMaterial.color.multiplyScalar(1 - SKY_DIM * smoothstep(collapse));
   group.visible = grow > 0;
   if (!group.visible) return;

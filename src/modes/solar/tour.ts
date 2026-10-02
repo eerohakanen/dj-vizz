@@ -2,18 +2,17 @@ import { clamp01, smoothstep } from '../../math';
 
 export const MIN_DWELL_SECONDS = 6;
 export const PHRASES_PER_STOP = 2;
-export const UNLOCKED_DWELL_SECONDS = 24;
+export const UNLOCKED_DWELL_SECONDS = 32;
 export const CALM_HOLD = 0.5;
-export const BARS_PER_SHOT = 4;
-export const CALM_BARS_PER_SHOT = 8;
-export const UNLOCKED_SHOT_SECONDS = 10;
+export const BARS_PER_SHOT = 8;
+export const CALM_BARS_PER_SHOT = 16;
+export const UNLOCKED_SHOT_SECONDS = 16;
 
 export interface Tour {
   from: number;
   to: number;
   travel: number;
   travelSeconds: number;
-  jumping: boolean;
   leg: number;
   cuts: number;
   dwell: number;
@@ -34,7 +33,7 @@ export interface TourInput {
   calm: number;
   tempoLocked: boolean;
   cruiseSeconds: number;
-  jumpSeconds: number;
+  random: number;
   eclipseSeconds: number;
   canEclipse: boolean;
   shotCount: number;
@@ -45,7 +44,6 @@ export const createTour = (): Tour => ({
   to: 0,
   travel: 1,
   travelSeconds: 1,
-  jumping: false,
   leg: 0,
   cuts: 0,
   dwell: 0,
@@ -80,13 +78,17 @@ function cut(tour: Tour, shotCount: number) {
   tour.cuts++;
 }
 
-function depart(tour: Tour, stopCount: number, jumping: boolean, seconds: number) {
+export function nextStop(current: number, stops: readonly number[], random: number) {
+  const choices = stops.filter((stop) => stop !== current);
+  return choices[Math.min(choices.length - 1, Math.floor(random * choices.length))];
+}
+
+function depart(tour: Tour, stops: readonly number[], input: TourInput) {
   Object.assign(tour, {
     from: tour.to,
-    to: (tour.to + 1) % stopCount,
+    to: nextStop(tour.to, stops, input.random),
     travel: 0,
-    travelSeconds: seconds,
-    jumping,
+    travelSeconds: input.cruiseSeconds,
     leg: tour.leg + 1,
     cuts: tour.cuts + 1,
     dwell: 0,
@@ -109,7 +111,7 @@ function advanceShot(tour: Tour, input: TourInput) {
   if (tour.bars >= (input.calm > CALM_HOLD ? CALM_BARS_PER_SHOT : BARS_PER_SHOT)) cut(tour, input.shotCount);
 }
 
-export function stepTour(tour: Tour, input: TourInput, stopCount: number) {
+export function stepTour(tour: Tour, input: TourInput, stops: readonly number[]) {
   if (traveling(tour)) {
     tour.travel = Math.min(1, tour.travel + input.delta / tour.travelSeconds);
     return;
@@ -127,7 +129,6 @@ export function stepTour(tour: Tour, input: TourInput, stopCount: number) {
     Object.assign(tour, { eclipse: 0, eclipseSeconds: input.eclipseSeconds, eclipsed: true, cuts: tour.cuts + 1 });
     return;
   }
-  if (input.drop && tour.dwell >= MIN_DWELL_SECONDS) return depart(tour, stopCount, true, input.jumpSeconds);
-  if (readyToLeave(tour, input)) return depart(tour, stopCount, false, input.cruiseSeconds);
+  if ((input.drop && tour.dwell >= MIN_DWELL_SECONDS) || readyToLeave(tour, input)) return depart(tour, stops, input);
   advanceShot(tour, input);
 }

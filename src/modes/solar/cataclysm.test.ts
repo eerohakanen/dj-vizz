@@ -15,7 +15,9 @@ import {
   shockRadius,
   shouldIgnite,
   stepCataclysm,
+  survival,
   UNLOCKED_BAR_SECONDS,
+  WRECK_DISTANCE,
 } from './cataclysm';
 import { distance, vec } from './shots';
 
@@ -104,5 +106,14 @@ describe('cataclysm geometry', () => {
     expect(displace(point, 10, 0)).toEqual(point);
     expect(displace(point, 90, 0).x).toBeCloseTo(70);
     expect(distance(displace(point, 0, 1), vec(0, 0, 0))).toBeLessThan(2);
+  });
+});
+
+describe('survival', () => {
+  it('keeps bodies whole until the shock arrives, then burns them away', () => {
+    expect(survival(10, 50)).toBe(1);
+    expect(survival(50, 50)).toBe(1);
+    expect(survival(50 + WRECK_DISTANCE / 2, 50)).toBeCloseTo(0.5);
+    expect(survival(50 + WRECK_DISTANCE, 50)).toBe(0);
   });
 });

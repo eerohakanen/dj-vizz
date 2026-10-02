@@ -6,6 +6,7 @@ import {
   eclipseProgress,
   eclipsing,
   MIN_DWELL_SECONDS,
+  nextStop,
   PHRASES_PER_STOP,
   stepTour,
   type Tour,
@@ -16,7 +17,7 @@ import {
   warpLevel,
 } from './tour';
 
-const STOPS = 4;
+const STOPS = [0, 1, 2, 3];
 const SHOTS = 3;
 
 const input = (overrides: Partial<TourInput> = {}): TourInput => ({
@@ -27,7 +28,7 @@ const input = (overrides: Partial<TourInput> = {}): TourInput => ({
   calm: 0,
   tempoLocked: true,
   cruiseSeconds: 5,
-  jumpSeconds: 1.5,
+  random: 0,
   eclipseSeconds: 8,
   canEclipse: false,
   shotCount: SHOTS,
@@ -47,14 +48,13 @@ describe('stepTour departures', () => {
     expect([tour.to, tour.shot]).toEqual([0, 0]);
   });
 
-  it('jumps on a drop once the minimum dwell has passed', () => {
+  it('cruises on a drop once the minimum dwell has passed', () => {
     const tour = createTour();
     step(tour, { delta: MIN_DWELL_SECONDS / 2, drop: true });
     expect(traveling(tour)).toBe(false);
     step(tour, { delta: MIN_DWELL_SECONDS, drop: true });
     expect(traveling(tour)).toBe(true);
-    expect(tour.jumping).toBe(true);
-    expect(tour.travelSeconds).toBe(1.5);
+    expect(tour.travelSeconds).toBe(5);
     expect([tour.from, tour.to]).toEqual([0, 1]);
   });
 
@@ -65,11 +65,10 @@ describe('stepTour departures', () => {
     expect(traveling(tour)).toBe(false);
     step(tour, { phraseEnded: true });
     expect(traveling(tour)).toBe(true);
-    expect(tour.jumping).toBe(false);
     expect(tour.travelSeconds).toBe(5);
   });
 
-  it('lingers through calm sections but still jumps on a drop', () => {
+  it('lingers through calm sections but still leaves on a drop', () => {
     const tour = createTour();
     step(tour, { delta: MIN_DWELL_SECONDS });
     for (let i = 0; i < PHRASES_PER_STOP * 3; i++) step(tour, { phraseEnded: true, calm: 1 });
@@ -90,22 +89,36 @@ describe('stepTour departures', () => {
     const tour = createTour();
     step(tour, { delta: MIN_DWELL_SECONDS, drop: true });
     expect([tour.shot, tour.dwell, tour.phrases, tour.eclipsed]).toEqual([0, 0, 0, false]);
-    step(tour, { delta: 0.75 });
+    step(tour, { delta: 2.5 });
     expect(warpLevel(tour)).toBeCloseTo(1);
-    step(tour, { delta: 0.75 });
+    step(tour, { delta: 2.5 });
     expect(traveling(tour)).toBe(false);
   });
 
-  it('ignores drops while travelling and wraps after the last stop', () => {
+  it('ignores drops while travelling', () => {
     const tour = createTour();
-    for (let i = 0; i < STOPS; i++) {
-      step(tour, { delta: MIN_DWELL_SECONDS, drop: true });
-      step(tour, { drop: true });
-      expect(tour.to).toBe((i + 1) % STOPS);
-      arrive(tour);
+    step(tour, { delta: MIN_DWELL_SECONDS, drop: true });
+    step(tour, { drop: true, random: 0.9 });
+    expect([tour.from, tour.to, tour.leg]).toEqual([0, 1, 1]);
+    arrive(tour);
+    expect(traveling(tour)).toBe(false);
+  });
+
+  it('picks a random stop other than the current one', () => {
+    expect(nextStop(0, STOPS, 0)).toBe(1);
+    expect(nextStop(2, STOPS, 0.5)).toBe(1);
+    expect(nextStop(1, STOPS, 0.5)).toBe(2);
+    expect(nextStop(3, STOPS, 0.9999)).toBe(2);
+    expect(nextStop(0, STOPS, 1)).toBe(3);
+    for (const current of STOPS) {
+      const reached = new Set(Array.from({ length: 30 }, (_, i) => nextStop(current, STOPS, i / 30)));
+      expect([...reached].sort()).toEqual(STOPS.filter((stop) => stop !== current));
     }
-    expect([tour.from, tour.to]).toEqual([STOPS - 1, 0]);
-    expect(tour.leg).toBe(STOPS);
+  });
+
+  it('only visits the listed stops', () => {
+    expect(nextStop(0, [0, 2, 5], 0)).toBe(2);
+    expect(nextStop(0, [0, 2, 5], 0.99)).toBe(5);
   });
 });
 
@@ -145,7 +158,7 @@ describe('stepTour shots', () => {
 });
 
 describe('stepTour eclipses', () => {
-  it('turns the first drop at an eclipsable stop into an eclipse, then jumps on the next', () => {
+  it('turns the first drop at an eclipsable stop into an eclipse, then leaves on the next', () => {
     const tour = createTour();
     step(tour, { drop: true, canEclipse: true });
     expect(eclipsing(tour)).toBe(true);
@@ -157,7 +170,6 @@ describe('stepTour eclipses', () => {
     expect(tour.shot).toBe(1);
     step(tour, { drop: true, canEclipse: true });
     expect(traveling(tour)).toBe(true);
-    expect(tour.jumping).toBe(true);
   });
 
   it('ignores drops, phrases and downbeats during an eclipse', () => {
@@ -169,7 +181,7 @@ describe('stepTour eclipses', () => {
     expect(tour.phrases).toBe(0);
   });
 
-  it('jumps straight away at stops that cannot eclipse', () => {
+  it('leaves straight away at stops that cannot eclipse', () => {
     const tour = createTour();
     step(tour, { delta: MIN_DWELL_SECONDS, drop: true });
     expect(eclipsing(tour)).toBe(false);

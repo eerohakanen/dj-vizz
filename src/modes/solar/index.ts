@@ -8,7 +8,7 @@ import { clock, fx, settings, signal } from '../../state';
 import { advanceSway, cameraJitter, createKick, fitStage, lazyStage, paint, paintPalette, presentStage, sway } from '../three-stage';
 import { loadModules } from './assets';
 import { animateBlackHole, clearBlackHole } from './blackhole';
-import { BODIES } from './bodies';
+import { BODIES, TOUR_STOPS } from './bodies';
 import {
   busy,
   cataclysmPose,
@@ -20,6 +20,7 @@ import {
   resetCataclysm,
   shockRadius,
   shouldIgnite,
+  survival,
   stepCataclysm,
   UNLOCKED_BAR_SECONDS,
 } from './cataclysm';
@@ -37,25 +38,39 @@ import {
   SHOTS,
   shotsFor,
   sub,
+  UP,
+  vec,
   type Vec,
 } from './shots';
+import { animatePhenomena, clearPhenomena } from './phenomena';
 import { animateSupernova, clearSupernova } from './supernova';
+import { animateSystemMap } from './systemMap';
 import { createTour, eclipseProgress, eclipsing, lookEase, stepTour, traveling, warpLevel } from './tour';
 
 const CRUISE_SECONDS = 5;
-const JUMP_SECONDS = 1.5;
 const ECLIPSE_BEATS = 16;
 const UNLOCKED_ECLIPSE_SECONDS = 8;
 const TANGENT_STEP = 0.05;
 const VERTIGO = 0.45;
 const WARP_FOV = 28;
-const JUMP_FOV = 45;
-const WHITE_OUT = 0.85;
 const STREAK_LENGTH = 0.08;
 const STREAK_MIN_SPEED = 5;
 const STREAK_FULL_SPEED = 45;
 const DIVE_FOV = 50;
 const REJOIN_GAP = 0.5;
+const ROUTE_LIFT = 1;
+const BLEND_SECONDS = 6;
+const COAST_SECONDS = 1.5;
+const FLOW_RATE = 0.3;
+const SETTLE_RATE = 0.5;
+
+interface Blend {
+  position: Vec;
+  look: Vec;
+  velocity: Vec;
+  lookVelocity: Vec;
+  age: number;
+}
 
 interface Route {
   p0: Vec;
@@ -78,6 +93,10 @@ let dropping = false;
 let lastPhraseBeat = 0;
 let coronaFlare = 0;
 let route: Route | undefined;
+let blend: Blend | undefined;
+let flow = 0;
+let settle = 1;
+const flowing = { position: vec(0, 0, 0), look: vec(0, 0, 0), velocity: vec(0, 0, 0), lookVelocity: vec(0, 0, 0) };
 
 function dropStarted() {
   if (fx.drop > 0.9 && !dropping) {
@@ -105,12 +124,12 @@ function advanceTour() {
       calm: fx.calm,
       tempoLocked: signal.bpm > 0,
       cruiseSeconds: CRUISE_SECONDS / Math.sqrt(motion),
-      jumpSeconds: JUMP_SECONDS / Math.sqrt(motion),
+      random: Math.random(),
       eclipseSeconds: beatSeconds(ECLIPSE_BEATS, UNLOCKED_ECLIPSE_SECONDS),
       canEclipse: canEclipse(body),
       shotCount: shotsFor(body).length,
     },
-    BODIES.length,
+    TOUR_STOPS,
   );
 }
 
@@ -126,25 +145,57 @@ function stopPose(stage: SolarStage, t: number): Pose {
 }
 
 function planRoute(stage: SolarStage) {
-  const { camera, velocity, lookTarget } = stage;
+  const { position: p0, look: look0, velocity } = flowing;
   const context = shotContext(stage, tour.to);
   const shot = SHOTS[shotsFor(context.body)[0]];
   const arrival = shot(context, 0);
   const ahead = shot(context, TANGENT_STEP);
   const reach = tour.travelSeconds / 3;
-  const p0 = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
   const span = distance(p0, arrival.position) / 3;
   const departure = scale(velocity, reach);
   const departureLength = Math.hypot(departure.x, departure.y, departure.z);
-  const p1 = add(p0, departureLength > span ? scale(departure, span / departureLength) : departure);
-  const p2 = sub(arrival.position, scale(sub(ahead.position, arrival.position), reach / TANGENT_STEP));
-  route = { p0, p1, p2, p3: arrival.position, look0: { x: lookTarget.x, y: lookTarget.y, z: lookTarget.z }, look3: arrival.look };
+  const lift = span * ROUTE_LIFT;
+  const p1 = add(add(p0, departureLength > span ? scale(departure, span / departureLength) : departure), UP, lift);
+  const p2 = add(sub(arrival.position, scale(sub(ahead.position, arrival.position), reach / TANGENT_STEP)), UP, lift);
+  route = { p0, p1, p2, p3: arrival.position, look0, look3: arrival.look };
 }
 
 function travelPose(stage: SolarStage): Pose {
   const { p0, p1, p2, p3, look0, look3 } = route!;
   const position = keepClear(bezier(p0, p1, p2, p3, tour.travel), stage.centers, [tour.from, tour.to]);
   return { position, look: add(look0, sub(look3, look0), lookEase(tour)) };
+}
+
+const coast = (origin: Vec, velocity: Vec, age: number) => add(origin, velocity, COAST_SECONDS * (1 - Math.exp(-age / COAST_SECONDS)));
+
+const startBlend = () => {
+  blend = { ...flowing, age: 0 };
+};
+
+function blended(stage: SolarStage, target: Pose): Pose {
+  if (!blend) return target;
+  blend.age += clock.delta;
+  const mix = smoothstep(clamp01(blend.age / BLEND_SECONDS));
+  if (mix >= 1) {
+    blend = undefined;
+    return target;
+  }
+  const from = coast(blend.position, blend.velocity, blend.age);
+  const fromLook = coast(blend.look, blend.lookVelocity, blend.age);
+  return {
+    position: keepClear(add(from, sub(target.position, from), mix), stage.centers, [tour.to]),
+    look: add(fromLook, sub(target.look, fromLook), mix),
+  };
+}
+
+function trackFlow(pose: Pose) {
+  const { delta } = clock;
+  if (delta > 0) {
+    flowing.velocity = scale(sub(pose.position, flowing.position), 1 / delta);
+    flowing.lookVelocity = scale(sub(pose.look, flowing.look), 1 / delta);
+  }
+  flowing.position = pose.position;
+  flowing.look = pose.look;
 }
 
 function applyVertigo(camera: Three.PerspectiveCamera, look: Vec, motion: number) {
@@ -161,27 +212,31 @@ function moveCamera(stage: SolarStage) {
   advanceSway();
   if (tour.leg !== lastLeg) {
     lastLeg = tour.leg;
+    lastCuts = tour.cuts;
+    blend = undefined;
     planRoute(stage);
     shotClock = 0;
   }
   const cut = tour.cuts !== lastCuts;
   lastCuts = tour.cuts;
-  if (cut && !traveling(tour)) shotClock = 0;
   const moving = traveling(tour) && route !== undefined;
-  if (!moving) shotClock += delta * (0.6 + signal.energy * 0.8) * settings.motion;
-  const pose = moving ? travelPose(stage) : stopPose(stage, shotClock);
+  if (cut && !moving) {
+    startBlend();
+    shotClock = 0;
+  }
+  flow += (signal.energy - flow) * Math.min(1, delta * FLOW_RATE);
+  settle += ((moving ? 0 : 1) - settle) * Math.min(1, delta * SETTLE_RATE);
+  if (!moving) shotClock += delta * (0.6 + flow * 0.8) * settings.motion;
+  const pose = moving ? travelPose(stage) : blended(stage, stopPose(stage, shotClock));
+  trackFlow(pose);
   camera.position.set(pose.position.x, pose.position.y, pose.position.z);
   lookTarget.set(pose.look.x, pose.look.y, pose.look.z);
-  const fov = moving ? BASE_FOV : applyVertigo(camera, pose.look, motion);
-  const jitter = cameraJitter(0.05 * motion);
-  camera.position.x += jitter();
-  camera.position.y += jitter();
+  const fov = applyVertigo(camera, pose.look, motion * settle);
   camera.lookAt(lookTarget);
   camera.rotation.z += (fx.spin * 0.1 + sway(0.07, 1) * 0.04) * motion;
-  const warp = warpLevel(tour) * (tour.jumping ? JUMP_FOV : WARP_FOV);
-  camera.fov = fov + (kick.value * 4 + warp + fx.drop * 10) * motion;
+  camera.fov = fov + warpLevel(tour) * WARP_FOV * motion;
   camera.updateProjectionMatrix();
-  trackVelocity(stage, cut && !moving);
+  trackVelocity(stage, false);
 }
 
 function trackVelocity(stage: SolarStage, cut: boolean) {
@@ -265,7 +320,7 @@ function spinAsteroids(stage: SolarStage) {
       scratch.position.set(point.x, point.y, point.z);
     }
     scratch.quaternion.setFromAxisAngle(asteroid.axis, clock.time * asteroid.spin * (exploding ? 4 : 1));
-    scratch.scale.setScalar(asteroid.scale * (1 - pull));
+    scratch.scale.setScalar(asteroid.scale * (1 - pull) * (exploding ? survival(shock, asteroid.position.length()) : 1));
     scratch.updateMatrix();
     belt.setMatrixAt(i, scratch.matrix);
   });
@@ -279,16 +334,14 @@ function updateStreaks(stage: SolarStage) {
   streakUniforms.uOffset.value.copy(camera.position);
   if (speed > 0) streakUniforms.uHeading.value.copy(velocity).divideScalar(speed);
   streakUniforms.uStreak.value = speed * STREAK_LENGTH;
-  const jump = tour.jumping ? warpLevel(tour) : 0;
   const dive = phaseLevel(cataclysm, 'dive');
-  streakUniforms.uStreakAlpha.value = Math.max(clamp01((speed - STREAK_MIN_SPEED) / STREAK_FULL_SPEED), jump, dive) * motionScale();
+  streakUniforms.uStreakAlpha.value = Math.max(clamp01((speed - STREAK_MIN_SPEED) / STREAK_FULL_SPEED), dive) * motionScale();
   paintPalette(stage, streakUniforms.uColorA.value, streakUniforms.uColorB.value);
 }
 
 function whiteOutLevel() {
   const dive = smoothstep(clamp01((phaseLevel(cataclysm, 'dive') - 0.7) / 0.3));
-  const jump = tour.jumping && traveling(tour) ? warpLevel(tour) ** 8 * WHITE_OUT : 0;
-  return Math.max(dive, jump) * motionScale();
+  return dive * motionScale();
 }
 
 function whiteOut() {
@@ -300,6 +353,7 @@ function whiteOut() {
 
 function restoreTour(stage: SolarStage) {
   clearSupernova(stage);
+  clearPhenomena(stage);
   clearBlackHole(stage);
   Object.assign(tour, createTour());
   lastLeg = 0;
@@ -307,6 +361,7 @@ function restoreTour(stage: SolarStage) {
   shotClock = 0;
   dropping = false;
   route = undefined;
+  blend = undefined;
 }
 
 function rejoin(stage: SolarStage) {
@@ -364,6 +419,8 @@ export function drawSolar() {
     animateBlackHole(stage, cataclysm, kick.value);
   }
   spinAsteroids(stage);
+  animateSystemMap(stage, !exploding, kick.value);
+  animatePhenomena(stage, traveling(tour) ? tour.from : tour.to, !exploding && !traveling(tour));
   updateStreaks(stage);
   presentStage(stage);
   whiteOut();

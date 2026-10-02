@@ -46,8 +46,9 @@ describe('shots', () => {
 
       it(`${body.name} ${name} moves continuously`, () => {
         for (const t of samples) {
-          const step = distance(SHOTS[name](contextFor(index), t).position, SHOTS[name](contextFor(index), t + 1 / 60).position);
-          expect(step).toBeLessThan(body.view * 0.05);
+          const pose = SHOTS[name](contextFor(index), t);
+          const step = distance(pose.position, SHOTS[name](contextFor(index), t + 1 / 60).position);
+          expect(step).toBeLessThan(Math.max(body.view, distance(pose.position, pose.look)) * 0.05);
         }
       });
     }

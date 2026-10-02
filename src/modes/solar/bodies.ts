@@ -86,7 +86,7 @@ export const BODIES: Body[] = [
     name: 'Moon',
     kind: 'moon',
     radius: compressRadius(1737),
-    orbit: 3.2,
+    orbit: 6,
     angle: 2.2,
     tilt: 0.12,
     spin: 0.03,
@@ -131,3 +131,5 @@ export function orbitPoint(body: Body): { x: number; z: number } {
 }
 
 export const outerRadius = (body: Body) => body.radius * (body.ring?.outer ?? 1);
+
+export const TOUR_STOPS = BODIES.flatMap((body, index) => (body.kind === 'moon' ? [] : [index]));

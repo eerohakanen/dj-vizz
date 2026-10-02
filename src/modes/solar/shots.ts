@@ -18,14 +18,17 @@ export interface ShotContext {
   parent?: Vec;
 }
 
-export type ShotName = 'flyby' | 'skim' | 'terminator' | 'silhouette' | 'ringOrbit' | 'ringDive' | 'earthrise';
+export type ShotName = 'flyby' | 'skim' | 'terminator' | 'silhouette' | 'ringOrbit' | 'ringDive' | 'earthrise' | 'vista' | 'overview';
 
 const ORIGIN: Vec = { x: 0, y: 0, z: 0 };
-const UP: Vec = { x: 0, y: 1, z: 0 };
+export const UP: Vec = { x: 0, y: 1, z: 0 };
 const ECLIPSE_OVERSIZE = 1.1;
 const ECLIPSE_SWEEP = 3;
 const ENDPOINT_SAFE_SCALE = 1.1;
 const TRAVEL_SAFE_SCALE = 1.15;
+const SYSTEM_RADIUS = Math.max(...BODIES.map((body) => body.orbit));
+const OVERVIEW_REACH = 1.15;
+const OVERVIEW_HEIGHT = 0.6;
 
 export const vec = (x: number, y: number, z: number): Vec => ({ x, y, z });
 export const add = (a: Vec, b: Vec, scale = 1) => vec(a.x + b.x * scale, a.y + b.y * scale, a.z + b.z * scale);
@@ -110,6 +113,21 @@ function earthrise({ body, center, parent }: ShotContext, t: number): Pose {
   return { position: add(center, normal, body.radius * 1.08), look: parent ?? ORIGIN };
 }
 
+function vista(context: ShotContext, t: number): Pose {
+  const { body, center } = context;
+  const { toSun, side } = frame(context);
+  const reach = body.view * 2.2;
+  const position = combine(center, [toSun, -reach], [UP, body.view * (0.9 + 0.15 * Math.sin(t * 0.2))], [side, body.view * 0.8 * Math.sin(t * 0.12)]);
+  return { position, look: add(center, sub(ORIGIN, center), 0.25) };
+}
+
+function overview({ center }: ShotContext, t: number): Pose {
+  const angle = Math.atan2(center.z, center.x) + 0.4 + t * 0.03;
+  const radius = SYSTEM_RADIUS * OVERVIEW_REACH;
+  const height = SYSTEM_RADIUS * OVERVIEW_HEIGHT * (1 + 0.15 * Math.sin(t * 0.07));
+  return { position: vec(Math.cos(angle) * radius, height, Math.sin(angle) * radius), look: vec(0, -SYSTEM_RADIUS * 0.1, 0) };
+}
+
 export const SHOTS: Record<ShotName, (context: ShotContext, t: number) => Pose> = {
   flyby,
   skim,
@@ -118,14 +136,16 @@ export const SHOTS: Record<ShotName, (context: ShotContext, t: number) => Pose> 
   ringOrbit,
   ringDive,
   earthrise,
+  vista,
+  overview,
 };
 
 export function shotsFor(body: Body): ShotName[] {
-  if (body.kind === 'star') return ['flyby', 'skim'];
-  if (body.kind === 'belt') return ['flyby'];
-  if (body.kind === 'moon') return ['earthrise', 'flyby', 'terminator'];
-  if (body.ring) return ['flyby', 'ringOrbit', 'ringDive', 'silhouette', 'terminator'];
-  return ['flyby', 'skim', 'terminator', 'silhouette'];
+  if (body.kind === 'star') return ['flyby', 'overview', 'skim'];
+  if (body.kind === 'belt') return ['flyby', 'overview'];
+  if (body.kind === 'moon') return ['earthrise', 'vista', 'flyby', 'overview', 'terminator'];
+  if (body.ring) return ['flyby', 'vista', 'ringOrbit', 'overview', 'ringDive', 'silhouette', 'terminator'];
+  return ['flyby', 'vista', 'skim', 'overview', 'terminator', 'silhouette'];
 }
 
 export const canEclipse = (body: Body) => body.kind === 'planet' || body.kind === 'moon';

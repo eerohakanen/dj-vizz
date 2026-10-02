@@ -6,13 +6,14 @@ export type Phase = 'idle' | 'supernova' | 'collapse' | 'dive' | 'done';
 
 type RunningPhase = Exclude<Phase, 'idle' | 'done'>;
 
-export const PHASE_BARS: Record<RunningPhase, number> = { supernova: 8, collapse: 6, dive: 2 };
+export const PHASE_BARS: Record<RunningPhase, number> = { supernova: 3, collapse: 4, dive: 2 };
 export const UNLOCKED_BAR_SECONDS = 2;
 export const IGNITE_TENSION = 0.6;
 export const FALLBACK_DROPS = 3;
 export const MIN_VISIT_SECONDS = 8;
 export const MAX_SHOCK = 230;
 export const HOLE_RADIUS = 4;
+export const WRECK_DISTANCE = 40;
 
 const NEXT: Record<RunningPhase, Phase> = { supernova: 'collapse', collapse: 'dive', dive: 'done' };
 const ORIGIN: Vec = { x: 0, y: 0, z: 0 };
@@ -79,6 +80,8 @@ export const shockRadius = (cataclysm: Cataclysm) =>
 function orbit(angle: number, radius: number, height: number): Pose {
   return { position: vec(Math.cos(angle) * radius, radius * height, -Math.sin(angle) * radius), look: ORIGIN };
 }
+
+export const survival = (shock: number, reach: number) => 1 - smoothstep(clamp01((shock - reach) / WRECK_DISTANCE));
 
 export const pullLevel = (cataclysm: Cataclysm) => smoothstep(clamp01(phaseLevel(cataclysm, 'collapse') * 1.25));
 
