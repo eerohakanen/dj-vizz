@@ -1,7 +1,7 @@
 import { bandAt } from '../audio/spectrum';
 import { gradientCache, sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
-import { signedRandom, TAU } from '../math';
+import { clamp01, follow, lerp, signedRandom, TAU } from '../math';
 import { clock, fx, settings, signal, view } from '../state';
 
 const HUES = 6;
@@ -11,6 +11,10 @@ const LOUD_LEVEL = 0.35;
 const QUIET_ALPHA = 0.55;
 const STREAK_STRETCH = 3;
 const MARGIN = 50;
+const MIN_STARS = 120;
+const MAX_STARS = 1000;
+const DENSITY_ATTACK = 0.15;
+const DENSITY_RELEASE = 1.5;
 
 interface Star {
   x: number;
@@ -36,9 +40,19 @@ function recycle(star: Star) {
   star.z = star.previousZ = 1;
 }
 
-const stars = Array.from({ length: 600 }, () => respawn({ x: 0, y: 0, z: 0, previousZ: 0, hue: 0, turn: 0 }));
+const stars = Array.from({ length: MAX_STARS }, () => respawn({ x: 0, y: 0, z: 0, previousZ: 0, hue: 0, turn: 0 }));
 const centerGlow = gradientCache(() => ctx.createRadialGradient(0, 0, 0, 0, 0, 1));
 const buckets = Array.from({ length: HUES * DEPTH_BUCKETS * LEVEL_BUCKETS }, (): number[] => []);
+let density = 0;
+let activeStars = MIN_STARS;
+
+function updateActiveStars() {
+  const target = clamp01(signal.energy * 1.2 + fx.drop * 0.6) * signal.gate;
+  density = follow(density, target, DENSITY_ATTACK, DENSITY_RELEASE, clock.delta);
+  const count = Math.round(lerp(MIN_STARS, MAX_STARS, density));
+  for (let i = activeStars; i < count; i++) recycle(stars[i]);
+  activeStars = count;
+}
 
 function collectStreaks() {
   const { width, height, minSide } = view;
@@ -47,7 +61,9 @@ function collectStreaks() {
   const focal = minSide * 0.5;
   const speed = signal.gate * (0.12 + signal.punchBass * 2.2 + fx.drop * 5) * settings.motion * clock.delta;
   for (const bucket of buckets) bucket.length = 0;
-  for (const star of stars) {
+  updateActiveStars();
+  for (let i = 0; i < activeStars; i++) {
+    const star = stars[i];
     star.previousZ = star.z;
     star.z -= speed;
     if (star.z < 0.02) {
