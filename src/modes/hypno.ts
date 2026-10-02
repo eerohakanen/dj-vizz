@@ -63,6 +63,6 @@ export function drawHypno() {
   const outerRadius = diagonal * 0.55;
   ctx.globalCompositeOperation = 'source-over';
   drawArms(cx, cy, innerRadius, Math.log(outerRadius / innerRadius));
-  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalCompositeOperation = 'lighten';
   drawRings(cx, cy, outerRadius);
 }

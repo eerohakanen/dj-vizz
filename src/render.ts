@@ -71,10 +71,10 @@ export function renderScene() {
 
   ctx.save();
   applyBeatShake(ctx);
-  ctx.globalCompositeOperation = mode.opaque ? 'source-over' : 'lighter';
+  ctx.globalCompositeOperation = mode.opaque ? 'source-over' : 'lighten';
   mode.draw();
   ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalCompositeOperation = 'lighten';
   drawLasers();
   ctx.restore();
 }
