@@ -150,7 +150,7 @@ export function analyse(events: AnalysisEvents) {
   signal.energy = approach(signal.energy, energy, 8, delta);
   signal.energySlow = approach(signal.energySlow, energy, 0.5, delta);
   signal.energyPeak = Math.max(signal.energy, signal.energyPeak - delta * 0.05);
-  signal.gate = Math.min(1, Math.max(0, (signal.energy - settings.noiseGate) / 0.07));
+  signal.gate = Math.min(1, signal.energy / 0.07);
 
   const { gate } = signal;
   const react = intensity();

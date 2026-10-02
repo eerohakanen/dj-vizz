@@ -42,19 +42,7 @@ export const TUNING_SECTIONS = [
     title: 'Input',
     group: 'calibration',
     description: 'What the visualizer hears.',
-    controls: [
-      GAIN_CONTROL,
-      {
-        key: 'noiseGate',
-        label: 'Silence threshold',
-        min: 0,
-        max: 0.15,
-        step: 0.005,
-        format: percentOf(0, 0.15),
-        description:
-          'Anything quieter than this counts as silence and the visuals rest. Raise it if room noise or hiss keeps things moving between tracks.',
-      },
-    ],
+    controls: [GAIN_CONTROL],
   },
   {
     title: 'Detection',

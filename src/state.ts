@@ -15,7 +15,6 @@ export const clock = {
 export const TUNING_DEFAULTS = {
   autoGain: true,
   gain: 55,
-  noiseGate: 0.03,
   beatSensitivity: 1,
   dropSensitivity: 1,
   reactivity: 1,
