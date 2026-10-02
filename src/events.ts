@@ -1,5 +1,4 @@
-import { releaseTension } from './audio/musical';
-import { anchorPhrase } from './audio/tempo';
+import { registerDrop } from './audio/drop';
 import { KEY_CONFIDENCE_FLOOR, keyHue, keyPalette, setPalette } from './color';
 import { currentMode, setMode } from './mode';
 import { MODES } from './modes/index';
@@ -8,7 +7,7 @@ import { PALETTES } from './palettes';
 import { changeOption } from './presets/change';
 import { playlist } from './presets/library';
 import { currentChangeOn, nextPreset } from './presets/playlist';
-import { clock, fx, settings, signal } from './state';
+import { fx, settings, signal } from './state';
 
 const DOWNBEAT_HUE_BOOST = 1.6;
 
@@ -25,11 +24,7 @@ function dropPalette() {
 }
 
 export function triggerDrop() {
-  signal.lastDrop = clock.time;
-  signal.breakdown = 0;
-  anchorPhrase();
-  releaseTension();
-  signal.energyPeak = signal.energy;
+  registerDrop();
   fx.drop = 1;
   fx.flash = flashLevel();
   fx.shake = 1.4 * shakeLevel();

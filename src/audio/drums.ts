@@ -30,7 +30,7 @@ const kickDetector = createDetector([[45, 110, 1]], 1.6, 0.16);
 const snareDetector = createDetector([[170, 260, 0.35], [2000, 5000, 0.65]], 1.8, 0.1);
 const hatDetector = createDetector([[8000, 12000, 1]], 1.9, 0.06);
 
-const drumHits = { kick: 0, snare: 0, hat: 0, snareTimes: [] as number[] };
+const drumHits = { kick: 0, kickLevel: 0, snare: 0, hat: 0, snareTimes: [] as number[] };
 
 function toBin(hz: number, binCount: number) {
   return Math.min(binCount - 1, Math.max(1, Math.round((hz * binCount * 2) / audio.sampleRate)));
@@ -71,6 +71,7 @@ export function detectDrums(time: number, gate: number) {
   const hat = detectOnset(hatDetector, frequencies, time);
   const open = gate > 0.3;
   drumHits.kick = open ? kick : 0;
+  drumHits.kickLevel = kickDetector.previous;
   drumHits.snare = open ? snare : 0;
   drumHits.hat = open ? hat : 0;
   if (drumHits.snare) drumHits.snareTimes.push(time);

@@ -7,6 +7,7 @@ import { adaptQuality, output, resize } from './canvas';
 import { advancePaletteFade, buildLut } from './color';
 import { bindControls } from './controls';
 import { psyIndex, type PsyName } from './effects/options';
+import { onBeat, onHat, onKick, onSnare, triggerDrop } from './events';
 import { bindReducedMotion } from './motion';
 import { advanceTimedPlaylist, shiftPlaylistClock } from './presets/playlist';
 import { flushAutosave, startAutosave } from './presets/autosave';
@@ -15,6 +16,8 @@ import { presentFrame, renderScene } from './render';
 import { restoreSession, saveSession } from './session';
 import { clock, fx, settings } from './state';
 import { subscribe, ui } from './store';
+
+const ANALYSIS_EVENTS = { onBeat, onKick, onSnare, onHat, onDrop: triggerDrop };
 
 let lastTimestamp = 0;
 let wasPaused = false;
@@ -58,7 +61,7 @@ function frame(timestamp: number) {
   updateEffectMixes();
   advancePaletteFade(clock.delta);
   advanceTimedPlaylist();
-  analyse();
+  analyse(ANALYSIS_EVENTS);
   buildLut();
   syncAccent(accentDelta);
   renderScene();

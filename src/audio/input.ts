@@ -24,6 +24,7 @@ export const audio = {
   samples: new Float32Array(2048),
   sampleRate: 48000,
   live: false,
+  external: false,
   source: null as AudioSourceKind | null,
   lost: null as AudioSourceKind | null,
 };

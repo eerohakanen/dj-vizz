@@ -1,4 +1,5 @@
-import { fx, signal } from '@/state';
+import { dropState, dropThreshold, isDropArmed } from '@/audio/drop';
+import { fx, settings, signal } from '@/state';
 import { cn } from '@/lib/utils';
 import { FLOATING_PANEL, MeterBar, useTicker } from './shared';
 
@@ -52,6 +53,15 @@ export function AnalysisHud() {
       <Meter label="tension" value={signal.tension} />
       <Meter label="bright" value={signal.brightness} />
       <Meter label="vocal" value={signal.vocal} />
+      <Meter label="low" value={dropState.level} />
+      <Meter label="groove" value={dropState.groove} />
+      <Meter label="drop" value={dropState.score / dropThreshold(settings.dropSensitivity)} />
+      <div className="flex items-center gap-2">
+        <span className="w-16 text-muted-foreground">reduced</span>
+        <span>
+          {dropState.reduced} {isDropArmed(dropState) ? 'armed' : ''}
+        </span>
+      </div>
       <div className="flex items-center gap-2">
         <span className="w-16 text-muted-foreground">key</span>
         <span>

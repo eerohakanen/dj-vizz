@@ -7,7 +7,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "eval:drops": "DROP_EVAL=1 vitest run scripts/drop-eval --silent=false"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

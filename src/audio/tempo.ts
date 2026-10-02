@@ -11,6 +11,7 @@ const PEAK_WIDTH = 3;
 const MIN_FREE_BEAT_GAP = 0.25;
 export const BEATS_PER_BAR = 4;
 const BEATS_PER_PHRASE = 32;
+const PERIOD_HOLD = 60;
 
 const histogram = new Float32Array(HISTOGRAM_SIZE);
 const kickTimes: number[] = [];
@@ -23,6 +24,7 @@ let lastGridBeat = -1;
 let lastKick = -9;
 let kickStrength = 0;
 let locked = false;
+let lastLockedAt = -Infinity;
 let candidateShift = 0;
 let candidateBars = 0;
 
@@ -152,6 +154,10 @@ export function anchorPhrase() {
   candidateShift = candidateBars = 0;
 }
 
+export const isLocked = () => locked;
+
+export const heldBeatPeriod = (time: number) => (locked || time - lastLockedAt < PERIOD_HOLD ? period : 0);
+
 export function beatStrength(time: number) {
   const kicking = time - lastKick < period * 2.5;
   const accent = signal.beatInBar === 0 ? 0.1 : 0;
@@ -175,6 +181,7 @@ function stepTempo(time: number, delta: number, kick: number, snare: number) {
   locked = reading.confidence > (wasLocked ? LOCK_CONFIDENCE * 0.7 : LOCK_CONFIDENCE) && reading.mass > 2;
   signal.tempoConfidence = reading.confidence;
   if (locked) {
+    lastLockedAt = time;
     const target = refinePeriod(60 / reading.bpm);
     const drift = Math.abs(target - period) / period;
     period = drift > 0.08 ? target : period + (target - period) * Math.min(1, delta * 2);

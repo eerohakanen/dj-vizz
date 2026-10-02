@@ -1,13 +1,12 @@
-import { onBeat, onHat, onKick, onSnare, triggerDrop } from '../events';
 import { approach, decay, follow, frameScale, lerp, stretch, updatePeak } from '../math';
 import { clock, fx, settings, signal, TUNING_DEFAULTS } from '../state';
 import { detectDrums } from './drums';
+import { type DropFrame, dropState, stepDrop } from './drop';
 import { audio } from './input';
 import { analyseMusic, tensionPeak } from './musical';
 import { averageBins, BAND_COUNT, spectrum } from './spectrum';
-import { advanceTempo, beatStrength } from './tempo';
+import { advanceTempo, beatStrength, heldBeatPeriod, isLocked } from './tempo';
 
-const DROP_COOLDOWN = 8;
 const SPECTRUM_ATTACK = 0.03;
 const SPECTRUM_RELEASE = 0.1;
 const BEAT_BOOST = 0.1;
@@ -20,6 +19,14 @@ const PEAK_FALL = 0.15;
 const BAND_MIN_RANGE = 0.12;
 const LEVEL_MIN_RANGE = 0.1;
 const STRETCH_HEADROOM = 1.1;
+
+export interface AnalysisEvents {
+  onBeat(): void;
+  onKick(strength: number): void;
+  onSnare(strength: number): void;
+  onHat(strength: number): void;
+  onDrop(): void;
+}
 
 interface LevelRange {
   floor: number;
@@ -54,6 +61,7 @@ const removeNoiseFloor = (level: number) => Math.max(0, (level - 0.06) * 1.15);
 
 function readInput() {
   const { analyser, detector, frequencies, sharpFrequencies, waveform, samples } = audio;
+  if (audio.external) return frequencies;
   if (audio.live && analyser && detector) {
     analyser.getByteFrequencyData(frequencies);
     analyser.getByteTimeDomainData(waveform);
@@ -102,20 +110,41 @@ function fillSpectrum(frequencies: Uint8Array, gain: number, delta: number) {
   }
 }
 
-function isDropReturning(kick: number) {
-  const sensitivity = settings.dropSensitivity;
-  if (sensitivity <= 0) return false;
-  const released = tensionPeak() > 0.45 / sensitivity && signal.energy > signal.energySlow * (1 + 0.2 / sensitivity);
-  return kick > 0.5 && signal.bass > 0.5 && (released || signal.breakdown > 0.7 / sensitivity);
+const dropFrame: DropFrame = {
+  time: 0,
+  delta: 0,
+  kick: 0,
+  kickLevel: 0,
+  fullLevel: 0,
+  tension: 0,
+  period: 0,
+  locked: false,
+  phraseBeat: 0,
+  beatInBar: 0,
+};
+
+function readDropFrame(kick: number, kickLevel: number, fullLevel: number) {
+  dropFrame.time = clock.time;
+  dropFrame.delta = clock.delta;
+  dropFrame.kick = kick;
+  dropFrame.kickLevel = kickLevel;
+  dropFrame.fullLevel = fullLevel;
+  dropFrame.tension = tensionPeak();
+  dropFrame.period = heldBeatPeriod(clock.time);
+  dropFrame.locked = isLocked();
+  dropFrame.phraseBeat = signal.phraseBeat;
+  dropFrame.beatInBar = signal.beatInBar;
+  return dropFrame;
 }
 
-export function analyse() {
+export function analyse(events: AnalysisEvents) {
   const { delta, time } = clock;
   const frequencies = readInput();
   const rawBass = averageBins(frequencies, 1, 9);
   const rawMid = averageBins(frequencies, 9, 100);
   const rawHigh = averageBins(frequencies, 100, 400);
-  const gain = computeGain(rawBass * 0.5 + rawMid * 0.35 + rawHigh * 0.15, delta);
+  const rawFull = rawBass * 0.5 + rawMid * 0.35 + rawHigh * 0.15;
+  const gain = computeGain(rawFull, delta);
   signal.gainFactor = gain;
 
   const bass = removeNoiseFloor(rawBass) * gain;
@@ -148,17 +177,17 @@ export function analyse() {
   fx.calm = approach(fx.calm, calming ? 1 : 0, calming ? CALM_RISE : CALM_FALL, delta);
 
   const hits = detectDrums(time, gate);
-  if (hits.kick) onKick(hits.kick);
-  if (hits.snare) onSnare(hits.snare);
-  if (hits.hat) onHat(hits.hat);
+  if (hits.kick) events.onKick(hits.kick);
+  if (hits.snare) events.onSnare(hits.snare);
+  if (hits.hat) events.onHat(hits.hat);
   analyseMusic(time, delta, hits.snareTimes.length / 2);
 
   if (advanceTempo(time, delta, hits.kick, hits.snare) && gate > 0.3) {
     fx.beat = Math.min(1, beatStrength(time));
     signal.lastBeat = time;
-    onBeat();
+    events.onBeat();
   }
-  if (time - signal.lastDrop > DROP_COOLDOWN && isDropReturning(hits.kick)) triggerDrop();
+  if (stepDrop(dropState, readDropFrame(hits.kick, hits.kickLevel, rawFull), settings.dropSensitivity)) events.onDrop();
 
   fillSpectrum(frequencies, gain, delta);
 }
