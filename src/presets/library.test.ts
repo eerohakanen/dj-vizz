@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MODES } from '../modes/index';
 import { settings, TUNING_DEFAULTS } from '../state';
 import {
   addScene,
@@ -25,7 +26,7 @@ import {
 } from './library';
 
 vi.mock('../canvas', () => ({ output: {}, transitionCtx: {}, transitionFrame: {} }));
-vi.mock('../modes/index', () => ({ MODES: Array.from({ length: 12 }, (_, index) => ({ name: `Mode ${index}` })) }));
+vi.mock('../modes/index', () => ({ MODES: Array.from({ length: 12 }, (_, index) => ({ name: `Mode ${index}`, threeD: index >= 9 })) }));
 vi.mock('../mode', async () => {
   const { settings } = await import('../state');
   return { setMode: vi.fn((index: number) => (settings.mode = index)) };
@@ -64,7 +65,7 @@ beforeEach(() => {
 describe('migrateLibrary', () => {
   it('maps v2 short keys into the v3 shape and drops calibration', () => {
     const migrated = migrateLibrary(legacyLibrary(2));
-    expect(migrated?.version).toBe(7);
+    expect(migrated?.version).toBe(8);
     expect(migrated?.folders[0].presets[0]).toEqual({
       name: 'Old look',
       mode: 3,
@@ -115,10 +116,24 @@ describe('migrateLibrary', () => {
   });
 
   it('accepts an empty library but rejects non-arrays', () => {
-    expect(migrateLibrary({ version: 5, cur: 3, folders: [] })).toEqual({ version: 7, cur: 0, folders: [] });
+    expect(migrateLibrary({ version: 5, cur: 3, folders: [] })).toEqual({ version: 8, cur: 0, folders: [] });
     expect(migrateLibrary({ version: 2 })).toBeNull();
     expect(migrateLibrary({ version: 2, folders: 'x' })).toBeNull();
     expect(migrateLibrary('nope')).toBeNull();
+  });
+
+  it('replaces the old Default folder with the starter sets in place for v7 libraries', () => {
+    const mine = { name: 'Mine', presets: [createPreset('Kept', 2, 5)] };
+    const migrated = migrateLibrary({ version: 7, cur: 2, folders: [mine, { name: 'Default', presets: [] }, { name: 'Last', presets: [] }] });
+    expect(migrated?.folders.map((folder) => folder.name)).toEqual(['Mine', 'Pixelated 2D', '2D', '3D', 'Last']);
+    expect(migrated?.folders[0].presets).toEqual(mine.presets);
+    expect(migrated?.cur).toBe(4);
+    expect(migrateLibrary({ version: 7, cur: 1, folders: [mine, { name: 'Default', presets: [] }] })?.cur).toBe(1);
+  });
+
+  it('keeps a Default folder saved by v8', () => {
+    const migrated = migrateLibrary({ version: 8, cur: 0, folders: [{ name: 'Default', presets: [] }] });
+    expect(migrated?.folders.map((folder) => folder.name)).toEqual(['Default']);
   });
 });
 
@@ -150,11 +165,34 @@ describe('importFolders', () => {
 });
 
 describe('starter presets', () => {
+  const starters = () => migrateLibrary({ version: 7, cur: 0, folders: [{ name: 'Default', presets: [] }] })!.folders;
+  const starterSet = (name: string) => starters().find((folder) => folder.name === name)!.presets;
+
   it('carry no tuning or calibration', () => {
-    for (const preset of library.folders[0].presets) {
+    for (const preset of starters().flatMap((folder) => folder.presets)) {
       expect(preset).not.toHaveProperty('tuning');
       expect(preset).not.toHaveProperty('gain');
     }
+  });
+
+  it('pixelate every Pixelated 2D preset on a 2D mode', () => {
+    for (const preset of starterSet('Pixelated 2D')) {
+      expect(preset.pixelate).toBeGreaterThan(0);
+      expect(MODES[preset.mode].threeD).toBe(false);
+    }
+  });
+
+  it('keep 2D presets unpixelated on 2D modes', () => {
+    for (const preset of starterSet('2D')) {
+      expect(preset.pixelate).toBe(0);
+      expect(MODES[preset.mode].threeD).toBe(false);
+    }
+  });
+
+  it('give each 3D mode exactly one 3D preset', () => {
+    const modes = starterSet('3D').map((preset) => preset.mode);
+    expect(modes.every((mode) => MODES[mode].threeD)).toBe(true);
+    expect(new Set(modes).size).toBe(modes.length);
   });
 });
 
@@ -231,9 +269,9 @@ describe('stored v3 and v4 libraries', () => {
     expect(fresh.currentFolder()).toBeUndefined();
   });
 
-  it('starts with a Default preset when nothing is stored', async () => {
+  it('starts with the starter sets when nothing is stored', async () => {
     const fresh = await load([]);
-    expect(fresh.library.folders.map((folder) => folder.name)).toEqual(['Default']);
+    expect(fresh.library.folders.map((folder) => folder.name)).toEqual(['Pixelated 2D', '2D', '3D']);
   });
 });
 

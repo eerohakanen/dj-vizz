@@ -9,15 +9,17 @@ import { PALETTES } from '../palettes';
 import { INTENSITY_SCALE, settings } from '../state';
 import { notify } from '../store';
 import type { TuningKey } from '../tuning';
-import { MIRROR_NAMES, PIXEL_NAMES, PSY_NAMES } from '../effects/options';
+import { MIRROR_NAMES, mirrorIndex, PIXEL_NAMES, pixelIndex, PSY_NAMES, psyIndex } from '../effects/options';
 
 const STORAGE_KEY = 'djviz.presets.v4';
 const LEGACY_STORAGE_KEYS = ['djviz.presets.v3', 'djviz.presets.v2', 'djviz.presets.v1'];
-export const LIBRARY_VERSION = 7;
+export const LIBRARY_VERSION = 8;
 const INTENSITY_SCALE_VERSION = 5;
 const SCENE_SHAPE_VERSION = 3;
 const PALETTE_SHIFT_VERSION = 2;
 const MODE_SHIFT_VERSION = 7;
+const STARTER_SETS_VERSION = 8;
+const REPLACED_STARTER_NAME = 'Default';
 export const NAME_LIMIT = 40;
 
 export interface PresetEffects {
@@ -75,26 +77,49 @@ export const createPreset = (
   effects: { ...DEFAULT_EFFECTS, ...overrides?.effects },
 });
 
+const starterFolder = (name: string, presets: Preset[]): Folder => ({
+  name,
+  transition: DEFAULT_TRANSITION,
+  changeOn: DEFAULT_CHANGE_ON,
+  shuffle: false,
+  presets,
+});
+
+const starterFolders = (): Folder[] => [
+  starterFolder('Pixelated 2D', [
+    createPreset('Pixel bars', 0, 1, { pixelate: pixelIndex('Square') }),
+    createPreset('Diamond hex', 8, 11, { pixelate: pixelIndex('Diamond') }),
+    createPreset('8-bit grid', 5, 7, { pixelate: pixelIndex('Square') }),
+    createPreset('Dotted laser tunnel', 2, 4, { pixelate: pixelIndex('Round'), effects: { lasers: true } }),
+    createPreset('Bead galaxy', 4, 9, { pixelate: pixelIndex('Round') }),
+    createPreset('Pixel scope', 3, 8, { pixelate: pixelIndex('Square') }),
+  ]),
+  starterFolder('2D', [
+    createPreset('Warp · Fire', 6, 5),
+    createPreset('Radial vortex', 1, 7, { psy: psyIndex('Vortex') }),
+    createPreset('Kaleido galaxy', 4, 1, { mirror: mirrorIndex('Kaleido') }),
+    createPreset('Laser tunnel', 2, 11, { effects: { lasers: true } }),
+    createPreset('Liquid bars', 0, 2, { psy: psyIndex('Liquid') }),
+    createPreset('Rainbow hex', 8, 0, { psy: psyIndex('Rainbow') }),
+    createPreset('Blob · Ice', 7, 6),
+  ]),
+  starterFolder('3D', [
+    createPreset('Deep Space · Ice', 9, 6),
+    createPreset('Model · Neon', 10, 1),
+    createPreset('Solar System · Fire', 11, 5),
+  ]),
+];
+
 const starterLibrary = (): Library => ({
   version: LIBRARY_VERSION,
   cur: 0,
-  folders: [
-    {
-      name: 'Default',
-      transition: DEFAULT_TRANSITION,
-      changeOn: DEFAULT_CHANGE_ON,
-      shuffle: false,
-      presets: [
-        createPreset('Warp · Fire', 6, 5),
-        createPreset('Radial vortex', 1, 7, { psy: 1 }),
-        createPreset('Kaleido galaxy', 4, 1, { mirror: 3 }),
-        createPreset('Laser tunnel', 2, 11, { effects: { lasers: true } }),
-        createPreset('Liquid bars', 0, 2, { psy: 2 }),
-        createPreset('Rainbow hex', 8, 0, { psy: 3 }),
-      ],
-    },
-  ],
+  folders: starterFolders(),
 });
+
+function replaceStarterFolders(folders: Folder[], cur: number) {
+  const groups = folders.map((folder) => (folder.name === REPLACED_STARTER_NAME ? starterFolders() : [folder]));
+  return { folders: groups.flat(), cur: groups.slice(0, cur).reduce((total, group) => total + group.length, 0) };
+}
 
 const REMOVED_PALETTE = 1;
 const REMOVED_MODE = 9;
@@ -151,7 +176,8 @@ export function migrateLibrary(data: unknown): Library | null {
   try {
     const folders = migrateFolders(data);
     const cur = clamp(numberOr(data.cur, 0) | 0, 0, Math.max(0, folders.length - 1));
-    return { version: LIBRARY_VERSION, cur, folders };
+    const current = numberOr(data.version, 1) < STARTER_SETS_VERSION ? replaceStarterFolders(folders, cur) : { folders, cur };
+    return { version: LIBRARY_VERSION, ...current };
   } catch {
     return null;
   }

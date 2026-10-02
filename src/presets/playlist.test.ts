@@ -48,8 +48,7 @@ describe('folder playback options', () => {
 
   it('keeps options per folder', () => {
     setChangeOn('s60');
-    library.folders.push({ name: 'Other', presets: [], transition: 'random', changeOn: 'b16', shuffle: false });
-    library.cur = 1;
+    library.cur = library.folders.push({ name: 'Other', presets: [], transition: 'random', changeOn: 'b16', shuffle: false }) - 1;
     expect(currentChangeOn()).toBe('b16');
     library.cur = 0;
     expect(currentChangeOn()).toBe('s60');
