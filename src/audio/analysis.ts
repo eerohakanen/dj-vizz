@@ -4,8 +4,9 @@ import { detectDrums } from './drums';
 import { type DropFrame, dropState, stepDrop } from './drop';
 import { audio } from './input';
 import { analyseMusic, tensionPeak } from './musical';
+import { type PhraseFrame, phraseAlignment, phraseState, phraseStrength, stepPhrase } from './phrase';
 import { averageBins, BAND_COUNT, spectrum } from './spectrum';
-import { advanceTempo, beatStrength, heldBeatPeriod, isLocked } from './tempo';
+import { advanceTempo, BEATS_PER_BAR, beatStrength, heldBeatPeriod, isLocked, shiftPhrase } from './tempo';
 
 const SPECTRUM_ATTACK = 0.03;
 const SPECTRUM_RELEASE = 0.1;
@@ -28,6 +29,7 @@ export interface AnalysisEvents {
   onSnare(strength: number): void;
   onHat(strength: number): void;
   onDrop(): void;
+  onPhrase(strength: number): void;
 }
 
 interface LevelRange {
@@ -140,6 +142,37 @@ function readDropFrame(kick: number, kickLevel: number, fullLevel: number) {
   return dropFrame;
 }
 
+const phraseFrame: PhraseFrame = {
+  locked: false,
+  downbeat: false,
+  barInPhrase: 0,
+  bass: 0,
+  mid: 0,
+  high: 0,
+  brightness: 0,
+  vocal: 0,
+  kick: 0,
+  snare: 0,
+  hat: 0,
+  tension: 0,
+};
+
+function readPhraseFrame(bass: number, mid: number, high: number, kick: number, snare: number, hat: number) {
+  phraseFrame.locked = isLocked();
+  phraseFrame.downbeat = signal.downbeat;
+  phraseFrame.barInPhrase = Math.floor(signal.phraseBeat / BEATS_PER_BAR);
+  phraseFrame.bass = Math.min(1, bass);
+  phraseFrame.mid = Math.min(1, mid);
+  phraseFrame.high = Math.min(1, high);
+  phraseFrame.brightness = signal.brightness;
+  phraseFrame.vocal = signal.vocal;
+  phraseFrame.kick = kick;
+  phraseFrame.snare = snare;
+  phraseFrame.hat = hat;
+  phraseFrame.tension = signal.tension;
+  return phraseFrame;
+}
+
 export function analyse(events: AnalysisEvents) {
   const { delta, time } = clock;
   const frequencies = readInput();
@@ -185,9 +218,15 @@ export function analyse(events: AnalysisEvents) {
   if (hits.hat) events.onHat(hits.hat);
   analyseMusic(time, delta, hits.snareTimes.length / 2);
 
-  if (advanceTempo(time, delta, hits.kick, hits.snare) && gate > 0.3) {
+  const fired = advanceTempo(time, delta, hits.kick, hits.snare);
+  const shift = stepPhrase(phraseState, readPhraseFrame(bass, mid, high, hits.kick, hits.snare, hits.hat));
+  if (shift) shiftPhrase(shift);
+  signal.phraseNovelty = phraseState.novelty;
+  signal.phraseAlignment = phraseAlignment(phraseState);
+  if (fired && gate > 0.3) {
     impulse.beat = Math.min(1, beatStrength(time));
     signal.lastBeat = time;
+    if (signal.downbeat && signal.phraseBeat === 0) events.onPhrase(phraseStrength(phraseState));
     events.onBeat();
   }
   if (stepDrop(dropState, readDropFrame(hits.kick, hits.kickLevel, rawFull), settings.dropSensitivity)) events.onDrop();

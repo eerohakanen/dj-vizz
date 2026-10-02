@@ -5,11 +5,16 @@ import { MODES } from './modes/index';
 import { shakeLevel } from './motion';
 import { PALETTES } from './palettes';
 import { changeOption } from './presets/change';
+import { STRONG_PHRASE } from './modes/restyle';
 import { playlist } from './presets/library';
 import { currentChangeOn, nextPreset } from './presets/playlist';
 import { fx, impulse, intensity, settings, signal } from './state';
 
 const DOWNBEAT_HUE_BOOST = 1.6;
+const MAX_PHRASES_PER_MODE = 4;
+
+let phrasesInMode = 0;
+let countedMode = -1;
 
 function randomOtherMode() {
   let next;
@@ -17,6 +22,8 @@ function randomOtherMode() {
   while (next === settings.mode);
   return next;
 }
+
+const neighbourPalette = () => 1 + (settings.palette % (PALETTES.length - 1));
 
 function dropPalette() {
   if (signal.key >= 0 && signal.keyConfidence >= KEY_CONFIDENCE_FLOOR) return keyPalette(keyHue(signal.key), settings.palette);
@@ -47,11 +54,22 @@ export function onBeat() {
   if (playlist.playing) {
     playlist.beats++;
     if (!held && every && playlist.beats >= every / 2 && signal.phraseBeat % every === 0) nextPreset();
-  } else if (settings.auto && !held && signal.phraseBeat === 0) {
-    setMode(settings.mode + 1);
   }
   currentMode().onBeat();
   fx.shake = Math.max(fx.shake, 0.22 * impulse.beat * intensity() * shakeLevel());
+}
+
+export function onPhrase(strength: number) {
+  phrasesInMode = settings.mode === countedMode ? phrasesInMode + 1 : 1;
+  countedMode = settings.mode;
+  const sectionChange = strength >= STRONG_PHRASE || phrasesInMode >= MAX_PHRASES_PER_MODE;
+  if (settings.auto && !playlist.playing && !currentMode().busy() && sectionChange) {
+    phrasesInMode = 0;
+    setMode(settings.mode + 1);
+    return;
+  }
+  currentMode().onPhrase(strength);
+  if (settings.auto && !playlist.playing) setPalette(neighbourPalette(), true);
 }
 
 export function onKick(strength: number) {

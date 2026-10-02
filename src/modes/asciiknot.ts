@@ -1,20 +1,30 @@
 import { createGlyphSheet, DENSITY_RAMP, drawGlyphField, glyphGrid } from '../ascii';
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
-import { decay, TAU } from '../math';
+import { approach, decay, lerp, smoothstep, TAU } from '../math';
 import { clock, fx, settings, signal } from '../state';
+import { nextVariant, STYLE_RATE } from './restyle';
 
-const KNOT_P = 2;
-const KNOT_Q = 3;
+const KNOTS = [
+  { p: 2, q: 3, tube: 0.55 },
+  { p: 3, q: 2, tube: 0.5 },
+  { p: 2, q: 5, tube: 0.42 },
+  { p: 3, q: 4, tube: 0.36 },
+  { p: 3, q: 5, tube: 0.32 },
+  { p: 5, q: 3, tube: 0.34 },
+];
 const PATH_STEPS = 900;
 const TUBE_STEPS = 48;
-const TUBE_RADIUS = 0.55;
+const FRAME_STRIDE = 12;
 const CAMERA_DISTANCE = 7;
 const CELL = 11;
 const LIGHT = normalize(0.3, 0.6, -0.75);
 
 const tones = [createGlyphSheet(DENSITY_RAMP), createGlyphSheet(DENSITY_RAMP), createGlyphSheet(DENSITY_RAMP)];
-const curve = new Float32Array(PATH_STEPS * 12);
+const curve = new Float32Array(PATH_STEPS * FRAME_STRIDE);
+const fromCurve = new Float32Array(PATH_STEPS * FRAME_STRIDE);
+const toCurve = new Float32Array(PATH_STEPS * FRAME_STRIDE);
+const style = { knot: 0, morph: 1, tube: KNOTS[0].tube };
 let depth = new Float32Array(0);
 let shade = new Float32Array(0);
 let angleA = 0;
@@ -26,28 +36,63 @@ function normalize(x: number, y: number, z: number) {
   return [x / length, y / length, z / length];
 }
 
-function knotPoint(t: number, out: Float32Array, offset: number) {
-  const radius = Math.cos(KNOT_Q * t) + 2;
-  out[offset] = radius * Math.cos(KNOT_P * t);
-  out[offset + 1] = radius * Math.sin(KNOT_P * t);
-  out[offset + 2] = -Math.sin(KNOT_Q * t);
+function knotPoint(p: number, q: number, t: number, out: Float32Array, offset: number) {
+  const radius = Math.cos(q * t) + 2;
+  out[offset] = radius * Math.cos(p * t);
+  out[offset + 1] = radius * Math.sin(p * t);
+  out[offset + 2] = -Math.sin(q * t);
 }
 
-function buildCurve() {
+function buildCurve({ p, q }: (typeof KNOTS)[number], target: Float32Array) {
   const ahead = new Float32Array(3);
   for (let i = 0; i < PATH_STEPS; i++) {
     const t = (i / PATH_STEPS) * TAU;
-    const offset = i * 12;
-    knotPoint(t, curve, offset);
-    knotPoint(t + 0.001, ahead, 0);
-    const [tx, ty, tz] = normalize(ahead[0] - curve[offset], ahead[1] - curve[offset + 1], ahead[2] - curve[offset + 2]);
+    const offset = i * FRAME_STRIDE;
+    knotPoint(p, q, t, target, offset);
+    knotPoint(p, q, t + 0.001, ahead, 0);
+    const [tx, ty, tz] = normalize(ahead[0] - target[offset], ahead[1] - target[offset + 1], ahead[2] - target[offset + 2]);
     const [bx, by, bz] = normalize(ty, -tx, 0);
     const [nx, ny, nz] = normalize(by * tz - bz * ty, bz * tx - bx * tz, bx * ty - by * tx);
-    curve.set([nx, ny, nz, bx, by, bz, tx, ty, tz], offset + 3);
+    target.set([nx, ny, nz, bx, by, bz, tx, ty, tz], offset + 3);
   }
 }
 
-buildCurve();
+buildCurve(KNOTS[0], toCurve);
+curve.set(toCurve);
+
+function blendVector(offset: number, blend: number) {
+  const [x, y, z] = normalize(
+    lerp(fromCurve[offset], toCurve[offset], blend),
+    lerp(fromCurve[offset + 1], toCurve[offset + 1], blend),
+    lerp(fromCurve[offset + 2], toCurve[offset + 2], blend),
+  );
+  curve.set([x, y, z], offset);
+}
+
+function morphCurve() {
+  const settled = style.morph >= 0.999;
+  style.morph = approach(style.morph, 1, STYLE_RATE, clock.delta);
+  style.tube = approach(style.tube, KNOTS[style.knot].tube, STYLE_RATE, clock.delta);
+  if (settled) return;
+  if (style.morph >= 0.999) {
+    curve.set(toCurve);
+    return;
+  }
+  const blend = smoothstep(style.morph);
+  for (let i = 0; i < PATH_STEPS; i++) {
+    const offset = i * FRAME_STRIDE;
+    for (let axis = 0; axis < 3; axis++) curve[offset + axis] = lerp(fromCurve[offset + axis], toCurve[offset + axis], blend);
+    blendVector(offset + 3, blend);
+    blendVector(offset + 6, blend);
+  }
+}
+
+export function restyleAsciiKnot(strength: number) {
+  fromCurve.set(curve);
+  style.knot = nextVariant(style.knot, KNOTS.length, strength);
+  buildCurve(KNOTS[style.knot], toCurve);
+  style.morph = 0;
+}
 
 export function kickAsciiKnot() {
   spinKick += 2.5;
@@ -58,9 +103,9 @@ function rasterize(columns: number, rows: number, scale: number) {
   const sinA = Math.sin(angleA);
   const cosB = Math.cos(angleB);
   const sinB = Math.sin(angleB);
-  const thickness = TUBE_RADIUS * (0.8 + signal.punchBass * 0.45 + fx.kick * 0.35 + fx.snare * 0.2);
+  const thickness = style.tube * (0.8 + signal.punchBass * 0.45 + fx.kick * 0.35 + fx.snare * 0.2);
   for (let i = 0; i < PATH_STEPS; i++) {
-    const o = i * 12;
+    const o = i * FRAME_STRIDE;
     for (let j = 0; j < TUBE_STEPS; j++) {
       const around = (j / TUBE_STEPS) * TAU;
       const c = Math.cos(around);
@@ -99,6 +144,7 @@ export function drawAsciiKnot() {
   }
   depth.fill(0);
   shade.fill(0);
+  morphCurve();
   const step = clock.delta * settings.motion;
   spinKick *= decay(0.15, clock.delta);
   angleA += step * (0.3 + signal.gate * (signal.mid * 1.2 + spinKick));

@@ -7,6 +7,7 @@ export const CALM_HOLD = 0.5;
 export const BARS_PER_SHOT = 8;
 export const CALM_BARS_PER_SHOT = 16;
 export const UNLOCKED_SHOT_SECONDS = 16;
+export const PHRASE_CUT_BARS = 4;
 
 export interface Tour {
   from: number;
@@ -29,6 +30,7 @@ export interface TourInput {
   delta: number;
   drop: boolean;
   phraseEnded: boolean;
+  strongPhrase: boolean;
   downbeat: boolean;
   calm: number;
   tempoLocked: boolean;
@@ -108,7 +110,8 @@ function advanceShot(tour: Tour, input: TourInput) {
     return;
   }
   if (input.downbeat) tour.bars++;
-  if (tour.bars >= (input.calm > CALM_HOLD ? CALM_BARS_PER_SHOT : BARS_PER_SHOT)) cut(tour, input.shotCount);
+  const quota = input.calm > CALM_HOLD ? CALM_BARS_PER_SHOT : BARS_PER_SHOT;
+  if (tour.bars >= quota || (input.phraseEnded && tour.bars >= quota - PHRASE_CUT_BARS)) cut(tour, input.shotCount);
 }
 
 export function stepTour(tour: Tour, input: TourInput, stops: readonly number[]) {
@@ -124,7 +127,7 @@ export function stepTour(tour: Tour, input: TourInput, stops: readonly number[])
     cut(tour, input.shotCount);
     return;
   }
-  if (input.phraseEnded) tour.phrases++;
+  if (input.phraseEnded) tour.phrases += input.strongPhrase ? PHRASES_PER_STOP : 1;
   if (input.drop && input.canEclipse && !tour.eclipsed) {
     Object.assign(tour, { eclipse: 0, eclipseSeconds: input.eclipseSeconds, eclipsed: true, cuts: tour.cuts + 1 });
     return;

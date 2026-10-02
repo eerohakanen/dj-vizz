@@ -1,4 +1,5 @@
 import { dropState, dropThreshold, isDropArmed } from '@/audio/drop';
+import { phraseState } from '@/audio/phrase';
 import { fx, settings, signal } from '@/state';
 import { cn } from '@/lib/utils';
 import { FLOATING_PANEL, MeterBar, useTicker } from './shared';
@@ -50,6 +51,12 @@ export function AnalysisHud() {
         </span>
       </div>
       <Meter label="tempo" value={signal.tempoConfidence} />
+      <Meter label="novelty" value={signal.phraseNovelty} />
+      <Meter label="phrase" value={signal.phraseAlignment} />
+      <div className="flex items-center gap-2">
+        <span className="w-16 text-muted-foreground">shifted</span>
+        <span>{phraseState.lastShift ? `${phraseState.lastShift} bars` : '—'}</span>
+      </div>
       <Meter label="tension" value={signal.tension} />
       <Meter label="bright" value={signal.brightness} />
       <Meter label="vocal" value={signal.vocal} />

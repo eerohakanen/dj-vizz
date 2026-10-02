@@ -60,6 +60,8 @@ export const signal = {
   barPhase: 0,
   downbeat: false,
   phraseBeat: 0,
+  phraseNovelty: 0,
+  phraseAlignment: 0,
   tension: 0,
   brightness: 0.5,
   key: -1,

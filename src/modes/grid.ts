@@ -3,13 +3,27 @@ import { BACKGROUND, gradientCache, sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
 import { TAU } from '../math';
 import { fx, signal, view } from '../state';
+import { glideStyle, nextVariant } from './restyle';
 
 const sunGradient = gradientCache(() => ctx.createLinearGradient(0, -1, 0, 1));
+const STYLES = [
+  { horizon: 0.55, fan: 0.14, sun: 1, ridge: 0.4 },
+  { horizon: 0.48, fan: 0.2, sun: 0.85, ridge: 0.3 },
+  { horizon: 0.62, fan: 0.09, sun: 1.15, ridge: 0.5 },
+  { horizon: 0.52, fan: 0.11, sun: 1.25, ridge: 0.25 },
+];
+
+let styleIndex = 0;
+const style = { ...STYLES[0] };
+
+export function restyleGrid(strength: number) {
+  styleIndex = nextVariant(styleIndex, STYLES.length, strength);
+}
 
 function drawSun(horizon: number) {
   const { width, minSide } = view;
   const { punchBass } = signal;
-  const radius = minSide * (0.24 + 0.05 * Math.min(1, punchBass) + 0.06 * fx.drop);
+  const radius = minSide * (0.24 + 0.05 * Math.min(1, punchBass) + 0.06 * fx.drop) * style.sun;
   const centerY = horizon - radius * 0.55;
   ctx.save();
   ctx.fillStyle = sunGradient(color(1.3, 1, 62), color(0, 1, 52));
@@ -36,7 +50,7 @@ function drawMountains(horizon: number) {
   for (let i = 0; i <= count; i++) {
     const edge = Math.abs(i / count - 0.5) * 2;
     const level = bandAt(Math.floor((edge * count) / 2), count / 2);
-    ctx.lineTo(i * step, horizon - level * height * 0.4 * (0.35 + edge));
+    ctx.lineTo(i * step, horizon - level * height * style.ridge * (0.35 + edge));
   }
   ctx.lineTo(width, horizon);
   ctx.closePath();
@@ -63,14 +77,15 @@ function drawFloor(horizon: number) {
   ctx.beginPath();
   for (let i = -14; i <= 14; i++) {
     ctx.moveTo(width / 2 + i * width * 0.012, horizon);
-    ctx.lineTo(width / 2 + i * width * 0.14, height);
+    ctx.lineTo(width / 2 + i * width * style.fan, height);
   }
   ctx.stroke();
 }
 
 export function drawGrid() {
   const { width, height } = view;
-  const horizon = height * 0.55;
+  glideStyle(style, STYLES[styleIndex]);
+  const horizon = height * style.horizon;
   ctx.save();
   ctx.beginPath();
   ctx.rect(0, 0, width, horizon);

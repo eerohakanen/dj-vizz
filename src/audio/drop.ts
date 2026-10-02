@@ -1,6 +1,7 @@
 import { clamp, clamp01, follow } from '../math';
 import { clock, signal } from '../state';
 import { releaseTension } from './musical';
+import { anchorPhraseVotes, phraseState } from './phrase';
 import { anchorPhrase } from './tempo';
 
 const DB_RANGE = 70;
@@ -114,6 +115,7 @@ export function registerDrop() {
   signal.lastDrop = clock.time;
   signal.breakdown = 0;
   anchorPhrase();
+  anchorPhraseVotes(phraseState);
   releaseTension();
   resetDrop(dropState, clock.time);
   signal.energyPeak = signal.energy;

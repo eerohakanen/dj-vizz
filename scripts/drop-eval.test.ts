@@ -52,6 +52,7 @@ async function detect(wav: string, sensitivity: number) {
     onKick: ignore,
     onSnare: ignore,
     onHat: ignore,
+    onPhrase: ignore,
     onDrop() {
       drops.push(clock.time);
       registerDrop();

@@ -6,6 +6,7 @@ import { clamp01, smoothstep } from '../../math';
 import { motionScale } from '../../motion';
 import { clock, fx, settings, signal } from '../../state';
 import { advanceSway, cameraJitter, createKick, fitStage, lazyStage, paint, paintPalette, presentStage, sway } from '../three-stage';
+import { STRONG_PHRASE } from '../restyle';
 import { loadModules } from './assets';
 import { animateBlackHole, clearBlackHole } from './blackhole';
 import { BODIES, TOUR_STOPS } from './bodies';
@@ -90,7 +91,7 @@ let shotClock = 0;
 let lastCuts = 0;
 let lastLeg = 0;
 let dropping = false;
-let lastPhraseBeat = 0;
+let pendingPhrase = -1;
 let coronaFlare = 0;
 let route: Route | undefined;
 let blend: Blend | undefined;
@@ -111,8 +112,9 @@ const beatSeconds = (beats: number, fallback: number) => (signal.bpm > 0 ? (beat
 
 function advanceTour() {
   const motion = motionScale();
-  const phraseEnded = signal.phraseBeat === 0 && lastPhraseBeat !== 0;
-  lastPhraseBeat = signal.phraseBeat;
+  const phraseEnded = pendingPhrase >= 0;
+  const strongPhrase = pendingPhrase >= STRONG_PHRASE;
+  pendingPhrase = -1;
   const body = BODIES[tour.to];
   stepTour(
     tour,
@@ -120,6 +122,7 @@ function advanceTour() {
       delta: clock.delta,
       drop: dropStarted(),
       phraseEnded,
+      strongPhrase,
       downbeat: signal.downbeat,
       calm: fx.calm,
       tempoLocked: signal.bpm > 0,
@@ -360,6 +363,7 @@ function restoreTour(stage: SolarStage) {
   lastCuts = -1;
   shotClock = 0;
   dropping = false;
+  pendingPhrase = -1;
   route = undefined;
   blend = undefined;
 }
@@ -374,6 +378,10 @@ function rejoin(stage: SolarStage) {
 
 export function pulseSolar() {
   kick.pulse();
+}
+
+export function restyleSolar(strength: number) {
+  if (!busy(cataclysm)) pendingPhrase = strength;
 }
 
 export function solarBusy() {

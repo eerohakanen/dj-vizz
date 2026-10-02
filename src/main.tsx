@@ -7,7 +7,7 @@ import { adaptQuality, output, resize } from './canvas';
 import { advancePaletteFade, buildLut } from './color';
 import { bindControls } from './controls';
 import { psyIndex, type PsyName } from './effects/options';
-import { onBeat, onHat, onKick, onSnare, triggerDrop } from './events';
+import { onBeat, onHat, onKick, onPhrase, onSnare, triggerDrop } from './events';
 import { bindReducedMotion } from './motion';
 import { advanceTimedPlaylist, shiftPlaylistClock } from './presets/playlist';
 import { flushAutosave, startAutosave } from './presets/autosave';
@@ -17,7 +17,7 @@ import { restoreSession, saveSession } from './session';
 import { clock, fx, settings } from './state';
 import { subscribe, ui } from './store';
 
-const ANALYSIS_EVENTS = { onBeat, onKick, onSnare, onHat, onDrop: triggerDrop };
+const ANALYSIS_EVENTS = { onBeat, onKick, onSnare, onHat, onDrop: triggerDrop, onPhrase };
 
 let lastTimestamp = 0;
 let wasPaused = false;

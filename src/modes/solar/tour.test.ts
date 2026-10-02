@@ -7,6 +7,7 @@ import {
   eclipsing,
   MIN_DWELL_SECONDS,
   nextStop,
+  PHRASE_CUT_BARS,
   PHRASES_PER_STOP,
   stepTour,
   type Tour,
@@ -24,6 +25,7 @@ const input = (overrides: Partial<TourInput> = {}): TourInput => ({
   delta: 0.1,
   drop: false,
   phraseEnded: false,
+  strongPhrase: false,
   downbeat: false,
   calm: 0,
   tempoLocked: true,
@@ -66,6 +68,13 @@ describe('stepTour departures', () => {
     step(tour, { phraseEnded: true });
     expect(traveling(tour)).toBe(true);
     expect(tour.travelSeconds).toBe(5);
+  });
+
+  it('cruises after a single strong phrase', () => {
+    const tour = createTour();
+    step(tour, { delta: MIN_DWELL_SECONDS });
+    step(tour, { phraseEnded: true, strongPhrase: true });
+    expect(traveling(tour)).toBe(true);
   });
 
   it('lingers through calm sections but still leaves on a drop', () => {
@@ -146,6 +155,33 @@ describe('stepTour shots', () => {
     for (let i = 0; i < BARS_PER_SHOT * SHOTS; i++) step(tour, { downbeat: true });
     expect(tour.shot).toBe(0);
     expect(tour.cuts).toBe(SHOTS);
+  });
+
+  it('cuts on a phrase start once the shot is near its bar count', () => {
+    const tour = createTour();
+    for (let i = 2; i < BARS_PER_SHOT - PHRASE_CUT_BARS; i++) step(tour, { downbeat: true });
+    step(tour, { downbeat: true, phraseEnded: true });
+    expect(tour.shot).toBe(0);
+    step(tour, { downbeat: true, phraseEnded: true });
+    expect([tour.shot, tour.bars]).toEqual([1, 0]);
+  });
+
+  it('cuts once when the phrase start and the bar count coincide', () => {
+    const tour = createTour();
+    for (let i = 1; i < BARS_PER_SHOT; i++) step(tour, { downbeat: true });
+    step(tour, { downbeat: true, phraseEnded: true });
+    expect([tour.shot, tour.cuts]).toEqual([1, 1]);
+    step(tour);
+    expect([tour.shot, tour.cuts]).toEqual([1, 1]);
+  });
+
+  it('holds calm shots across a phrase start that comes too early', () => {
+    const tour = createTour();
+    for (let i = 0; i < BARS_PER_SHOT; i++) step(tour, { downbeat: true, calm: 1, phraseEnded: i === BARS_PER_SHOT - 1 });
+    expect(tour.shot).toBe(0);
+    for (let i = BARS_PER_SHOT; i < CALM_BARS_PER_SHOT - PHRASE_CUT_BARS; i++) step(tour, { downbeat: true, calm: 1 });
+    step(tour, { calm: 1, phraseEnded: true });
+    expect(tour.shot).toBe(1);
   });
 
   it('cuts on a timer without a tempo lock', () => {

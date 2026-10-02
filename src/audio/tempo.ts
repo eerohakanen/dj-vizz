@@ -146,6 +146,10 @@ function countBeat() {
   if (locked) realignDownbeat();
 }
 
+export function shiftPhrase(bars: number) {
+  signal.phraseBeat = wrap(signal.phraseBeat - bars * BEATS_PER_BAR, BEATS_PER_PHRASE);
+}
+
 export function anchorPhrase() {
   signal.beatInBar = 0;
   signal.phraseBeat = 0;

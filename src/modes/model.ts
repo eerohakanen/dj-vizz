@@ -1,7 +1,8 @@
 import type * as Three from 'three';
 import type { MeshSurfaceSampler as Sampler } from 'three/examples/jsm/math/MeshSurfaceSampler.js';
-import { approach } from '../math';
+import { approach, randomRange, signedRandom } from '../math';
 import { clock, fx, signal } from '../state';
+import { glideStyle } from './restyle';
 import {
   additiveOptions,
   advanceSway,
@@ -25,6 +26,11 @@ const POINT_COUNT = 24000;
 const BASE_FOV = 45;
 const FOV_GLIDE = 8;
 const ORBIT_RADIUS = 3.4;
+const ORBIT_SPEED = 0.13;
+const RADIUS_RANGE = [-0.9, 1.6];
+const HEIGHT_RANGE = 2.4;
+const TILT_RANGE = 1.4;
+const SPEED_RANGE = 0.32;
 
 const DISPLACE = `
   uniform float uTime;
@@ -86,6 +92,10 @@ const kick = createKick();
 let shapeIndex = 0;
 let dropping = false;
 let nextShape: Shape | undefined;
+let orbitPhase = 0;
+
+const style = { radius: ORBIT_RADIUS, height: 0, tilt: 0, speed: ORBIT_SPEED };
+const target = { ...style };
 
 function injectDisplacement<T extends Three.Material>(material: T, uniforms: Record<string, Three.IUniform>) {
   material.onBeforeCompile = (shader) => {
@@ -250,13 +260,33 @@ function animate(stage: ModelStage) {
   });
 }
 
+export function restyleModel(strength: number) {
+  const reach = Math.min(1, 0.4 + strength);
+  target.radius = ORBIT_RADIUS + randomRange(RADIUS_RANGE[0], RADIUS_RANGE[1]) * reach;
+  target.height = signedRandom(HEIGHT_RANGE) * reach;
+  target.tilt = signedRandom(TILT_RANGE) * reach;
+  target.speed = ORBIT_SPEED + signedRandom(SPEED_RANGE * 2) * reach;
+}
+
+function easeStyle() {
+  glideStyle(style, target);
+  orbitPhase += (style.speed - ORBIT_SPEED) * clock.delta;
+}
+
 function moveCamera(stage: ModelStage) {
   const { camera } = stage;
   const { time } = clock;
   advanceSway();
+  easeStyle();
   const jitter = cameraJitter(0.12);
-  const radius = ORBIT_RADIUS - kick.value * 0.25 + fx.drop * 0.8;
-  camera.position.set(Math.sin(time * 0.13) * radius + jitter(), sway(0.09, 1) * 0.9 + jitter(), Math.cos(time * 0.13) * radius);
+  const radius = style.radius - kick.value * 0.25 + fx.drop * 0.8;
+  const angle = time * ORBIT_SPEED + orbitPhase;
+  const across = Math.sin(angle) * radius + jitter();
+  const height = sway(0.09, 1) * 0.9 + style.height + jitter();
+  const depth = Math.cos(angle) * radius;
+  const tiltCos = Math.cos(style.tilt);
+  const tiltSin = Math.sin(style.tilt);
+  camera.position.set(across, height * tiltCos - depth * tiltSin, height * tiltSin + depth * tiltCos);
   camera.lookAt(0, 0, 0);
   camera.rotation.z += fx.spin * 0.2;
   camera.fov = approach(camera.fov, BASE_FOV + kick.value * 4 + fx.drop * 18, FOV_GLIDE, clock.delta);

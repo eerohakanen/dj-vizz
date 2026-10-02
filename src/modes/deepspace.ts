@@ -1,6 +1,7 @@
 import type * as Three from 'three';
-import { approach, clamp, clamp01, decay, randomRange, TAU } from '../math';
+import { approach, clamp, clamp01, decay, randomRange, signedRandom, TAU } from '../math';
 import { clock, fx, impulse, settings, signal } from '../state';
+import { glideStyle } from './restyle';
 import {
   additiveOptions,
   advanceSway,
@@ -36,11 +37,20 @@ const SUN_COUNT = 3;
 const NEBULA_COUNT = 10;
 const BASE_FOV = 70;
 const FOV_GLIDE = 8;
+const DENSITY_SOFTNESS = 0.15;
+const FULL_DENSITY = 1 + DENSITY_SOFTNESS;
+const MIN_DENSITY = 0.5;
+const HEADING_RANGE = 2.4;
+const CLIMB_RANGE = 0.7;
+const TILT_RANGE = 0.7;
+const WANDER_RANGE = 1.6;
+const STREAK_RANGE = 1.2;
 
 const STAR_VERTEX = `
   ${STREAM}
   uniform float uScale;
   uniform float uSize;
+  uniform float uDensity;
   attribute float aSeed;
   varying float vSeed;
   varying float vFade;
@@ -49,7 +59,7 @@ const STAR_VERTEX = `
     gl_Position = projectionMatrix * eye;
     float distance = length(eye.xyz);
     float size = uSize * (0.4 + aSeed) * uScale / max(-eye.z, 0.5);
-    vFade = (1.0 - smoothstep(uFieldRadius * 0.55, uFieldRadius, distance)) * smoothstep(0.5, 4.0, distance) * min(1.0, size / 1.5);
+    vFade = (1.0 - smoothstep(uFieldRadius * 0.55, uFieldRadius, distance)) * smoothstep(0.5, 4.0, distance) * min(1.0, size / 1.5) * clamp((uDensity - fract(aSeed * 31.7)) / ${DENSITY_SOFTNESS.toFixed(2)}, 0.0, 1.0);
     vSeed = aSeed;
     gl_PointSize = clamp(size, 1.5, 48.0);
   }
@@ -134,6 +144,9 @@ let roll = 0;
 let rollVelocity = 0;
 let dropping = false;
 
+const style = { homeYaw: 0, homePitch: 0, tilt: 0, wander: 1, density: FULL_DENSITY, streak: 1 };
+const target = { ...style };
+
 function createGalaxyGeometry(THREE: ThreeModule) {
   const positions = new Float32Array(GALAXY_COUNT * 3);
   const seeds = new Float32Array(GALAXY_COUNT);
@@ -198,7 +211,7 @@ function buildStage(THREE: ThreeModule) {
 
   const scene = new THREE.Scene();
   const { stars, streaks } = createStarGeometry(THREE, STAR_COUNT, CUBE);
-  const starMaterial = additive(STAR_VERTEX, GLOW_POINT_FRAGMENT, { uSize: { value: 0.5 } });
+  const starMaterial = additive(STAR_VERTEX, GLOW_POINT_FRAGMENT, { uSize: { value: 0.5 }, uDensity: { value: FULL_DENSITY } });
   const streakMaterial = additive(STREAK_VERTEX, STREAK_FRAGMENT, {
     uStreak: { value: 0 },
     uStreakAlpha: { value: 0 },
@@ -280,6 +293,16 @@ function throwTurn(strength: number) {
   turnPitch = randomRange(-1, 1) * reach * 0.5;
 }
 
+export function restyleDeepSpace(strength: number) {
+  const reach = Math.min(1, 0.4 + strength);
+  target.homeYaw = style.homeYaw + signedRandom(HEADING_RANGE) * reach;
+  target.homePitch = signedRandom(CLIMB_RANGE) * reach;
+  target.tilt = signedRandom(TILT_RANGE) * reach;
+  target.wander = 1 + signedRandom(WANDER_RANGE) * reach;
+  target.density = FULL_DENSITY - Math.random() * (FULL_DENSITY - MIN_DENSITY) * reach;
+  target.streak = 1 + signedRandom(STREAK_RANGE) * reach;
+}
+
 function steer(stage: DeepSpaceStage) {
   const { delta, time } = clock;
   const { gate, energy, punchBass } = signal;
@@ -288,10 +311,10 @@ function steer(stage: DeepSpaceStage) {
     throwTurn(1.8);
     rollVelocity = (Math.random() < 0.5 ? -1 : 1) * 6;
   } else if (fx.drop < 0.5) dropping = false;
-  const wander = (Math.sin(time * 0.21) * 0.25 + Math.sin(time * 0.07 + 1) * 0.35) * (0.3 + energy);
+  const wander = (Math.sin(time * 0.21) * 0.25 + Math.sin(time * 0.07 + 1) * 0.35) * (0.3 + energy) * style.wander;
   const push = 1 + punchBass * gate * 0.8;
-  yawRate = approach(yawRate, (turnYaw + wander * gate) * push - wrapAngle(yaw) * 0.12, 2.5, delta);
-  pitchRate = approach(pitchRate, (turnPitch + Math.sin(time * 0.17) * 0.12 * gate) * push - pitch * 0.6, 2.5, delta);
+  yawRate = approach(yawRate, (turnYaw + wander * gate) * push - wrapAngle(yaw - style.homeYaw) * 0.12, 2.5, delta);
+  pitchRate = approach(pitchRate, (turnPitch + Math.sin(time * 0.17) * 0.12 * gate) * push - (pitch - style.homePitch) * 0.6, 2.5, delta);
   turnYaw *= decay(0.25, delta);
   turnPitch *= decay(0.25, delta);
   yaw += yawRate * delta;
@@ -320,8 +343,9 @@ function updateUniforms(stage: DeepSpaceStage) {
   shared.uScale.value = pointScale(camera);
   shared.uGlow.value = glowLevel(kick.value);
   paintPalette(stage, shared.uColorA.value, shared.uColorB.value);
+  starMaterial.uniforms.uDensity.value = style.density;
   starMaterial.uniforms.uSize.value = 0.45 + kick.value * 0.35 + signal.punchHigh * 0.3;
-  streakMaterial.uniforms.uStreak.value = speed * 0.12;
+  streakMaterial.uniforms.uStreak.value = speed * 0.12 * style.streak;
   streakMaterial.uniforms.uHeading.value.copy(stage.heading);
   streakMaterial.uniforms.uStreakAlpha.value = clamp01((speed - 20) / 120);
 }
@@ -359,7 +383,7 @@ function moveCamera(stage: DeepSpaceStage) {
   camera.rotation.set(
     pitch + sway(0.17, 2) * 0.05,
     yaw + sway(0.13, 2, 1) * 0.06,
-    bank + roll + fx.spin * 0.15 + sway(0.09, 1) * 0.2,
+    bank + roll + style.tilt + fx.spin * 0.15 + sway(0.09, 1) * 0.2,
   );
   camera.fov = approach(camera.fov, BASE_FOV + kick.value * 6 + Math.min(40, fx.drop * 35 + Math.max(0, speed - 60) * 0.04), FOV_GLIDE, clock.delta);
   camera.updateProjectionMatrix();
@@ -375,6 +399,7 @@ export function drawDeepSpace() {
   if (!stage) return;
   kick.decay();
   fitStage(stage);
+  glideStyle(style, target);
   steer(stage);
   fly(stage);
   moveCamera(stage);
