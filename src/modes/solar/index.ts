@@ -1,11 +1,28 @@
 import type * as Three from 'three';
+import { tensionPeak } from '../../audio/musical';
+import { BEATS_PER_BAR } from '../../audio/tempo';
 import { fillWith, sceneCtx } from '../../canvas';
-import { clamp01 } from '../../math';
+import { clamp01, smoothstep } from '../../math';
 import { flashLevel, motionScale } from '../../motion';
 import { clock, fx, settings, signal } from '../../state';
 import { advanceSway, cameraJitter, createKick, fitStage, lazyStage, paint, paintPalette, presentStage, sway } from '../three-stage';
 import { loadModules } from './assets';
+import { animateBlackHole, clearBlackHole } from './blackhole';
 import { BODIES } from './bodies';
+import {
+  busy,
+  cataclysmPose,
+  createCataclysm,
+  displace,
+  ignite,
+  phaseLevel,
+  pullLevel,
+  resetCataclysm,
+  shockRadius,
+  shouldIgnite,
+  stepCataclysm,
+  UNLOCKED_BAR_SECONDS,
+} from './cataclysm';
 import { BASE_FOV, buildStage, type SolarStage } from './scene';
 import {
   add,
@@ -22,6 +39,7 @@ import {
   sub,
   type Vec,
 } from './shots';
+import { animateSupernova, clearSupernova } from './supernova';
 import { createTour, eclipseProgress, eclipsing, lookEase, stepTour, traveling, warpLevel } from './tour';
 
 const CRUISE_SECONDS = 5;
@@ -36,6 +54,8 @@ const WHITE_OUT = 0.85;
 const STREAK_LENGTH = 0.08;
 const STREAK_MIN_SPEED = 5;
 const STREAK_FULL_SPEED = 45;
+const DIVE_FOV = 50;
+const REJOIN_GAP = 0.5;
 
 interface Route {
   p0: Vec;
@@ -49,6 +69,8 @@ interface Route {
 const solar = lazyStage(() => loadModules().then(buildStage));
 const kick = createKick();
 const tour = createTour();
+const cataclysm = createCataclysm();
+let lastDrawn = -Infinity;
 let shotClock = 0;
 let lastCuts = 0;
 let lastLeg = 0;
@@ -133,7 +155,7 @@ function applyVertigo(camera: Three.PerspectiveCamera, look: Vec, motion: number
 }
 
 function moveCamera(stage: SolarStage) {
-  const { camera, lookTarget, previous, velocity } = stage;
+  const { camera, lookTarget } = stage;
   const { delta } = clock;
   const motion = motionScale();
   advanceSway();
@@ -159,9 +181,32 @@ function moveCamera(stage: SolarStage) {
   const warp = warpLevel(tour) * (tour.jumping ? JUMP_FOV : WARP_FOV);
   camera.fov = fov + (kick.value * 4 + warp + fx.drop * 10) * motion;
   camera.updateProjectionMatrix();
-  if (cut && !moving) velocity.set(0, 0, 0);
-  else if (delta > 0) velocity.subVectors(camera.position, previous).divideScalar(delta);
+  trackVelocity(stage, cut && !moving);
+}
+
+function trackVelocity(stage: SolarStage, cut: boolean) {
+  const { camera, previous, velocity } = stage;
+  if (cut) velocity.set(0, 0, 0);
+  else if (clock.delta > 0) velocity.subVectors(camera.position, previous).divideScalar(clock.delta);
   previous.copy(camera.position);
+}
+
+function moveCataclysmCamera(stage: SolarStage) {
+  const { camera, lookTarget } = stage;
+  const motion = motionScale();
+  const dive = phaseLevel(cataclysm, 'dive');
+  const pose = cataclysmPose(cataclysm);
+  advanceSway();
+  camera.position.set(pose.position.x, pose.position.y, pose.position.z);
+  lookTarget.set(pose.look.x, pose.look.y, pose.look.z);
+  const jitter = cameraJitter(0.4 * motion);
+  camera.position.x += jitter();
+  camera.position.y += jitter();
+  camera.lookAt(lookTarget);
+  camera.rotation.z += (fx.spin * 0.1 + sway(0.07, 1) * 0.04 + dive * dive * 2) * motion;
+  camera.fov = BASE_FOV + (kick.value * 4 + fx.drop * 10 + dive * dive * DIVE_FOV) * motion;
+  camera.updateProjectionMatrix();
+  trackVelocity(stage, false);
 }
 
 function currentCoverage(stage: SolarStage) {
@@ -210,10 +255,17 @@ function animateBodies(stage: SolarStage) {
 function spinAsteroids(stage: SolarStage) {
   const { asteroids, belt, scratch } = stage;
   const burst = fx.kick * 0.6 * motionScale();
+  const exploding = busy(cataclysm);
+  const shock = shockRadius(cataclysm);
+  const pull = pullLevel(cataclysm);
   asteroids.forEach((asteroid, i) => {
     scratch.position.copy(asteroid.position).addScaledVector(asteroid.push, burst);
-    scratch.quaternion.setFromAxisAngle(asteroid.axis, clock.time * asteroid.spin);
-    scratch.scale.setScalar(asteroid.scale);
+    if (exploding) {
+      const point = displace(scratch.position, shock, pull);
+      scratch.position.set(point.x, point.y, point.z);
+    }
+    scratch.quaternion.setFromAxisAngle(asteroid.axis, clock.time * asteroid.spin * (exploding ? 4 : 1));
+    scratch.scale.setScalar(asteroid.scale * (1 - pull));
     scratch.updateMatrix();
     belt.setMatrixAt(i, scratch.matrix);
   });
@@ -228,30 +280,90 @@ function updateStreaks(stage: SolarStage) {
   if (speed > 0) streakUniforms.uHeading.value.copy(velocity).divideScalar(speed);
   streakUniforms.uStreak.value = speed * STREAK_LENGTH;
   const jump = tour.jumping ? warpLevel(tour) : 0;
-  streakUniforms.uStreakAlpha.value = Math.max(clamp01((speed - STREAK_MIN_SPEED) / STREAK_FULL_SPEED), jump) * motionScale();
+  const dive = phaseLevel(cataclysm, 'dive');
+  streakUniforms.uStreakAlpha.value = Math.max(clamp01((speed - STREAK_MIN_SPEED) / STREAK_FULL_SPEED), jump, dive) * motionScale();
   paintPalette(stage, streakUniforms.uColorA.value, streakUniforms.uColorB.value);
 }
 
+function whiteOutLevel() {
+  const dive = smoothstep(clamp01((phaseLevel(cataclysm, 'dive') - 0.7) / 0.3));
+  const jump = tour.jumping && traveling(tour) ? warpLevel(tour) ** 8 * WHITE_OUT : 0;
+  return Math.max(dive, jump) * flashLevel();
+}
+
 function whiteOut() {
-  if (!tour.jumping || !traveling(tour)) return;
-  const level = warpLevel(tour) ** 8 * WHITE_OUT * flashLevel();
+  const level = whiteOutLevel();
   if (level < 0.01) return;
   fillWith(sceneCtx, 'lighter', `rgba(255, 255, 255, ${level})`);
   sceneCtx.globalCompositeOperation = 'source-over';
+}
+
+function restoreTour(stage: SolarStage) {
+  clearSupernova(stage);
+  clearBlackHole(stage);
+  Object.assign(tour, createTour());
+  lastLeg = 0;
+  lastCuts = -1;
+  shotClock = 0;
+  dropping = false;
+  route = undefined;
+}
+
+function rejoin(stage: SolarStage) {
+  const away = clock.time - lastDrawn > REJOIN_GAP;
+  lastDrawn = clock.time;
+  if (!away) return;
+  if (busy(cataclysm)) restoreTour(stage);
+  resetCataclysm(cataclysm);
 }
 
 export function pulseSolar() {
   kick.pulse();
 }
 
+export function solarBusy() {
+  return busy(cataclysm);
+}
+
+export function claimSolarDrop() {
+  if (busy(cataclysm)) return true;
+  const stage = solar.get();
+  if (!stage || !shouldIgnite(cataclysm, tensionPeak())) {
+    cataclysm.drops++;
+    return false;
+  }
+  const { position } = stage.camera;
+  ignite(cataclysm, Math.atan2(-position.z, position.x));
+  return true;
+}
+
+export function solarHandoff() {
+  const stage = solar.get();
+  if (!stage || cataclysm.phase !== 'done') return undefined;
+  restoreTour(stage);
+  resetCataclysm(cataclysm);
+  fx.flash = flashLevel();
+  return 'Deep Space';
+}
+
 export function drawSolar() {
   const stage = solar.get();
   if (!stage) return;
+  rejoin(stage);
   kick.decay();
   fitStage(stage);
-  advanceTour();
-  moveCamera(stage);
+  stepCataclysm(cataclysm, clock.delta, beatSeconds(BEATS_PER_BAR, UNLOCKED_BAR_SECONDS));
+  const exploding = busy(cataclysm);
+  if (exploding) moveCataclysmCamera(stage);
+  else {
+    advanceTour();
+    moveCamera(stage);
+  }
   animateBodies(stage);
+  if (exploding) {
+    animateSupernova(stage, cataclysm, kick.value);
+    animateBlackHole(stage, cataclysm, kick.value);
+  }
   spinAsteroids(stage);
   updateStreaks(stage);
   presentStage(stage);

@@ -8,7 +8,7 @@ import { drawHypno } from './hypno';
 import { drawModel, pulseModel } from './model';
 import { drawRadial } from './radial';
 import { drawScope } from './scope';
-import { drawSolar, pulseSolar } from './solar';
+import { claimSolarDrop, drawSolar, pulseSolar, solarBusy, solarHandoff } from './solar';
 import { drawTunnel, spawnRing, spawnRingVolley } from './tunnel';
 import { drawWarp } from './warp';
 
@@ -21,6 +21,9 @@ export interface Mode {
   threeD: boolean;
   onBeat: () => void;
   onDrop: () => void;
+  claimDrop: () => boolean;
+  busy: () => boolean;
+  handoff: () => string | undefined;
 }
 
 const defineMode = (name: string, draw: () => void, options?: Partial<Mode>): Mode => ({
@@ -32,6 +35,9 @@ const defineMode = (name: string, draw: () => void, options?: Partial<Mode>): Mo
   threeD: false,
   onBeat: () => {},
   onDrop: () => {},
+  claimDrop: () => false,
+  busy: () => false,
+  handoff: () => undefined,
   ...options,
 });
 
@@ -48,5 +54,5 @@ export const MODES = [
   defineMode('Hypno', drawHypno),
   defineMode('Deep Space', drawDeepSpace, { trails: false, opaque: true, threeD: true, onBeat: pulseDeepSpace }),
   defineMode('Model', drawModel, { trails: false, opaque: true, threeD: true, onBeat: pulseModel }),
-  defineMode('Solar System', drawSolar, { trails: false, opaque: true, threeD: true, onBeat: pulseSolar }),
+  defineMode('Solar System', drawSolar, { trails: false, opaque: true, threeD: true, onBeat: pulseSolar, claimDrop: claimSolarDrop, busy: solarBusy, handoff: solarHandoff }),
 ];

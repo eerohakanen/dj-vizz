@@ -7,7 +7,8 @@ import { applyMirror } from './effects/mirror';
 import { applyPixelate } from './effects/pixelate';
 import { drawTransition } from './effects/transition';
 import { clamp01, frameAlpha, frameScale, signedRandom } from './math';
-import { currentMode } from './mode';
+import { currentMode, setMode } from './mode';
+import { MODES } from './modes/index';
 import { flashLevel, motionScale, shakeLevel } from './motion';
 import { clock, fx, settings, signal, view } from './state';
 
@@ -73,6 +74,8 @@ export function renderScene() {
   applyBeatShake(ctx);
   ctx.globalCompositeOperation = mode.opaque ? 'source-over' : 'lighten';
   mode.draw();
+  const next = mode.handoff();
+  if (next) setMode(MODES.findIndex((candidate) => candidate.name === next), 'cut');
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'lighten';
   drawLasers();

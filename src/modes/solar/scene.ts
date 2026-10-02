@@ -9,9 +9,13 @@ import {
   STREAK_VERTEX,
   SUN_FRAGMENT,
   type ThreeModule,
+  type Uniforms,
+  withUniforms,
 } from '../three-stage';
 import { createTextureLoader, loadAsteroid, type Modules } from './assets';
+import { createBlackHole } from './blackhole';
 import { BELT_ANGLE, BELT_CLEARANCE, BELT_ORBIT, BODIES, type Body, orbitPoint, SKY_TEXTURE } from './bodies';
+import { createSupernova } from './supernova';
 
 export const BASE_FOV = 55;
 const FAR = 1500;
@@ -51,7 +55,7 @@ const RIM_FRAGMENT = `
   }
 `;
 
-const AURORA_VERTEX = `
+const SHELL_VERTEX = `
   varying vec3 vLocal;
   varying vec3 vNormal;
   varying vec3 vView;
@@ -115,23 +119,14 @@ export interface Asteroid {
 
 export interface Planet {
   body: Body;
+  group: Three.Object3D;
+  reach: number;
   spinner: Three.Object3D;
   clouds?: Three.Object3D;
   rim?: Three.ShaderMaterial;
   swirl?: Uniforms;
   ripple?: Uniforms;
   aurora?: Uniforms;
-}
-
-type Uniforms = Record<string, Three.IUniform<number>>;
-
-function withUniforms(material: Three.Material, key: string, uniforms: Uniforms, patch: (shader: Three.WebGLProgramParametersWithUniforms) => void) {
-  material.customProgramCacheKey = () => key;
-  material.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, uniforms);
-    patch(shader);
-  };
-  return uniforms;
 }
 
 function texturedMaterial(THREE: ThreeModule, load: ReturnType<typeof createTextureLoader>, body: Body) {
@@ -175,7 +170,7 @@ function createRing(THREE: ThreeModule, load: ReturnType<typeof createTextureLoa
   return { ring, ripple };
 }
 
-function createPlanet(THREE: ThreeModule, load: ReturnType<typeof createTextureLoader>, body: Body, sphere: Three.SphereGeometry): { group: Three.Object3D; planet: Planet } {
+function createPlanet(THREE: ThreeModule, load: ReturnType<typeof createTextureLoader>, body: Body, sphere: Three.SphereGeometry, center: Three.Vector3) {
   const group = new THREE.Group();
   const tilt = new THREE.Group();
   tilt.rotation.z = body.tilt;
@@ -184,7 +179,7 @@ function createPlanet(THREE: ThreeModule, load: ReturnType<typeof createTextureL
   const spinner = new THREE.Mesh(sphere, material);
   spinner.scale.setScalar(body.radius);
   tilt.add(spinner);
-  const planet: Planet = { body, spinner, swirl };
+  const planet: Planet = { body, group, reach: center.length(), spinner, swirl };
   if (body.clouds) {
     const material = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, depthWrite: false, roughness: 1 });
     const clouds = new THREE.Mesh(sphere, material);
@@ -216,7 +211,7 @@ function createPlanet(THREE: ThreeModule, load: ReturnType<typeof createTextureL
   }
   if (body.signature === 'aurora') {
     const uniforms = { uTime: { value: 0 }, uIntensity: { value: 0 } };
-    const shell = new THREE.Mesh(sphere, new THREE.ShaderMaterial({ vertexShader: AURORA_VERTEX, fragmentShader: AURORA_FRAGMENT, uniforms, ...additiveOptions(THREE) }));
+    const shell = new THREE.Mesh(sphere, new THREE.ShaderMaterial({ vertexShader: SHELL_VERTEX, fragmentShader: AURORA_FRAGMENT, uniforms, ...additiveOptions(THREE) }));
     shell.scale.setScalar(body.radius * AURORA_SCALE);
     tilt.add(shell);
     planet.aurora = uniforms;
@@ -226,7 +221,8 @@ function createPlanet(THREE: ThreeModule, load: ReturnType<typeof createTextureL
     tilt.add(ring);
     planet.ripple = ripple;
   }
-  return { group, planet };
+  group.position.copy(center);
+  return planet;
 }
 
 function beltPoint(THREE: ThreeModule, angle: number, radial: number, height: number) {
@@ -259,6 +255,16 @@ function createDust(THREE: ThreeModule) {
   return new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0x9d8f80, size: 0.06, transparent: true, opacity: 0.7, depthWrite: false }));
 }
 
+function prewarm(renderer: Three.WebGLRenderer, scene: Three.Scene, camera: Three.Camera, hidden: Three.Object3D[]) {
+  hidden.forEach((object) => {
+    object.visible = true;
+  });
+  renderer.compile(scene, camera);
+  hidden.forEach((object) => {
+    object.visible = false;
+  });
+}
+
 export function buildStage(modules: Modules) {
   const [THREE] = modules;
   const renderer = createRenderer(THREE);
@@ -282,10 +288,6 @@ export function buildStage(modules: Modules) {
 
   const [sunBody] = BODIES;
   const sunMaterial = new THREE.MeshBasicMaterial({ color: sunBody.color });
-  load(sunBody.texture!, (texture) => {
-    sunMaterial.map = texture;
-    sunMaterial.needsUpdate = true;
-  });
   const sun = new THREE.Mesh(sphere, sunMaterial);
   sun.scale.setScalar(sunBody.radius);
   scene.add(sun);
@@ -313,9 +315,8 @@ export function buildStage(modules: Modules) {
   const planets: Planet[] = [];
   BODIES.forEach((body, i) => {
     if (body.kind !== 'planet' && body.kind !== 'moon') return;
-    const { group, planet } = createPlanet(THREE, load, body, sphere);
-    group.position.copy(centers[i]);
-    scene.add(group);
+    const planet = createPlanet(THREE, load, body, sphere, centers[i]);
+    scene.add(planet.group);
     planets.push(planet);
   });
 
@@ -327,7 +328,16 @@ export function buildStage(modules: Modules) {
     asteroids.length,
   );
   belt.frustumCulled = false;
-  scene.add(belt, createDust(THREE));
+  const dust = createDust(THREE);
+  const supernova = createSupernova(THREE, sphere, SHELL_VERTEX, centers);
+  const blackHole = createBlackHole(THREE, sphere);
+  load(sunBody.texture!, (texture) => {
+    for (const material of [sunMaterial, supernova.shards.material]) {
+      material.map = texture;
+      material.needsUpdate = true;
+    }
+  });
+  scene.add(belt, dust, supernova.shell, supernova.shards, supernova.debris, blackHole.group);
   loadAsteroid(modules, (geometry) => {
     belt.geometry.dispose();
     belt.geometry = geometry;
@@ -352,6 +362,7 @@ export function buildStage(modules: Modules) {
 
   const camera = new THREE.PerspectiveCamera(BASE_FOV, 1, 0.05, FAR);
   camera.position.copy(centers[0]).add(new THREE.Vector3(0, 0, BODIES[0].view));
+  prewarm(renderer, scene, camera, [supernova.shell, supernova.shards, supernova.debris, blackHole.group]);
 
   return {
     THREE,
@@ -367,6 +378,9 @@ export function buildStage(modules: Modules) {
     centers,
     asteroids,
     belt,
+    dust,
+    supernova,
+    blackHole,
     streaks,
     streakUniforms,
     lookTarget: new THREE.Vector3(),

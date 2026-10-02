@@ -24,6 +24,7 @@ function dropPalette() {
 }
 
 export function triggerDrop() {
+  const claimed = currentMode().claimDrop();
   registerDrop();
   fx.drop = 1;
   fx.flash = flashLevel();
@@ -32,7 +33,9 @@ export function triggerDrop() {
   fx.vortexDirection = -fx.vortexDirection;
   if (strobeActive()) fx.invert = flashLevel();
   if (settings.glitch) fx.glitchAmount = 1.2;
-  if (playlist.playing && currentChangeOn() === 'drop') nextPreset();
+  if (claimed) {
+    if (settings.auto) setPalette(dropPalette(), true);
+  } else if (playlist.playing && currentChangeOn() === 'drop') nextPreset();
   else if (settings.auto) {
     setMode(randomOtherMode());
     setPalette(dropPalette(), true);
@@ -43,10 +46,11 @@ export function triggerDrop() {
 export function onBeat() {
   fx.hue += (12 + fx.beat * 20) * settings.colorSpeed * (signal.downbeat ? DOWNBEAT_HUE_BOOST : 1);
   const every = changeOption(currentChangeOn()).beats;
+  const held = currentMode().busy();
   if (playlist.playing) {
     playlist.beats++;
-    if (every && playlist.beats >= every / 2 && signal.phraseBeat % every === 0) nextPreset();
-  } else if (settings.auto && signal.phraseBeat === 0) {
+    if (!held && every && playlist.beats >= every / 2 && signal.phraseBeat % every === 0) nextPreset();
+  } else if (settings.auto && !held && signal.phraseBeat === 0) {
     setMode(settings.mode + 1);
   }
   currentMode().onBeat();

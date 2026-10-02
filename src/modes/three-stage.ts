@@ -105,6 +105,17 @@ export const glowLevel = (kick: number) => 0.7 + signal.mid * 0.8 + kick * 0.8 +
 
 export const cameraJitter = (scale: number) => () => signedRandom(fx.shake * scale);
 
+export type Uniforms = Record<string, Three.IUniform<number>>;
+
+export function withUniforms(material: Three.Material, key: string, uniforms: Uniforms, patch: (shader: Three.WebGLProgramParametersWithUniforms) => void) {
+  material.customProgramCacheKey = () => key;
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    patch(shader);
+  };
+  return uniforms;
+}
+
 export const additiveOptions = (THREE: ThreeModule) => ({
   blending: THREE.AdditiveBlending,
   depthWrite: false,
