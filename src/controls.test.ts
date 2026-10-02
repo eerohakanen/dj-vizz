@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { isMenuBackKey, KEYMAP, keysFor, modeIndexFor, resolveKey, shortcutBlocked, shortcutFor, type ShortcutTarget } from './controls';
+import { isMenuBackKey, KEYMAP, keysFor, modeIndexFor, modeKeyFor, resolveKey, shortcutBlocked, shortcutFor, type ShortcutTarget } from './controls';
 import type { LiveMode } from './store';
 
 vi.mock('./actions', () => ({
@@ -55,6 +55,19 @@ describe('modeIndexFor', () => {
   it('ignores other shifted digits and non-digits', () => {
     expect(modeIndexFor(press('$', 'Digit4', true))).toBeUndefined();
     expect(modeIndexFor(press('a', 'KeyA'))).toBeUndefined();
+  });
+});
+
+describe('modeKeyFor', () => {
+  it('round-trips with modeIndexFor', () => {
+    expect(modeKeyFor(0)).toBe('1');
+    expect(modeKeyFor(9)).toBe('0');
+    expect(modeKeyFor(10)).toBe('⇧1');
+    expect(modeKeyFor(12)).toBe('⇧3');
+  });
+
+  it('has no key past the shifted modes', () => {
+    expect(modeKeyFor(13)).toBeUndefined();
   });
 });
 

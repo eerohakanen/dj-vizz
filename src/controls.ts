@@ -52,6 +52,12 @@ export function modeIndexFor({ key, code, shiftKey }: KeyLike) {
   return digitTyped ? (+key + 9) % 10 : undefined;
 }
 
+export function modeKeyFor(index: number) {
+  if (index < FIRST_SHIFT_MODE) return String((index + 1) % 10);
+  const code = SHIFT_MODE_CODES[index - FIRST_SHIFT_MODE];
+  return code && `⇧${code.slice(-1)}`;
+}
+
 const keyIn =
   (...keys: string[]) =>
   ({ key }: KeyLike) =>

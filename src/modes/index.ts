@@ -14,6 +14,7 @@ import { drawWarp } from './warp';
 
 export interface Mode {
   name: string;
+  description: string;
   draw: () => void;
   trails: boolean;
   fade: number;
@@ -26,8 +27,9 @@ export interface Mode {
   handoff: () => string | undefined;
 }
 
-const defineMode = (name: string, draw: () => void, options?: Partial<Mode>): Mode => ({
+const defineMode = (name: string, description: string, draw: () => void, options?: Partial<Mode>): Mode => ({
   name,
+  description,
   draw,
   trails: true,
   fade: 0.22,
@@ -42,17 +44,17 @@ const defineMode = (name: string, draw: () => void, options?: Partial<Mode>): Mo
 });
 
 export const MODES = [
-  defineMode('Bars', drawBars, { onDrop: dropBars }),
-  defineMode('Radial', drawRadial),
-  defineMode('Tunnel', drawTunnel, { trails: false, onBeat: spawnRing, onDrop: spawnRingVolley }),
-  defineMode('Scope', drawScope, { trails: false, fade: 0.28 }),
-  defineMode('Galaxy', drawGalaxy),
-  defineMode('Retro Grid', drawGrid, { trails: false, fade: 0.55, opaque: true }),
-  defineMode('Warp', drawWarp),
-  defineMode('Blob', drawBlob),
-  defineMode('Hex', drawHex),
-  defineMode('Hypno', drawHypno),
-  defineMode('Deep Space', drawDeepSpace, { trails: false, opaque: true, threeD: true, onBeat: pulseDeepSpace }),
-  defineMode('Model', drawModel, { trails: false, opaque: true, threeD: true, onBeat: pulseModel }),
-  defineMode('Solar System', drawSolar, { trails: false, opaque: true, threeD: true, onBeat: pulseSolar, claimDrop: claimSolarDrop, busy: solarBusy, handoff: solarHandoff }),
+  defineMode('Bars', 'Mirrored spectrum bars with falling peaks', drawBars, { onDrop: dropBars }),
+  defineMode('Radial', 'Spectrum spokes radiating from a pulsing core', drawRadial),
+  defineMode('Tunnel', 'Polygon rings fired down a tunnel on every beat', drawTunnel, { trails: false, onBeat: spawnRing, onDrop: spawnRingVolley }),
+  defineMode('Scope', 'Layered oscilloscope traces of the waveform', drawScope, { trails: false, fade: 0.28 }),
+  defineMode('Galaxy', 'A spiral of stars that swirls with the music', drawGalaxy),
+  defineMode('Retro Grid', 'Synthwave sun over a scrolling neon grid', drawGrid, { trails: false, fade: 0.55, opaque: true }),
+  defineMode('Warp', 'Hyperspace star streaks that thicken with energy', drawWarp),
+  defineMode('Blob', 'Nested organic shapes that breathe with the bass', drawBlob),
+  defineMode('Hex', 'A honeycomb lit by ripples on each beat', drawHex),
+  defineMode('Hypno', 'Twisting spiral arms that pulse with the beat', drawHypno),
+  defineMode('Deep Space', '3D flight through a glowing star field', drawDeepSpace, { trails: false, opaque: true, threeD: true, onBeat: pulseDeepSpace }),
+  defineMode('Model', 'A 3D point-cloud asteroid orbited by the camera', drawModel, { trails: false, opaque: true, threeD: true, onBeat: pulseModel }),
+  defineMode('Solar System', 'A cinematic 3D tour of the planets', drawSolar, { trails: false, opaque: true, threeD: true, onBeat: pulseSolar, claimDrop: claimSolarDrop, busy: solarBusy, handoff: solarHandoff }),
 ];

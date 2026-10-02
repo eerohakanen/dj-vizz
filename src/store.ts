@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 export type Screen = 'landing' | 'presets' | 'setup' | 'live';
 export type LiveMode = 'explore' | 'play' | 'edit';
-export type Overlay = 'exit' | 'help' | 'scenes' | 'tuning';
+export type Overlay = 'exit' | 'help' | 'modes' | 'scenes' | 'tuning';
 
 const listeners = new Set<() => void>();
 let version = 0;

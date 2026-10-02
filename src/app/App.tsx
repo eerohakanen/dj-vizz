@@ -7,6 +7,7 @@ import { ui, useEngine } from '@/store';
 import { AnalysisHud } from './AnalysisHud';
 import { ExitDialog } from './ExitDialog';
 import { HelpDialog } from './HelpDialog';
+import { ModeLibrary } from './ModeLibrary';
 import { Landing } from './Landing';
 import { PresetsMenu } from './PresetsMenu';
 import { RevealButton } from './RevealButton';
@@ -42,6 +43,7 @@ export function App() {
           <SceneEditor />
           <TuningSheet />
           <HelpDialog />
+          <ModeLibrary />
           <ExitDialog onExit={leaveVisualizer} />
           {ui.debug && <AnalysisHud />}
         </>

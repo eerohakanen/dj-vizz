@@ -3,6 +3,7 @@ import {
   AudioLines,
   CircleHelp,
   EyeOff,
+  LayoutGrid,
   Layers,
   ListMusic,
   LogOut,
@@ -56,7 +57,7 @@ import { audio } from '@/audio/input';
 import { setPalette } from '@/color';
 import { shortcutFor, shortcutKeys } from '@/controls';
 import { triggerDrop } from '@/events';
-import { pixelateAvailable, setMode } from '@/mode';
+import { currentMode, pixelateAvailable } from '@/mode';
 import { MODES } from '@/modes/index';
 import { PALETTES } from '@/palettes';
 import { currentFolder, playlist } from '@/presets/library';
@@ -89,23 +90,16 @@ function Hint({ label, shortcut, children }: { label: string; shortcut?: string;
   );
 }
 
-function ModeSelect() {
+const MODE_NAMES = MODES.map((mode) => mode.name);
+
+function ModeButton() {
   return (
-    <Select value={String(settings.mode)} onValueChange={(value) => setMode(+value)}>
-      <Hint label="Visual mode" shortcut={`${shortcutFor('mode')}, ${shortcutFor('modeStep')}`}>
-        <SelectTrigger size="sm" className="w-36">
-          <span className="text-muted-foreground">Mode</span>
-          <SelectValue />
-        </SelectTrigger>
-      </Hint>
-      <SelectContent position="popper" side="top" align="start">
-        {MODES.map((mode, index) => (
-          <SelectItem key={mode.name} value={String(index)}>
-            {mode.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Hint label="Visual mode library" shortcut={`${shortcutFor('mode')}, ${shortcutFor('modeStep')}`}>
+      <Button variant="outline" size="sm" onClick={() => openOverlay('modes')}>
+        <LayoutGrid />
+        <StableLabel value={currentMode().name} options={MODE_NAMES} />
+      </Button>
+    </Hint>
   );
 }
 
@@ -512,7 +506,7 @@ function StudioControls() {
     <>
       <AudioPopover />
       <Separator orientation="vertical" className="h-6! max-sm:hidden" />
-      <ModeSelect />
+      <ModeButton />
       <PaletteSelect />
       <EffectsMenu />
       <Hint label="Tune levels and effect strength" shortcut={shortcutFor('tune')}>
