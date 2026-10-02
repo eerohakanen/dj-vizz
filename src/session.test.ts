@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CALIBRATION_CONTROLS, LOOK_CONTROLS } from './tuning';
+import { GLOBAL_CONTROLS, MODE_CONTROLS } from './tuning';
 
 vi.mock('./canvas', () => ({ output: {}, transitionCtx: {}, transitionFrame: {} }));
 vi.mock('./modes/index', () => ({ MODES: Array.from({ length: 12 }, (_, index) => ({ name: `Mode ${index}` })) }));
-vi.mock('./mode', () => ({ setMode: vi.fn() }));
+vi.mock('./modes/tunnel', () => ({ resetRings: vi.fn() }));
+vi.mock('./effects/transition', async (importOriginal) => ({ ...(await importOriginal<object>()), startTransition: vi.fn() }));
 vi.mock('./color', () => ({ setPalette: vi.fn() }));
 
 let stored: Map<string, string>;
@@ -20,9 +21,9 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('tuning groups', () => {
-  it('splits Input and Detection from Response', () => {
-    expect(CALIBRATION_CONTROLS.map(({ key }) => key)).toEqual(['gain', 'beatSensitivity', 'dropSensitivity']);
-    expect(LOOK_CONTROLS.map(({ key }) => key)).toEqual(['reactivity', 'contrast', 'motion', 'punch', 'colorSpeed', 'pixelSize', 'pixelGap']);
+  it('keeps only motion, punch and colour speed per mode', () => {
+    expect(GLOBAL_CONTROLS.map(({ key }) => key)).toEqual(['gain', 'beatSensitivity', 'dropSensitivity', 'reactivity', 'contrast', 'pixelSize', 'pixelGap']);
+    expect(MODE_CONTROLS.map(({ key }) => key)).toEqual(['motion', 'punch', 'colorSpeed']);
   });
 });
 
@@ -82,15 +83,48 @@ describe('session persistence', () => {
   it('saves calibration and session under separate keys', async () => {
     const { saveSession } = await import('./session');
     const { settings } = await import('./state');
-    Object.assign(settings, { gain: 33, autoGain: false, mode: 4, reactivity: 2 });
+    Object.assign(settings, { gain: 33, autoGain: false, mode: 4, reactivity: 2, motion: 1.5 });
     saveSession();
     const calibration = JSON.parse(stored.get('djviz.calibration.v1')!);
     const session = JSON.parse(stored.get('djviz.session.v2')!);
-    expect(calibration).toEqual({ autoGain: false, inputDevice: '', gain: 33, beatSensitivity: 1, dropSensitivity: 1 });
-    expect(session).toMatchObject({ look: { mode: 4, tuning: { reactivity: 2 } } });
+    const profiles = JSON.parse(stored.get('djviz.modeTuning.v1')!);
+    expect(calibration).toEqual({
+      autoGain: false,
+      inputDevice: '',
+      gain: 33,
+      beatSensitivity: 1,
+      dropSensitivity: 1,
+      reactivity: 2,
+      contrast: 0.7,
+      pixelSize: 12,
+      pixelGap: 0.15,
+    });
+    expect(profiles).toEqual({ 'Mode 4': { motion: 1.5, punch: 1, colorSpeed: 1 } });
+    expect(session).toMatchObject({ look: { mode: 4 } });
+    expect(session.look).not.toHaveProperty('tuning');
     expect(session).not.toHaveProperty('source');
     expect(session).not.toHaveProperty('changeOn');
     expect(session).not.toHaveProperty('shuffle');
-    expect(session.look.tuning).not.toHaveProperty('gain');
+  });
+
+  it('restores each mode profile and applies the current one', async () => {
+    stored.set('djviz.session.v2', JSON.stringify({ look: { mode: 2 } }));
+    stored.set('djviz.modeTuning.v1', JSON.stringify({ 'Mode 2': { motion: 1.6, punch: 9 }, 'Mode 3': { motion: 0.2 } }));
+    const { restoreSession } = await import('./session');
+    const { settings } = await import('./state');
+    const { modeTuning } = await import('./modeTuning');
+    restoreSession();
+    expect(settings).toMatchObject({ mode: 2, motion: 1.6, punch: 2, colorSpeed: 1 });
+    expect(modeTuning['Mode 3']).toEqual({ motion: 0.2, punch: 1, colorSpeed: 1 });
+  });
+
+  it('seeds only the current mode from tuning saved in an older session', async () => {
+    stored.set('djviz.session.v2', JSON.stringify({ look: { mode: 2, tuning: { motion: 1.6, contrast: 0.3 } } }));
+    const { restoreSession } = await import('./session');
+    const { settings } = await import('./state');
+    const { modeTuning } = await import('./modeTuning');
+    restoreSession();
+    expect(settings).toMatchObject({ motion: 1.6, contrast: 0.3 });
+    expect(Object.keys(modeTuning)).toEqual(['Mode 2']);
   });
 });

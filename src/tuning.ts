@@ -13,12 +13,13 @@ export interface TuningControl {
   description: string;
 }
 
-export type TuningGroup = 'calibration' | 'look';
+export type TuningGroup = 'global' | 'mode';
 
 interface TuningSection {
   title: string;
   group: TuningGroup;
   placement?: 'effects';
+  whilePlaying?: true;
   description: string;
   controls: TuningControl[];
 }
@@ -40,13 +41,15 @@ export const GAIN_CONTROL: TuningControl = {
 export const TUNING_SECTIONS = [
   {
     title: 'Input',
-    group: 'calibration',
+    group: 'global',
+    whilePlaying: true,
     description: 'What the visualizer hears.',
     controls: [GAIN_CONTROL],
   },
   {
     title: 'Detection',
-    group: 'calibration',
+    group: 'global',
+    whilePlaying: true,
     description: 'What counts as a hit or a drop.',
     controls: [
       {
@@ -73,7 +76,7 @@ export const TUNING_SECTIONS = [
   },
   {
     title: 'Response',
-    group: 'look',
+    group: 'global',
     description: 'How strongly the visuals react to what is heard.',
     controls: [
       {
@@ -83,7 +86,7 @@ export const TUNING_SECTIONS = [
         max: 3,
         step: 0.1,
         format: multiplier,
-        description: 'Master strength for everything below. One knob to make the whole show calmer or wilder.',
+        description: 'Master strength for every mode. One knob to make the whole show calmer or wilder.',
       },
       {
         key: 'contrast',
@@ -95,6 +98,13 @@ export const TUNING_SECTIONS = [
         description:
           'How strongly small changes in the music swing the visuals. High values exaggerate every shift; zero follows raw loudness.',
       },
+    ],
+  },
+  {
+    title: 'Movement',
+    group: 'mode',
+    description: 'How this mode moves with the music.',
+    controls: [
       {
         key: 'motion',
         label: 'Motion speed',
@@ -126,7 +136,7 @@ export const TUNING_SECTIONS = [
   },
   {
     title: 'Pixelate',
-    group: 'look',
+    group: 'global',
     placement: 'effects',
     description: 'How the picture breaks into pixels while Pixelate is on.',
     controls: [
@@ -154,8 +164,8 @@ export const TUNING_SECTIONS = [
 
 type SectionIn<G extends TuningGroup> = Extract<(typeof TUNING_SECTIONS)[number], { group: G }>;
 
-export type LookTuningKey = SectionIn<'look'>['controls'][number]['key'];
-export type CalibrationTuningKey = Exclude<TuningKey, LookTuningKey>;
+export type ModeTuningKey = SectionIn<'mode'>['controls'][number]['key'];
+export type GlobalTuningKey = Exclude<TuningKey, ModeTuningKey>;
 
 interface GroupControl<K extends TuningKey> extends TuningControl {
   key: K;
@@ -164,12 +174,12 @@ interface GroupControl<K extends TuningKey> extends TuningControl {
 const controlsIn = <K extends TuningKey>(group: TuningGroup) =>
   TUNING_SECTIONS.filter((section) => section.group === group).flatMap((section) => section.controls) as GroupControl<K>[];
 
-export const LOOK_CONTROLS = controlsIn<LookTuningKey>('look');
-export const CALIBRATION_CONTROLS = controlsIn<CalibrationTuningKey>('calibration');
+export const MODE_CONTROLS = controlsIn<ModeTuningKey>('mode');
+export const GLOBAL_CONTROLS = controlsIn<GlobalTuningKey>('global');
 
 export const EFFECT_CONTROLS = Object.fromEntries(
   TUNING_SECTIONS.filter((section) => section.placement === 'effects').flatMap((section) => section.controls.map((control) => [control.key, control])),
 ) as Record<'pixelSize' | 'pixelGap', TuningControl>;
 
 export const tuningSectionsFor = (mode: LiveMode) =>
-  TUNING_SECTIONS.filter((section) => (mode === 'play' ? section.group === 'calibration' : section.placement !== 'effects'));
+  TUNING_SECTIONS.filter((section) => (mode === 'play' ? 'whilePlaying' in section : section.placement !== 'effects'));

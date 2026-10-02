@@ -9,6 +9,7 @@ import { loadPreset, nextPreset, previousPreset, startPlaybackAt } from './prese
 import { settings, TUNING_DEFAULTS } from './state';
 import { notify, ui, type LiveMode, type Overlay, type Screen } from './store';
 import { MIRROR_NAMES, PIXEL_NAMES, PSY_NAMES } from './effects/options';
+import { MODE_CONTROLS } from './tuning';
 
 type Settings = typeof settings;
 
@@ -48,6 +49,11 @@ export const nudgeGain = (step: number) => setGain(settings.gain + step);
 
 export function resetTuning() {
   Object.assign(settings, TUNING_DEFAULTS);
+  notify();
+}
+
+export function resetModeTuning() {
+  for (const { key } of MODE_CONTROLS) settings[key] = TUNING_DEFAULTS[key];
   notify();
 }
 

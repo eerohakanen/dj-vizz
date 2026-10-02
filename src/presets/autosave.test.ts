@@ -69,7 +69,7 @@ describe('autosave', () => {
 
 
   it('leaves out-of-range imported values untouched when a scene is only opened', () => {
-    const scene: Preset = { ...createPreset('Wild', 30, 2), mirror: 9, tuning: { motion: 50 } };
+    const scene: Preset = { ...createPreset('Wild', 30, 2), mirror: 9 };
     library.folders[0].presets = [createPreset('One', 0, 1), structuredClone(scene)];
     loadPreset(1);
     vi.advanceTimersByTime(1000);
@@ -78,7 +78,7 @@ describe('autosave', () => {
   });
 
   it('saves the normalised look once the user changes an opened scene', () => {
-    library.folders[0].presets = [createPreset('One', 0, 1), { ...createPreset('Wild', 30, 2), tuning: { motion: 50 } }];
+    library.folders[0].presets = [createPreset('One', 0, 1), createPreset('Wild', 30, 2)];
     loadPreset(1);
     setSetting('psy', 2);
     vi.advanceTimersByTime(300);

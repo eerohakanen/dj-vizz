@@ -6,14 +6,14 @@ import { isNumber, isRecord } from '../lib/utils';
 import { clamp, wrap } from '../math';
 import { MODES } from '../modes/index';
 import { PALETTES } from '../palettes';
-import { INTENSITY_SCALE, settings, TUNING_DEFAULTS } from '../state';
+import { INTENSITY_SCALE, settings } from '../state';
 import { notify } from '../store';
-import { LOOK_CONTROLS, type LookTuningKey } from '../tuning';
+import type { TuningKey } from '../tuning';
 import { MIRROR_NAMES, PIXEL_NAMES, PSY_NAMES } from '../effects/options';
 
 const STORAGE_KEY = 'djviz.presets.v4';
 const LEGACY_STORAGE_KEYS = ['djviz.presets.v3', 'djviz.presets.v2', 'djviz.presets.v1'];
-const LIBRARY_VERSION = 5;
+const LIBRARY_VERSION = 6;
 const INTENSITY_SCALE_VERSION = 5;
 const SCENE_SHAPE_VERSION = 3;
 const PALETTE_SHIFT_VERSION = 2;
@@ -23,8 +23,6 @@ export interface PresetEffects {
   lasers: boolean;
 }
 
-export type LookTuning = Partial<Record<LookTuningKey, number>>;
-
 export interface Preset {
   name: string;
   mode: number;
@@ -33,7 +31,6 @@ export interface Preset {
   psy: number;
   pixelate: number;
   effects: PresetEffects;
-  tuning: LookTuning;
 }
 
 export interface Folder {
@@ -58,9 +55,6 @@ const LEGACY_EFFECT_KEYS: Record<keyof PresetEffects, string> = { lasers: 'las' 
 
 const DEFAULT_EFFECTS: PresetEffects = { lasers: false };
 
-const lookTuning = (source: Partial<Record<LookTuningKey, number>>): LookTuning =>
-  Object.fromEntries(LOOK_CONTROLS.map(({ key }) => [key, source[key]]));
-
 const effectFlags = (read: (key: EffectKey) => boolean): PresetEffects =>
   Object.fromEntries(EFFECT_KEYS.map((key) => [key, read(key)])) as Record<EffectKey, boolean>;
 
@@ -76,7 +70,6 @@ export const createPreset = (
   mirror: 0,
   psy: 0,
   pixelate: 0,
-  tuning: lookTuning(TUNING_DEFAULTS),
   ...overrides,
   effects: { ...DEFAULT_EFFECTS, ...overrides?.effects },
 });
@@ -111,9 +104,6 @@ function migratePreset(raw: Record<string, unknown>, version: number): Preset {
   let palette = numberOr(legacy ? raw.pal : raw.palette, 1);
   if (version < PALETTE_SHIFT_VERSION && palette > REMOVED_PALETTE) palette--;
   const effectSource = legacy ? raw : isRecord(raw.effects) ? raw.effects : {};
-  const tuningSource: Record<string, unknown> = isRecord(raw.tuning) ? { ...raw.tuning } : {};
-  if (legacy && isNumber(raw.react)) tuningSource.reactivity = raw.react;
-  if (version < INTENSITY_SCALE_VERSION && isNumber(tuningSource.reactivity)) tuningSource.reactivity /= INTENSITY_SCALE;
   const effect = (key: EffectKey) => {
     const value = effectSource[legacy ? LEGACY_EFFECT_KEYS[key] : key];
     return typeof value === 'boolean' ? value : DEFAULT_EFFECTS[key];
@@ -126,13 +116,17 @@ function migratePreset(raw: Record<string, unknown>, version: number): Preset {
     psy: numberOr(raw.psy, 0),
     pixelate: numberOr(raw.pixelate, 0),
     effects: effectFlags(effect),
-    tuning: Object.fromEntries(
-      LOOK_CONTROLS.flatMap(({ key }) => (isNumber(tuningSource[key]) ? [[key, tuningSource[key]]] : [])),
-    ),
   };
 }
 
 export const readPreset = (raw: Record<string, unknown>, version = LIBRARY_VERSION) => migratePreset(raw, version);
+
+export function readLegacyTuning(raw: Record<string, unknown>, version = LIBRARY_VERSION): Partial<Record<TuningKey, number>> {
+  const tuning: Record<string, unknown> = isRecord(raw.tuning) ? { ...raw.tuning } : {};
+  if (version < SCENE_SHAPE_VERSION && isNumber(raw.react)) tuning.reactivity = raw.react;
+  if (version < INTENSITY_SCALE_VERSION && isNumber(tuning.reactivity)) tuning.reactivity /= INTENSITY_SCALE;
+  return Object.fromEntries(Object.entries(tuning).filter((entry): entry is [TuningKey, number] => isNumber(entry[1])));
+}
 
 function migrateFolders(data: Record<string, unknown>): Folder[] {
   if (!Array.isArray(data.folders)) throw new Error('Not a preset library');
@@ -194,7 +188,7 @@ export function saveLibrary() {
 
 export const currentFolder = (): Folder | undefined => library.folders[library.cur];
 
-type Look = Pick<typeof settings, 'mode' | 'palette' | 'psy' | 'mirror' | 'pixelate' | keyof PresetEffects | LookTuningKey>;
+type Look = Pick<typeof settings, 'mode' | 'palette' | 'psy' | 'mirror' | 'pixelate' | keyof PresetEffects>;
 
 const presetFromLook = (name: string, look: Look): Preset => ({
   name,
@@ -204,7 +198,6 @@ const presetFromLook = (name: string, look: Look): Preset => ({
   psy: look.psy,
   pixelate: look.pixelate,
   effects: effectFlags((key) => look[key]),
-  tuning: lookTuning(look),
 });
 
 export const snapshot = (name: string) => presetFromLook(name, settings);
@@ -217,12 +210,6 @@ export function resolveLook(preset: Preset): Look {
     mirror: wrap(numberOr(preset.mirror, 0), MIRROR_NAMES.length),
     pixelate: wrap(numberOr(preset.pixelate, 0), PIXEL_NAMES.length),
     ...Object.fromEntries(EFFECT_KEYS.map((key) => [key, !!preset.effects?.[key]])),
-    ...Object.fromEntries(
-      LOOK_CONTROLS.map(({ key, min, max }) => {
-        const value = preset.tuning?.[key];
-        return [key, isNumber(value) ? clamp(value, min, max) : TUNING_DEFAULTS[key]];
-      }),
-    ),
   } as Look;
 }
 

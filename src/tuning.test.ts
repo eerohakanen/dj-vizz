@@ -2,10 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { TUNING_SECTIONS, tuningSectionsFor } from './tuning';
 
 describe('tuningSectionsFor', () => {
-  it('keeps only calibration sections while playing', () => {
-    const groups = tuningSectionsFor('play').map((section) => section.group);
-    expect(groups.length).toBeGreaterThan(0);
-    expect(new Set(groups)).toEqual(new Set(['calibration']));
+  it('keeps only Input and Detection while playing', () => {
+    expect(tuningSectionsFor('play').map((section) => section.title)).toEqual(['Input', 'Detection']);
   });
 
   it('leaves effect-specific sections to the effects panel while exploring or editing', () => {

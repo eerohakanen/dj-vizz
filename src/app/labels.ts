@@ -3,7 +3,6 @@ import { WINDOW_UNSUPPORTED, canCaptureWindow, captureMicrophone, captureWindow 
 import type { AudioSourceKind } from '@/audio/sources';
 import { isDesktop } from '@/desktop';
 import type { MenuScreen } from '@/actions';
-import type { LiveMode } from '@/store';
 import type { TuningGroup } from '@/tuning';
 
 export interface SourceOption {
@@ -44,13 +43,10 @@ export const SOURCES: readonly SourceOption[] = [
 
 export const sourceLabel = (kind: AudioSourceKind | null) => SOURCES.find((source) => source.kind === kind)?.label;
 
-const TUNING_GROUP_NOTES: Record<TuningGroup, string> = {
-  calibration: 'Remembered on this device.',
-  look: 'Saved with each scene.',
+export const TUNING_GROUP_NOTES: Record<TuningGroup, string> = {
+  global: 'Remembered on this device for every mode.',
+  mode: 'Remembered separately for each mode.',
 };
-
-export const tuningGroupNote = (group: TuningGroup, mode: LiveMode) =>
-  group === 'look' && mode !== 'edit' ? '' : TUNING_GROUP_NOTES[group];
 
 export const MENU_SCREEN_LABELS: Record<MenuScreen, string> = {
   landing: 'Home',

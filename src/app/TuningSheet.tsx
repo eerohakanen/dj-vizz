@@ -4,12 +4,13 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
-import { resetTuning, setGain, setSetting } from '@/actions';
+import { resetModeTuning, resetTuning, setGain, setSetting } from '@/actions';
 import { shortcutFor } from '@/controls';
+import { currentMode } from '@/mode';
 import { settings, signal } from '@/state';
 import { ui, useEngine } from '@/store';
 import { GAIN_CONTROL, tuningSectionsFor } from '@/tuning';
-import { tuningGroupNote } from './labels';
+import { TUNING_GROUP_NOTES } from './labels';
 import { cn } from '@/lib/utils';
 import { blurAfterPointerClick, FLOATING_PANEL, SIDE_PANEL_WIDTH, MeterBar, SliderRow, SourcePicker, useOverlay, useTicker } from './shared';
 
@@ -57,6 +58,7 @@ export function TuningSheet() {
   useEngine();
   const overlay = useOverlay('tuning');
   const playing = ui.liveMode === 'play';
+  const modeName = currentMode().name;
   return (
     <Sheet {...overlay} modal={false}>
       <SheetContent
@@ -76,11 +78,19 @@ export function TuningSheet() {
           {tuningSectionsFor(ui.liveMode).map((section, index) => (
             <section key={section.title} className="space-y-5">
               {index > 0 && <Separator />}
-              <div>
-                <h3 className="text-sm font-semibold">{section.title}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {section.description} {tuningGroupNote(section.group, ui.liveMode)}
-                </p>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-semibold">{section.group === 'mode' ? modeName : section.title}</h3>
+                  <p className="text-xs text-muted-foreground">
+                    {section.description} {TUNING_GROUP_NOTES[section.group]}
+                  </p>
+                </div>
+                {section.group === 'mode' && (
+                  <Button variant="ghost" size="xs" onClick={resetModeTuning} aria-label={`Reset ${modeName}`}>
+                    <RotateCcw />
+                    Reset
+                  </Button>
+                )}
               </div>
               {index === 0 && <SourcePicker />}
               {section.controls.map((control) =>
