@@ -12,7 +12,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -31,9 +31,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.os }}
-          path: |
-            release/DJ-Visualizer-mac.dmg
-            release/DJ-Visualizer-windows.exe
+          path: release/DJ-Visualizer-windows.exe
           if-no-files-found: ignore
 
   release:

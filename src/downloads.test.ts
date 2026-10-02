@@ -6,9 +6,9 @@ const WINDOWS = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (K
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
 
 describe('downloadsFor', () => {
-  it('puts the visitor platform first', () => {
-    expect(downloadsFor(MAC).map((download) => download.platform)).toEqual(['mac', 'windows']);
-    expect(downloadsFor(WINDOWS).map((download) => download.platform)).toEqual(['windows', 'mac']);
+  it('offers the Windows installer on every desktop', () => {
+    expect(downloadsFor(MAC).map((download) => download.platform)).toEqual(['windows']);
+    expect(downloadsFor(WINDOWS).map((download) => download.platform)).toEqual(['windows']);
   });
 
   it('offers nothing on phones', () => {
@@ -16,6 +16,6 @@ describe('downloadsFor', () => {
   });
 
   it('links to the latest release assets', () => {
-    expect(downloadsFor(MAC)[0].url).toBe('https://github.com/eerohakanen/dj-vizz/releases/latest/download/DJ-Visualizer-mac.dmg');
+    expect(downloadsFor(WINDOWS)[0].url).toBe('https://github.com/eerohakanen/dj-vizz/releases/latest/download/DJ-Visualizer-windows.exe');
   });
 });
