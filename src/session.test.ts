@@ -107,6 +107,22 @@ describe('session persistence', () => {
     expect(session).not.toHaveProperty('shuffle');
   });
 
+  it('shifts modes past the removed one in unversioned sessions', async () => {
+    stored.set('djviz.session.v2', JSON.stringify({ look: { mode: 10 } }));
+    const { restoreSession } = await import('./session');
+    const { settings } = await import('./state');
+    restoreSession();
+    expect(settings.mode).toBe(9);
+  });
+
+  it('keeps modes in versioned sessions', async () => {
+    stored.set('djviz.session.v2', JSON.stringify({ version: 7, look: { mode: 10 } }));
+    const { restoreSession } = await import('./session');
+    const { settings } = await import('./state');
+    restoreSession();
+    expect(settings.mode).toBe(10);
+  });
+
   it('restores each mode profile and applies the current one', async () => {
     stored.set('djviz.session.v2', JSON.stringify({ look: { mode: 2 } }));
     stored.set('djviz.modeTuning.v1', JSON.stringify({ 'Mode 2': { motion: 1.6, punch: 9 }, 'Mode 3': { motion: 0.2 } }));

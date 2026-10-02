@@ -64,7 +64,7 @@ beforeEach(() => {
 describe('migrateLibrary', () => {
   it('maps v2 short keys into the v3 shape and drops calibration', () => {
     const migrated = migrateLibrary(legacyLibrary(2));
-    expect(migrated?.version).toBe(6);
+    expect(migrated?.version).toBe(7);
     expect(migrated?.folders[0].presets[0]).toEqual({
       name: 'Old look',
       mode: 3,
@@ -100,6 +100,14 @@ describe('migrateLibrary', () => {
     expect(migrated?.folders[1]).toMatchObject({ transition: 'random', changeOn: 'b32', shuffle: false });
   });
 
+  it('shifts modes past the removed one for v6 libraries', () => {
+    const presets = [9, 10, 11].map((mode) => createPreset('Old', mode, 1));
+    const migrated = migrateLibrary({ version: 6, cur: 0, folders: [{ name: 'Mine', presets }] });
+    expect(migrated?.folders[0].presets.map((preset) => preset.mode)).toEqual([9, 9, 10]);
+    const current = migrateLibrary({ version: 7, cur: 0, folders: [{ name: 'Mine', presets }] });
+    expect(current?.folders[0].presets.map((preset) => preset.mode)).toEqual([9, 10, 11]);
+  });
+
   it('drops tuning stored in v5 scenes', () => {
     const preset = { ...createPreset('Current', 0, 1), tuning: { motion: 0.6 } };
     const migrated = migrateLibrary({ version: 5, cur: 0, folders: [{ name: 'Mine', presets: [preset] }] });
@@ -107,7 +115,7 @@ describe('migrateLibrary', () => {
   });
 
   it('accepts an empty library but rejects non-arrays', () => {
-    expect(migrateLibrary({ version: 5, cur: 3, folders: [] })).toEqual({ version: 6, cur: 0, folders: [] });
+    expect(migrateLibrary({ version: 5, cur: 3, folders: [] })).toEqual({ version: 7, cur: 0, folders: [] });
     expect(migrateLibrary({ version: 2 })).toBeNull();
     expect(migrateLibrary({ version: 2, folders: 'x' })).toBeNull();
     expect(migrateLibrary('nope')).toBeNull();

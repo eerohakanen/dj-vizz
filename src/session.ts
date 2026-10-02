@@ -3,7 +3,7 @@ import { isNumber, isRecord } from './lib/utils';
 import { clamp } from './math';
 import { currentMode } from './mode';
 import { applyModeTuning, captureModeTuning, modeTuning, restoreModeTuning } from './modeTuning';
-import { readLegacyTuning, readPreset, resolveLook, snapshot } from './presets/library';
+import { LIBRARY_VERSION, readLegacyTuning, readPreset, resolveLook, snapshot } from './presets/library';
 import { settings } from './state';
 import { subscribe } from './store';
 import { GLOBAL_CONTROLS, MODE_CONTROLS, type TuningControl } from './tuning';
@@ -13,6 +13,7 @@ const MODE_TUNING_KEY = 'djviz.modeTuning.v1';
 const SESSION_KEY = 'djviz.session.v2';
 const LEGACY_SESSION_KEY = 'djviz.session.v1';
 const LEGACY_LOOK_VERSION = 4;
+const UNVERSIONED_LOOK_VERSION = 6;
 const SAVE_DELAY_MS = 500;
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -48,6 +49,7 @@ const modeTuningSnapshot = () => {
 };
 
 const sessionSnapshot = () => ({
+  version: LIBRARY_VERSION,
   look: snapshot(''),
   auto: settings.auto,
 });
@@ -88,7 +90,7 @@ function restoreLook(stored: Record<string, unknown>, version?: number) {
 export function restoreSession() {
   const session = read(SESSION_KEY);
   const legacySession = session ? null : read(LEGACY_SESSION_KEY);
-  if (session) restoreLook(session);
+  if (session) restoreLook(session, isNumber(session.version) ? session.version : UNVERSIONED_LOOK_VERSION);
   else if (legacySession) restoreLook(legacySession, LEGACY_LOOK_VERSION);
   const calibration = read(CALIBRATION_KEY);
   if (calibration) restoreCalibration(calibration);

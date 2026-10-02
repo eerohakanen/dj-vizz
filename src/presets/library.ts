@@ -13,10 +13,11 @@ import { MIRROR_NAMES, PIXEL_NAMES, PSY_NAMES } from '../effects/options';
 
 const STORAGE_KEY = 'djviz.presets.v4';
 const LEGACY_STORAGE_KEYS = ['djviz.presets.v3', 'djviz.presets.v2', 'djviz.presets.v1'];
-const LIBRARY_VERSION = 6;
+export const LIBRARY_VERSION = 7;
 const INTENSITY_SCALE_VERSION = 5;
 const SCENE_SHAPE_VERSION = 3;
 const PALETTE_SHIFT_VERSION = 2;
+const MODE_SHIFT_VERSION = 7;
 export const NAME_LIMIT = 40;
 
 export interface PresetEffects {
@@ -85,7 +86,7 @@ const starterLibrary = (): Library => ({
       shuffle: false,
       presets: [
         createPreset('Warp · Fire', 6, 5),
-        createPreset('Hypno vortex', 9, 7, { psy: 1 }),
+        createPreset('Radial vortex', 1, 7, { psy: 1 }),
         createPreset('Kaleido galaxy', 4, 1, { mirror: 3 }),
         createPreset('Laser tunnel', 2, 11, { effects: { lasers: true } }),
         createPreset('Liquid bars', 0, 2, { psy: 2 }),
@@ -96,6 +97,7 @@ const starterLibrary = (): Library => ({
 });
 
 const REMOVED_PALETTE = 1;
+const REMOVED_MODE = 9;
 
 const numberOr = (value: unknown, fallback: number) => (isNumber(value) ? value : fallback);
 
@@ -103,6 +105,8 @@ function migratePreset(raw: Record<string, unknown>, version: number): Preset {
   const legacy = version < SCENE_SHAPE_VERSION;
   let palette = numberOr(legacy ? raw.pal : raw.palette, 1);
   if (version < PALETTE_SHIFT_VERSION && palette > REMOVED_PALETTE) palette--;
+  let mode = numberOr(raw.mode, 0);
+  if (version < MODE_SHIFT_VERSION && mode > REMOVED_MODE) mode--;
   const effectSource = legacy ? raw : isRecord(raw.effects) ? raw.effects : {};
   const effect = (key: EffectKey) => {
     const value = effectSource[legacy ? LEGACY_EFFECT_KEYS[key] : key];
@@ -110,7 +114,7 @@ function migratePreset(raw: Record<string, unknown>, version: number): Preset {
   };
   return {
     name: String(raw.name || 'Preset').slice(0, NAME_LIMIT),
-    mode: numberOr(raw.mode, 0),
+    mode,
     palette,
     mirror: numberOr(legacy ? raw.kal : raw.mirror, 0),
     psy: numberOr(raw.psy, 0),

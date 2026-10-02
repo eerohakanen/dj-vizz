@@ -4,7 +4,6 @@ import { drawDeepSpace, pulseDeepSpace } from './deepspace';
 import { drawGalaxy } from './galaxy';
 import { drawGrid } from './grid';
 import { drawHex } from './hex';
-import { drawHypno } from './hypno';
 import { drawModel, pulseModel } from './model';
 import { drawRadial } from './radial';
 import { drawScope } from './scope';
@@ -53,7 +52,6 @@ export const MODES = [
   defineMode('Warp', 'Hyperspace star streaks that thicken with energy', drawWarp),
   defineMode('Blob', 'Nested organic shapes that breathe with the bass', drawBlob),
   defineMode('Hex', 'A honeycomb lit by ripples on each beat', drawHex),
-  defineMode('Hypno', 'Twisting spiral arms that pulse with the beat', drawHypno),
   defineMode('Deep Space', '3D flight through a glowing star field', drawDeepSpace, { trails: false, opaque: true, threeD: true, onBeat: pulseDeepSpace }),
   defineMode('Model', 'A 3D point-cloud asteroid orbited by the camera', drawModel, { trails: false, opaque: true, threeD: true, onBeat: pulseModel }),
   defineMode('Solar System', 'A cinematic 3D tour of the planets', drawSolar, { trails: false, opaque: true, threeD: true, onBeat: pulseSolar, claimDrop: claimSolarDrop, busy: solarBusy, handoff: solarHandoff }),
