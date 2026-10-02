@@ -18,13 +18,11 @@ export const TUNING_DEFAULTS = {
   noiseGate: 0.03,
   beatSensitivity: 1,
   dropSensitivity: 1,
-  reactivity: 1.6,
+  reactivity: 1,
   contrast: 0.7,
   motion: 1,
   punch: 1,
-  flashes: 1,
   colorSpeed: 1,
-  trailLength: 0.86,
   pixelSize: 12,
   pixelGap: 0.15,
 };
@@ -35,10 +33,7 @@ export const settings = {
   psy: 0,
   mirror: 0,
   pixelate: 0,
-  trails: true,
   lasers: false,
-  glitch: false,
-  strobe: false,
   auto: false,
   ...TUNING_DEFAULTS,
 };
@@ -82,13 +77,9 @@ export const fx = {
   keyHue: 0,
   drop: 0,
   calm: 0,
-  flash: 0,
   shake: 0,
   spin: 0,
   scroll: 0,
-  strobeFlash: 0,
-  invert: 0,
-  glitchAmount: 0,
   vortexDirection: 1,
   laserMix: 0,
   vortexMix: 0,
@@ -96,3 +87,7 @@ export const fx = {
   rainbowMix: 0,
   tripMix: 0,
 };
+
+export const INTENSITY_SCALE = 0.2;
+
+export const intensity = () => settings.reactivity * INTENSITY_SCALE;

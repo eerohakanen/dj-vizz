@@ -46,7 +46,7 @@ const legacyPreset = {
   stb: true,
   gain: 80,
   agc: false,
-  react: 2.2,
+  react: 0.4,
   tuning: { motion: 1.5, noiseGate: 0.1, beatSensitivity: 1.8, dropSensitivity: 0.2 },
 };
 
@@ -54,7 +54,7 @@ const legacyLibrary = (version: number) => ({ version, cur: 0, folders: [{ name:
 
 const calibration = { gain: 12, autoGain: false, noiseGate: 0.1, beatSensitivity: 1.7, dropSensitivity: 0.3 };
 
-const defaultLook = { mode: 0, palette: 1, psy: 0, mirror: 0, pixelate: 0, trails: true, lasers: false, glitch: false, strobe: false };
+const defaultLook = { mode: 0, palette: 1, psy: 0, mirror: 0, pixelate: 0, lasers: false };
 
 beforeEach(() => {
   Object.assign(settings, TUNING_DEFAULTS, defaultLook);
@@ -63,7 +63,7 @@ beforeEach(() => {
 describe('migrateLibrary', () => {
   it('maps v2 short keys into the v3 shape and drops calibration', () => {
     const migrated = migrateLibrary(legacyLibrary(2));
-    expect(migrated?.version).toBe(4);
+    expect(migrated?.version).toBe(5);
     expect(migrated?.folders[0].presets[0]).toEqual({
       name: 'Old look',
       mode: 3,
@@ -71,8 +71,8 @@ describe('migrateLibrary', () => {
       mirror: 2,
       psy: 1,
       pixelate: 0,
-      effects: { trails: false, lasers: true, glitch: false, strobe: true },
-      tuning: { reactivity: 2.2, motion: 1.5 },
+      effects: { lasers: true },
+      tuning: { reactivity: 2, motion: 1.5 },
     });
   });
 
@@ -80,10 +80,10 @@ describe('migrateLibrary', () => {
     expect(migrateLibrary(legacyLibrary(1))?.folders[0].presets[0].palette).toBe(3);
   });
 
-  it('keeps v3 presets as they are and gives folders playback defaults', () => {
-    const preset = createPreset('Kept', 2, 5, { mirror: 1, effects: { glitch: true } });
+  it('keeps v3 presets apart from rescaled intensity and gives folders playback defaults', () => {
+    const preset = createPreset('Kept', 2, 5, { mirror: 1, effects: { lasers: true }, tuning: { reactivity: 0.4 } });
     const migrated = migrateLibrary({ version: 3, cur: 0, folders: [{ name: 'Mine', presets: [preset] }] });
-    expect(migrated?.folders[0].presets[0]).toEqual(preset);
+    expect(migrated?.folders[0].presets[0]).toEqual({ ...preset, tuning: { ...preset.tuning, reactivity: 2 } });
     expect(migrated?.folders[0]).toMatchObject({ transition: 'random', changeOn: 'b32', shuffle: false });
   });
 
@@ -100,8 +100,20 @@ describe('migrateLibrary', () => {
     expect(migrated?.folders[1]).toMatchObject({ transition: 'random', changeOn: 'b32', shuffle: false });
   });
 
+  it('rescales intensity from v4 so the old 0.2 becomes the new default', () => {
+    const preset = createPreset('Calm', 0, 1, { tuning: { reactivity: 0.2 } });
+    const migrated = migrateLibrary({ version: 4, cur: 0, folders: [{ name: 'Mine', presets: [preset] }] });
+    expect(migrated?.folders[0].presets[0].tuning.reactivity).toBeCloseTo(1);
+  });
+
+  it('leaves v5 intensity alone', () => {
+    const preset = createPreset('Current', 0, 1, { tuning: { reactivity: 0.6 } });
+    const migrated = migrateLibrary({ version: 5, cur: 0, folders: [{ name: 'Mine', presets: [preset] }] });
+    expect(migrated?.folders[0].presets[0].tuning.reactivity).toBe(0.6);
+  });
+
   it('accepts an empty library but rejects non-arrays', () => {
-    expect(migrateLibrary({ version: 4, cur: 3, folders: [] })).toEqual({ version: 4, cur: 0, folders: [] });
+    expect(migrateLibrary({ version: 5, cur: 3, folders: [] })).toEqual({ version: 5, cur: 0, folders: [] });
     expect(migrateLibrary({ version: 2 })).toBeNull();
     expect(migrateLibrary({ version: 2, folders: 'x' })).toBeNull();
     expect(migrateLibrary('nope')).toBeNull();
@@ -139,16 +151,16 @@ describe('applyPreset', () => {
     Object.assign(settings, calibration);
     applyPreset(migrateLibrary(legacyLibrary(2))!.folders[0].presets[0]);
     expect(settings).toMatchObject(calibration);
-    expect(settings).toMatchObject({ mode: 3, palette: 4, mirror: 2, psy: 1, lasers: true, strobe: true, trails: false });
-    expect(settings.reactivity).toBe(2.2);
+    expect(settings).toMatchObject({ mode: 3, palette: 4, mirror: 2, psy: 1, lasers: true });
+    expect(settings.reactivity).toBe(2);
     expect(settings.motion).toBe(1.5);
   });
 
   it('clamps look tuning to each control range', () => {
-    applyPreset(createPreset('Wild', 0, 0, { tuning: { reactivity: 99, trailLength: 0.1, flashes: -1 } }));
+    applyPreset(createPreset('Wild', 0, 0, { tuning: { reactivity: 99, pixelGap: 5, punch: -1 } }));
     expect(settings.reactivity).toBe(3);
-    expect(settings.trailLength).toBe(0.8);
-    expect(settings.flashes).toBe(0);
+    expect(settings.pixelGap).toBe(0.6);
+    expect(settings.punch).toBe(0);
   });
 
   it('clamps pixel size and spacing and wraps the pixel shape', () => {
@@ -177,16 +189,11 @@ describe('applyPreset', () => {
       mirror: 3,
       psy: 4,
       pixelate: 2,
-      trails: false,
       lasers: true,
-      glitch: true,
-      strobe: false,
       reactivity: 2.5,
       motion: 0.4,
       punch: 1.6,
-      flashes: 0.3,
       colorSpeed: 0.2,
-      trailLength: 0.9,
       pixelSize: 30,
       pixelGap: 0.4,
     };
@@ -222,10 +229,10 @@ describe('stored v3 and v4 libraries', () => {
   };
 
   it('loads a v3 library when v4 is missing', async () => {
-    const preset = createPreset('Kept', 2, 5);
+    const preset = createPreset('Kept', 2, 5, { tuning: { reactivity: 0.4 } });
     const fresh = await load([['djviz.presets.v3', { version: 3, cur: 0, folders: [{ name: 'Mine', presets: [preset] }] }]]);
     expect(fresh.library.folders[0]).toMatchObject({ name: 'Mine', transition: 'random', shuffle: false });
-    expect(fresh.library.folders[0].presets[0]).toEqual(preset);
+    expect(fresh.library.folders[0].presets[0]).toEqual({ ...preset, tuning: { ...preset.tuning, reactivity: 2 } });
   });
 
   it('keeps a deleted Default deleted after reload', async () => {

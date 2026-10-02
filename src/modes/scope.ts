@@ -3,7 +3,7 @@ import { bandAt } from '../audio/spectrum';
 import { findTrigger } from '../audio/trigger';
 import { sceneCtx as ctx } from '../canvas';
 import { color } from '../color';
-import { clock, fx, settings, signal, view } from '../state';
+import { clock, fx, intensity, settings, signal, view } from '../state';
 
 const TRACES = [
   { amplitude: 1, direction: 1, lineWidth: 3 },
@@ -17,7 +17,7 @@ export function drawScope() {
   const { waveform } = audio;
   const start = findTrigger(waveform);
   const span = waveform.length >> 1;
-  const scale = height * 0.45 * signal.gainFactor * signal.gate * settings.reactivity * 0.7 * (1 + fx.drop);
+  const scale = height * 0.45 * signal.gainFactor * signal.gate * intensity() * 0.7 * (1 + fx.drop);
   ctx.lineJoin = 'round';
   TRACES.forEach(({ amplitude, direction, lineWidth }, k) => {
     ctx.strokeStyle = color(k * 0.8, 0.9 - k * 0.2);

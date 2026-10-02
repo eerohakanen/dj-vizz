@@ -1,19 +1,18 @@
-import { BACKGROUND, fillWith, outputCtx, scene, sceneCtx } from './canvas';
-import { color } from './color';
+import { BACKGROUND, outputCtx, scene, sceneCtx } from './canvas';
 import { applyBloom } from './effects/bloom';
-import { applyGlitch } from './effects/glitch';
 import { drawLasers } from './effects/lasers';
 import { applyMirror } from './effects/mirror';
 import { applyPixelate } from './effects/pixelate';
 import { drawTransition } from './effects/transition';
-import { clamp01, frameAlpha, frameScale, signedRandom } from './math';
+import { frameAlpha, frameScale, signedRandom } from './math';
 import { currentMode, setMode } from './mode';
 import { MODES } from './modes/index';
-import { flashLevel, motionScale, shakeLevel } from './motion';
-import { clock, fx, settings, signal, view } from './state';
+import { motionScale, shakeLevel } from './motion';
+import { clock, fx, intensity, settings, signal, view } from './state';
 
 const LIQUID_STRIPS = 40;
 const WASH_RATE = 0.3;
+const TRAIL_LENGTH = 0.86;
 const TRAIL_CALM_SHORTENING = 0.15;
 const CALM_DAMPING = 0.6;
 
@@ -30,7 +29,7 @@ function feedPreviousFrame(ctx: CanvasRenderingContext2D) {
   const cx = width / 2 + Math.sin(clock.time * 0.7) * width * 0.07 * fx.vortexMix;
   const cy = height / 2 + Math.cos(clock.time * 0.53) * height * 0.07 * fx.vortexMix;
   const rotation =
-    ((signal.mid - 0.25) * 0.01 * gate + fx.drop * 0.04) * settings.reactivity +
+    ((signal.mid - 0.25) * 0.01 * gate + fx.drop * 0.04) * intensity() +
     fx.vortexMix * (0.015 + punchMid * 0.04) * fx.vortexDirection;
   const zoom =
     1 +
@@ -38,7 +37,7 @@ function feedPreviousFrame(ctx: CanvasRenderingContext2D) {
     fx.drop * 0.05 +
     fx.vortexMix * (0.012 + punchBass * 0.035);
   ctx.save();
-  ctx.globalAlpha = Math.min(0.95, frameAlpha(settings.trailLength * (1 - TRAIL_CALM_SHORTENING * fx.calm) + fx.vortexMix * 0.07, clock.delta));
+  ctx.globalAlpha = Math.min(0.95, frameAlpha(TRAIL_LENGTH * (1 - TRAIL_CALM_SHORTENING * fx.calm) + fx.vortexMix * 0.07, clock.delta));
   ctx.translate(cx, cy);
   ctx.rotate(rotation * step);
   ctx.scale(Math.pow(zoom, step), Math.pow(zoom, step));
@@ -49,7 +48,7 @@ function feedPreviousFrame(ctx: CanvasRenderingContext2D) {
 
 function applyBeatShake(ctx: CanvasRenderingContext2D) {
   const { width, height, pixelRatio } = view;
-  const punch = 1 + (fx.kick * 0.04 + fx.beat * 0.015 + fx.drop * 0.1) * settings.reactivity * shakeLevel() * signal.gate;
+  const punch = 1 + (fx.kick * 0.04 + fx.beat * 0.015 + fx.drop * 0.1) * intensity() * shakeLevel() * signal.gate;
   const shake = (fx.shake + signal.tension * signal.tension * 0.12 * motionScale()) * calmScale();
   const jitter = () => signedRandom(shake * 60 * pixelRatio);
   ctx.translate(width / 2 + jitter(), height / 2 + jitter());
@@ -63,7 +62,7 @@ export function renderScene() {
   const mode = currentMode();
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
-  const feedback = (settings.trails && mode.trails) || fx.vortexMix > 0.02;
+  const feedback = mode.trails || fx.vortexMix > 0.02;
   if (feedback && signal.gate > 0.01) feedPreviousFrame(ctx);
   ctx.globalAlpha = frameAlpha(feedback ? 0.13 : mode.fade, clock.delta);
   ctx.fillStyle = BACKGROUND;
@@ -121,24 +120,6 @@ function drawRainbowWash(o: CanvasRenderingContext2D) {
   o.restore();
 }
 
-function drawFlashes(o: CanvasRenderingContext2D) {
-  const calm = calmScale();
-  if (fx.tripMix > 0.02 && fx.beat > 0.3) fillWith(o, 'difference', color(0, fx.beat * 0.55 * fx.tripMix * flashLevel() * calm, 60));
-  if (fx.strobeFlash > 0.02) fillWith(o, 'lighter', color(0, fx.strobeFlash * 0.45 * calm, 70));
-  if (fx.snare > 0.05) fillWith(o, 'lighter', color(0.5, fx.snare * 0.18 * Math.min(1, settings.reactivity) * flashLevel() * calm, 75));
-  if (fx.invert > 0.02) {
-    o.globalAlpha = clamp01(fx.invert);
-    fillWith(o, 'difference', '#fff');
-    o.globalAlpha = 1;
-  }
-  o.globalCompositeOperation = 'source-over';
-  if (fx.flash > 0.02) {
-    o.globalAlpha = clamp01(fx.flash * 0.75 * calm);
-    fillWith(o, 'source-over', '#fff');
-    o.globalAlpha = 1;
-  }
-}
-
 export function presentFrame() {
   const o = outputCtx;
   o.globalCompositeOperation = 'source-over';
@@ -151,6 +132,4 @@ export function presentFrame() {
   o.globalCompositeOperation = 'source-over';
   applyPixelate(o);
   drawTransition(o);
-  applyGlitch(o);
-  drawFlashes(o);
 }

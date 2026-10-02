@@ -2,12 +2,12 @@ import { registerDrop } from './audio/drop';
 import { KEY_CONFIDENCE_FLOOR, keyHue, keyPalette, setPalette } from './color';
 import { currentMode, setMode } from './mode';
 import { MODES } from './modes/index';
-import { flashLevel, shakeLevel, strobeActive } from './motion';
+import { shakeLevel } from './motion';
 import { PALETTES } from './palettes';
 import { changeOption } from './presets/change';
 import { playlist } from './presets/library';
 import { currentChangeOn, nextPreset } from './presets/playlist';
-import { fx, settings, signal } from './state';
+import { fx, intensity, settings, signal } from './state';
 
 const DOWNBEAT_HUE_BOOST = 1.6;
 
@@ -27,12 +27,9 @@ export function triggerDrop() {
   const claimed = currentMode().claimDrop();
   registerDrop();
   fx.drop = 1;
-  fx.flash = flashLevel();
   fx.shake = 1.4 * shakeLevel();
   fx.hue += 120 * settings.colorSpeed;
   fx.vortexDirection = -fx.vortexDirection;
-  if (strobeActive()) fx.invert = flashLevel();
-  if (settings.glitch) fx.glitchAmount = 1.2;
   if (claimed) {
     if (settings.auto) setPalette(dropPalette(), true);
   } else if (playlist.playing && currentChangeOn() === 'drop') nextPreset();
@@ -54,9 +51,7 @@ export function onBeat() {
     setMode(settings.mode + 1);
   }
   currentMode().onBeat();
-  fx.shake = Math.max(fx.shake, 0.22 * fx.beat * settings.reactivity * shakeLevel());
-  if (strobeActive()) fx.strobeFlash = flashLevel();
-  if (settings.glitch && fx.beat > 0.6) fx.glitchAmount = Math.max(fx.glitchAmount, fx.beat);
+  fx.shake = Math.max(fx.shake, 0.22 * fx.beat * intensity() * shakeLevel());
 }
 
 export function onKick(strength: number) {

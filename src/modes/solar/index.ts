@@ -3,7 +3,7 @@ import { tensionPeak } from '../../audio/musical';
 import { BEATS_PER_BAR } from '../../audio/tempo';
 import { fillWith, sceneCtx } from '../../canvas';
 import { clamp01, smoothstep } from '../../math';
-import { flashLevel, motionScale } from '../../motion';
+import { motionScale } from '../../motion';
 import { clock, fx, settings, signal } from '../../state';
 import { advanceSway, cameraJitter, createKick, fitStage, lazyStage, paint, paintPalette, presentStage, sway } from '../three-stage';
 import { loadModules } from './assets';
@@ -288,7 +288,7 @@ function updateStreaks(stage: SolarStage) {
 function whiteOutLevel() {
   const dive = smoothstep(clamp01((phaseLevel(cataclysm, 'dive') - 0.7) / 0.3));
   const jump = tour.jumping && traveling(tour) ? warpLevel(tour) ** 8 * WHITE_OUT : 0;
-  return Math.max(dive, jump) * flashLevel();
+  return Math.max(dive, jump) * motionScale();
 }
 
 function whiteOut() {
@@ -342,7 +342,6 @@ export function solarHandoff() {
   if (!stage || cataclysm.phase !== 'done') return undefined;
   restoreTour(stage);
   resetCataclysm(cataclysm);
-  fx.flash = flashLevel();
   return 'Deep Space';
 }
 

@@ -7,7 +7,9 @@ import { subscribe } from './store';
 import { CALIBRATION_CONTROLS } from './tuning';
 
 const CALIBRATION_KEY = 'djviz.calibration.v1';
-const SESSION_KEY = 'djviz.session.v1';
+const SESSION_KEY = 'djviz.session.v2';
+const LEGACY_SESSION_KEY = 'djviz.session.v1';
+const LEGACY_LOOK_VERSION = 4;
 const SAVE_DELAY_MS = 500;
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -62,8 +64,8 @@ function restoreCalibration(stored: Record<string, unknown>) {
   }
 }
 
-function restoreLook(stored: Record<string, unknown>) {
-  if (isRecord(stored.look)) Object.assign(settings, resolveLook(readPreset(stored.look)));
+function restoreLook(stored: Record<string, unknown>, version?: number) {
+  if (isRecord(stored.look)) Object.assign(settings, resolveLook(readPreset(stored.look, version)));
   if (typeof stored.auto === 'boolean') settings.auto = stored.auto;
 }
 
@@ -71,6 +73,8 @@ export function restoreSession() {
   const calibration = read(CALIBRATION_KEY);
   if (calibration) restoreCalibration(calibration);
   const session = read(SESSION_KEY);
+  const legacySession = session ? null : read(LEGACY_SESSION_KEY);
   if (session) restoreLook(session);
+  else if (legacySession) restoreLook(legacySession, LEGACY_LOOK_VERSION);
   subscribe(scheduleSave);
 }

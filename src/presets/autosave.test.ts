@@ -4,7 +4,6 @@ import { ui } from '../store';
 import { flushAutosave, startAutosave } from './autosave';
 import { createPreset, currentFolder, library, playlist, snapshot, type Preset } from './library';
 import { loadPreset } from './playlist';
-import { comfort } from '../motion';
 import { setSetting } from '../actions';
 
 vi.mock('../canvas', () => ({ output: {}, transitionCtx: {}, transitionFrame: {} }));
@@ -25,7 +24,7 @@ let stop: () => void;
 beforeEach(() => {
   vi.useFakeTimers();
   vi.stubGlobal('localStorage', { getItem: () => null, setItem: vi.fn() });
-  Object.assign(settings, TUNING_DEFAULTS, { mode: 0, palette: 1, psy: 0, mirror: 0, trails: true, lasers: false, glitch: false, strobe: false });
+  Object.assign(settings, TUNING_DEFAULTS, { mode: 0, palette: 1, psy: 0, mirror: 0, lasers: false });
   library.cur = 0;
   library.folders[0].presets = [createPreset('One', 0, 1)];
   playlist.selected = 0;
@@ -35,8 +34,6 @@ beforeEach(() => {
 
 afterEach(() => {
   stop();
-  comfort.reduced = false;
-  comfort.strobeOptIn = false;
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -70,15 +67,6 @@ describe('autosave', () => {
     expect(currentFolder()?.presets[0].psy).toBe(0);
   });
 
-  it('leaves a strobe scene untouched when opened under reduced motion', () => {
-    comfort.reduced = true;
-    const scene = createPreset('Strobe', 3, 2, { effects: { strobe: true } });
-    library.folders[0].presets = [createPreset('One', 0, 1), structuredClone(scene)];
-    loadPreset(1);
-    vi.advanceTimersByTime(1000);
-    flushAutosave();
-    expect(currentFolder()?.presets[1]).toEqual(scene);
-  });
 
   it('leaves out-of-range imported values untouched when a scene is only opened', () => {
     const scene: Preset = { ...createPreset('Wild', 30, 2), mirror: 9, tuning: { motion: 50 } };

@@ -35,7 +35,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { effectEnabled, strobeActive } from '@/motion';
 import {
   fullscreenSupported,
   newPreset,
@@ -75,10 +74,7 @@ const NO_INPUT_LABEL = 'No input';
 const AUDIO_LABELS = [...SOURCES.map((source) => source.label), NO_INPUT_LABEL];
 
 const TOGGLES = [
-  { key: 'trails', label: 'Trails' },
   { key: 'lasers', label: 'Lasers' },
-  { key: 'glitch', label: 'Glitch' },
-  { key: 'strobe', label: 'Strobe' },
 ] as const;
 
 function Hint({ label, shortcut, children }: { label: string; shortcut?: string; children: ReactNode }) {
@@ -192,7 +188,7 @@ function EffectSelect({ id, names, value, onChange, unavailable }: EffectSelectP
 const pixelateOn = () => settings.pixelate > 0 && pixelateAvailable();
 
 function activeEffectCount() {
-  return TOGGLES.filter(({ key }) => effectEnabled(key)).length + Number(settings.psy > 0) + Number(settings.mirror > 0) + Number(pixelateOn());
+  return TOGGLES.filter(({ key }) => settings[key]).length + Number(settings.psy > 0) + Number(settings.mirror > 0) + Number(pixelateOn());
 }
 
 function EffectsMenu() {
@@ -268,12 +264,8 @@ function EffectsMenu() {
               id={`effect-${key}`}
               label={label}
               shortcut={shortcutFor(key)}
-              control={<Switch id={`effect-${key}`} checked={effectEnabled(key)} onCheckedChange={(checked) => setSetting(key, checked)} />}
+              control={<Switch id={`effect-${key}`} checked={settings[key]} onCheckedChange={(checked) => setSetting(key, checked)} />}
             >
-              {key === 'trails' && settings.trails && <SliderRow compact control={EFFECT_CONTROLS.trailLength} />}
-              {key === 'strobe' && strobeActive() && (
-                <p className="text-xs text-muted-foreground">Strobe flashes on beats. Avoid if sensitive to flashing light.</p>
-              )}
             </EffectRow>
           ))}
         </section>

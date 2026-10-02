@@ -99,10 +99,10 @@ describe('resolveKey', () => {
     expect(idIn('explore', ' ')).toBeUndefined();
   });
 
-  it('gives E to trails while editing and to edit while playing', () => {
+  it('gives E to edit only while playing', () => {
     expect(idIn('play', 'e')).toBe('edit');
-    expect(idIn('edit', 'e')).toBe('trails');
-    expect(idIn('explore', 'e')).toBe('trails');
+    expect(idIn('edit', 'e')).toBeUndefined();
+    expect(idIn('explore', 'e')).toBeUndefined();
   });
 
   it('toggles the scene list with M only in edit mode', () => {

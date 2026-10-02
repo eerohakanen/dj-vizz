@@ -29,10 +29,6 @@ export const bloomLevels = [createCanvas(), createCanvas(), createCanvas(), crea
 export const bloomContexts = bloomLevels.map((canvas) => canvas.getContext('2d')!);
 export const bloomMix = createCanvas();
 export const bloomMixCtx = bloomMix.getContext('2d')!;
-export const glitchRed = createCanvas();
-export const glitchRedCtx = glitchRed.getContext('2d')!;
-export const glitchCyan = createCanvas();
-export const glitchCyanCtx = glitchCyan.getContext('2d')!;
 export const pixelSmall = createCanvas();
 export const pixelSmallCtx = pixelSmall.getContext('2d')!;
 export const pixelTile = createCanvas();
@@ -91,8 +87,8 @@ export function resize() {
     canvas.width = levelWidth;
     canvas.height = levelHeight;
   }
-  glitchRed.width = glitchCyan.width = bloomMix.width = bloomLevels[1].width;
-  glitchRed.height = glitchCyan.height = bloomMix.height = bloomLevels[1].height;
+  bloomMix.width = bloomLevels[1].width;
+  bloomMix.height = bloomLevels[1].height;
 
   kaleidoCtx.globalCompositeOperation = transitionCtx.globalCompositeOperation = 'copy';
   bloomContexts.forEach((ctx) => {

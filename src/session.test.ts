@@ -22,7 +22,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe('tuning groups', () => {
   it('splits Input and Detection from Response', () => {
     expect(CALIBRATION_CONTROLS.map(({ key }) => key)).toEqual(['gain', 'noiseGate', 'beatSensitivity', 'dropSensitivity']);
-    expect(LOOK_CONTROLS.map(({ key }) => key)).toEqual(['reactivity', 'contrast', 'motion', 'punch', 'flashes', 'colorSpeed', 'trailLength', 'pixelSize', 'pixelGap']);
+    expect(LOOK_CONTROLS.map(({ key }) => key)).toEqual(['reactivity', 'contrast', 'motion', 'punch', 'colorSpeed', 'pixelSize', 'pixelGap']);
   });
 });
 
@@ -43,7 +43,7 @@ describe('session persistence', () => {
     const { settings } = await import('./state');
     restoreSession();
     expect(settings).toMatchObject({ autoGain: false, gain: 100, noiseGate: 0.05, beatSensitivity: 1.4, dropSensitivity: 1 });
-    expect(settings).toMatchObject({ mode: 5, palette: 3, mirror: 2, psy: 1, lasers: true, trails: true, motion: 1.7, reactivity: 3, auto: true });
+    expect(settings).toMatchObject({ mode: 5, palette: 3, mirror: 2, psy: 1, lasers: true, motion: 1.7, reactivity: 3, auto: true });
   });
 
   it('ignores legacy playback keys and a stored source', async () => {
@@ -52,6 +52,20 @@ describe('session persistence', () => {
     const { currentFolder } = await import('./presets/library');
     restoreSession();
     expect(currentFolder()?.changeOn).toBe('b32');
+  });
+
+  it('rescales intensity from the old session and keeps the new one as saved', async () => {
+    stored.set('djviz.session.v1', JSON.stringify({ look: { tuning: { reactivity: 0.2 } } }));
+    const { restoreSession } = await import('./session');
+    const { settings } = await import('./state');
+    restoreSession();
+    expect(settings.reactivity).toBeCloseTo(1);
+    stored.set('djviz.session.v2', JSON.stringify({ look: { tuning: { reactivity: 0.6 } } }));
+    vi.resetModules();
+    const fresh = await import('./session');
+    const freshState = await import('./state');
+    fresh.restoreSession();
+    expect(freshState.settings.reactivity).toBe(0.6);
   });
 
   it('remembers the chosen input device with calibration', async () => {
@@ -71,7 +85,7 @@ describe('session persistence', () => {
     Object.assign(settings, { gain: 33, autoGain: false, mode: 4, reactivity: 2 });
     saveSession();
     const calibration = JSON.parse(stored.get('djviz.calibration.v1')!);
-    const session = JSON.parse(stored.get('djviz.session.v1')!);
+    const session = JSON.parse(stored.get('djviz.session.v2')!);
     expect(calibration).toEqual({ autoGain: false, inputDevice: '', gain: 33, noiseGate: 0.03, beatSensitivity: 1, dropSensitivity: 1 });
     expect(session).toMatchObject({ look: { mode: 4, tuning: { reactivity: 2 } } });
     expect(session).not.toHaveProperty('source');

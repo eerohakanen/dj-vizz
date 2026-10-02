@@ -44,7 +44,7 @@ const defineMode = (name: string, draw: () => void, options?: Partial<Mode>): Mo
 export const MODES = [
   defineMode('Bars', drawBars, { onDrop: dropBars }),
   defineMode('Radial', drawRadial),
-  defineMode('Tunnel', drawTunnel, { onBeat: spawnRing, onDrop: spawnRingVolley }),
+  defineMode('Tunnel', drawTunnel, { trails: false, onBeat: spawnRing, onDrop: spawnRingVolley }),
   defineMode('Scope', drawScope, { trails: false, fade: 0.28 }),
   defineMode('Galaxy', drawGalaxy),
   defineMode('Retro Grid', drawGrid, { trails: false, fade: 0.55, opaque: true }),

@@ -1,5 +1,5 @@
 import { approach, decay, follow, frameScale, lerp, stretch, updatePeak } from '../math';
-import { clock, fx, settings, signal, TUNING_DEFAULTS } from '../state';
+import { clock, fx, intensity, settings, signal } from '../state';
 import { detectDrums } from './drums';
 import { type DropFrame, dropState, stepDrop } from './drop';
 import { audio } from './input';
@@ -9,8 +9,8 @@ import { advanceTempo, beatStrength, heldBeatPeriod, isLocked } from './tempo';
 
 const SPECTRUM_ATTACK = 0.03;
 const SPECTRUM_RELEASE = 0.1;
-const BEAT_BOOST = 0.1;
-const DROP_BOOST = 0.05;
+const BEAT_BOOST = 0.0625;
+const DROP_BOOST = 0.03125;
 const CALM_RISE = 0.8;
 const CALM_FALL = 2.5;
 const FLOOR_RISE = 4;
@@ -86,18 +86,14 @@ function computeGain(raw: number, delta: number) {
 function decayEffects(delta: number) {
   fx.beat *= decay(0.002, delta);
   fx.drop *= decay(0.4, delta);
-  fx.flash *= decay(0.02, delta);
   fx.shake *= decay(0.02, delta);
-  fx.strobeFlash *= decay(0.00005, delta);
-  fx.invert *= decay(0.0001, delta);
-  fx.glitchAmount *= decay(0.01, delta);
   fx.kick *= decay(0.004, delta);
   fx.snare *= decay(0.002, delta);
   fx.hat *= decay(0.0005, delta);
 }
 
 function fillSpectrum(frequencies: Uint8Array, gain: number, delta: number) {
-  const boost = 1 + (fx.beat * BEAT_BOOST + fx.drop * DROP_BOOST) * (settings.reactivity / TUNING_DEFAULTS.reactivity);
+  const boost = 1 + (fx.beat * BEAT_BOOST + fx.drop * DROP_BOOST) * intensity();
   for (let i = 0; i < BAND_COUNT; i++) {
     let max = 0;
     for (let j = bandStart[i]; j < bandEnd[i]; j++) if (frequencies[j] > max) max = frequencies[j];
@@ -157,7 +153,7 @@ export function analyse(events: AnalysisEvents) {
   signal.gate = Math.min(1, Math.max(0, (signal.energy - settings.noiseGate) / 0.07));
 
   const { gate } = signal;
-  const react = settings.reactivity;
+  const react = intensity();
   const motion = react * settings.motion;
   signal.bass = Math.min(1.2, emphasise(bassRange, bass, delta) * gate);
   signal.mid = Math.min(1.2, emphasise(midRange, mid, delta) * gate);

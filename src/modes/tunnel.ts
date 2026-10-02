@@ -7,10 +7,12 @@ import { clock, fx, settings, signal, view } from '../state';
 const SIDE_COUNTS = [4, 5, 6, 8];
 const SEGMENTS_PER_SIDE = 6;
 const BAND_BULGE = 0.22;
-const MAX_RINGS = 40;
+const MAX_RINGS = 18;
 const MIN_MOTION = 0.02;
-const VOLLEY_RINGS = 4;
-const VOLLEY_SPACING = 60;
+const VOLLEY_RINGS = 2;
+const VOLLEY_SPACING = 90;
+const SPAWN_BASE = 0.02;
+const SPAWN_PUNCH = 0.15;
 
 const point = { x: 0, y: 0 };
 
@@ -48,7 +50,7 @@ export function drawTunnel() {
   const sides = SIDE_COUNTS[Math.floor(fx.scroll / 8) % SIDE_COUNTS.length];
   const step = frameScale(clock.delta);
   if (signal.gate < 0.02) resetRings();
-  else if (settings.motion > MIN_MOTION && Math.random() < 1 - Math.pow(1 - signal.gate * (0.04 + signal.punchMid * 0.3), step)) spawnRing();
+  else if (settings.motion > MIN_MOTION && Math.random() < 1 - Math.pow(1 - signal.gate * (SPAWN_BASE + signal.punchMid * SPAWN_PUNCH), step)) spawnRing();
   let alive = 0;
   for (const ring of rings) {
     if (ring.alpha <= 0.02) continue;

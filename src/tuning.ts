@@ -79,7 +79,7 @@ export const TUNING_SECTIONS = [
         step: 0.05,
         format: (value) => (value === 0 ? 'Off' : multiplier(value)),
         description:
-          'How readily a build-up followed by a heavy return fires an automatic drop: big flash, shockwaves and a mode change if Auto-switch is on. Off means drops only fire from the Drop button.',
+          'How readily a build-up followed by a heavy return fires an automatic drop: shockwaves and a mode change if Auto-switch is on. Off means drops only fire from the Drop button.',
       },
     ],
   },
@@ -126,15 +126,6 @@ export const TUNING_SECTIONS = [
         description: 'How much the picture zooms and shakes on kicks, beats and drops.',
       },
       {
-        key: 'flashes',
-        label: 'Flash brightness',
-        min: 0,
-        max: 1,
-        step: 0.05,
-        format: percentOf(0, 1),
-        description: 'Brightness of snare flashes, drop flashes and the strobe. Turn it down if flashing light is uncomfortable.',
-      },
-      {
         key: 'colorSpeed',
         label: 'Colour speed',
         min: 0,
@@ -142,23 +133,6 @@ export const TUNING_SECTIONS = [
         step: 0.05,
         format: multiplier,
         description: 'How far colours move through the palette on each beat and drop. Zero keeps colours steady.',
-      },
-    ],
-  },
-  {
-    title: 'Trails',
-    group: 'look',
-    placement: 'effects',
-    description: 'How motion smears while Trails is on.',
-    controls: [
-      {
-        key: 'trailLength',
-        label: 'Length',
-        min: 0.8,
-        max: 0.95,
-        step: 0.005,
-        format: percentOf(0.8, 0.95),
-        description: 'How long motion trails linger. Longer trails smear movement into streaks.',
       },
     ],
   },
@@ -207,7 +181,7 @@ export const CALIBRATION_CONTROLS = controlsIn<CalibrationTuningKey>('calibratio
 
 export const EFFECT_CONTROLS = Object.fromEntries(
   TUNING_SECTIONS.filter((section) => section.placement === 'effects').flatMap((section) => section.controls.map((control) => [control.key, control])),
-) as Record<'trailLength' | 'pixelSize' | 'pixelGap', TuningControl>;
+) as Record<'pixelSize' | 'pixelGap', TuningControl>;
 
 export const tuningSectionsFor = (mode: LiveMode) =>
   TUNING_SECTIONS.filter((section) => (mode === 'play' ? section.group === 'calibration' : section.placement !== 'effects'));

@@ -2,7 +2,6 @@ import { showMessage } from './dom';
 import { startTransition } from './effects/transition';
 import { clamp, wrap } from './math';
 import { PIXELATE_UNAVAILABLE, pixelateAvailable } from './mode';
-import { allowStrobe, revokeStrobe, strobeActive } from './motion';
 import { audio, disconnectAudio } from './audio/input';
 import { flushAutosave } from './presets/autosave';
 import { addScene, createFolder, currentFolder, duplicateScene, playlist, selectFolder } from './presets/library';
@@ -14,14 +13,13 @@ import { MIRROR_NAMES, PIXEL_NAMES, PSY_NAMES } from './effects/options';
 type Settings = typeof settings;
 
 export function setSetting<K extends keyof Settings>(key: K, value: Settings[K]) {
-  if (key === 'strobe') (value ? allowStrobe : revokeStrobe)();
   settings[key] = value;
   notify();
 }
 
 type BooleanSetting = { [K in keyof Settings]: Settings[K] extends boolean ? K : never }[keyof Settings];
 
-export const toggleSetting = (key: BooleanSetting) => setSetting(key, key === 'strobe' ? !strobeActive() : !settings[key]);
+export const toggleSetting = (key: BooleanSetting) => setSetting(key, !settings[key]);
 
 export function setMirror(index: number) {
   startTransition();

@@ -6,23 +6,21 @@ import { isNumber, isRecord } from '../lib/utils';
 import { clamp, wrap } from '../math';
 import { MODES } from '../modes/index';
 import { PALETTES } from '../palettes';
-import { settings, TUNING_DEFAULTS } from '../state';
+import { INTENSITY_SCALE, settings, TUNING_DEFAULTS } from '../state';
 import { notify } from '../store';
 import { LOOK_CONTROLS, type LookTuningKey } from '../tuning';
 import { MIRROR_NAMES, PIXEL_NAMES, PSY_NAMES } from '../effects/options';
 
 const STORAGE_KEY = 'djviz.presets.v4';
 const LEGACY_STORAGE_KEYS = ['djviz.presets.v3', 'djviz.presets.v2', 'djviz.presets.v1'];
-const LIBRARY_VERSION = 4;
+const LIBRARY_VERSION = 5;
+const INTENSITY_SCALE_VERSION = 5;
 const SCENE_SHAPE_VERSION = 3;
 const PALETTE_SHIFT_VERSION = 2;
 export const NAME_LIMIT = 40;
 
 export interface PresetEffects {
-  trails: boolean;
   lasers: boolean;
-  glitch: boolean;
-  strobe: boolean;
 }
 
 export type LookTuning = Partial<Record<LookTuningKey, number>>;
@@ -52,13 +50,13 @@ interface Library {
   folders: Folder[];
 }
 
-const EFFECT_KEYS = ['trails', 'lasers', 'glitch', 'strobe'] as const;
+const EFFECT_KEYS = ['lasers'] as const;
 
 type EffectKey = (typeof EFFECT_KEYS)[number];
 
-const LEGACY_EFFECT_KEYS: Record<keyof PresetEffects, string> = { trails: 'fb', lasers: 'las', glitch: 'gl', strobe: 'stb' };
+const LEGACY_EFFECT_KEYS: Record<keyof PresetEffects, string> = { lasers: 'las' };
 
-const DEFAULT_EFFECTS: PresetEffects = { trails: true, lasers: false, glitch: false, strobe: false };
+const DEFAULT_EFFECTS: PresetEffects = { lasers: false };
 
 const lookTuning = (source: Partial<Record<LookTuningKey, number>>): LookTuning =>
   Object.fromEntries(LOOK_CONTROLS.map(({ key }) => [key, source[key]]));
@@ -98,7 +96,7 @@ const starterLibrary = (): Library => ({
         createPreset('Kaleido galaxy', 4, 1, { mirror: 3 }),
         createPreset('Laser tunnel', 2, 11, { effects: { lasers: true } }),
         createPreset('Liquid bars', 0, 2, { psy: 2 }),
-        createPreset('Rainbow hex', 8, 0, { psy: 3, effects: { glitch: true } }),
+        createPreset('Rainbow hex', 8, 0, { psy: 3 }),
       ],
     },
   ],
@@ -115,6 +113,7 @@ function migratePreset(raw: Record<string, unknown>, version: number): Preset {
   const effectSource = legacy ? raw : isRecord(raw.effects) ? raw.effects : {};
   const tuningSource: Record<string, unknown> = isRecord(raw.tuning) ? { ...raw.tuning } : {};
   if (legacy && isNumber(raw.react)) tuningSource.reactivity = raw.react;
+  if (version < INTENSITY_SCALE_VERSION && isNumber(tuningSource.reactivity)) tuningSource.reactivity /= INTENSITY_SCALE;
   const effect = (key: EffectKey) => {
     const value = effectSource[legacy ? LEGACY_EFFECT_KEYS[key] : key];
     return typeof value === 'boolean' ? value : DEFAULT_EFFECTS[key];
@@ -133,7 +132,7 @@ function migratePreset(raw: Record<string, unknown>, version: number): Preset {
   };
 }
 
-export const readPreset = (raw: Record<string, unknown>) => migratePreset(raw, LIBRARY_VERSION);
+export const readPreset = (raw: Record<string, unknown>, version = LIBRARY_VERSION) => migratePreset(raw, version);
 
 function migrateFolders(data: Record<string, unknown>): Folder[] {
   if (!Array.isArray(data.folders)) throw new Error('Not a preset library');
